@@ -1,0 +1,62 @@
+{
+ "library": "adhan-js 4.4.6 UmmAlQura",
+ "rounding": "library default",
+ "days": 694941,
+ "values": 4169646,
+ "pct_values_different": 51.09,
+ "pct_days_with_a_difference": 96.1,
+ "per": {
+  "fajr": {
+   "pct_different": 56.15,
+   "minutes_off": {
+    "0": 304714,
+    "1": 23862,
+    "-1": 356212,
+    "-2": 10153
+   }
+  },
+  "sunrise": {
+   "pct_different": 48.41,
+   "minutes_off": {
+    "0": 358495,
+    "1": 332832,
+    "2": 614,
+    "-1": 3000
+   }
+  },
+  "dhuhr": {
+   "pct_different": 50.73,
+   "minutes_off": {
+    "0": 342399,
+    "-1": 352542
+   }
+  },
+  "asr": {
+   "pct_different": 50.28,
+   "minutes_off": {
+    "0": 345546,
+    "1": 1725,
+    "-1": 341917,
+    "-2": 5753
+   }
+  },
+  "maghrib": {
+   "pct_different": 50.48,
+   "minutes_off": {
+    "0": 344138,
+    "1": 1040,
+    "-1": 346330,
+    "-2": 3433
+   }
+  },
+  "isha": {
+   "pct_different": 50.48,
+   "minutes_off": {
+    "0": 344138,
+    "1": 1040,
+    "-1": 346330,
+    "-2": 3433
+   }
+  }
+ }
+}

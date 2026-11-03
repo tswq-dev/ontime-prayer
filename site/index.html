@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>على وقتها — مواقيت الصلاة</title>
+<meta name="description" content="مواقيت الصلاة مطابقة لموقع تقويم أم القرى، وتُحسب على جهازك بلا إنترنت">
+<meta name="theme-color" content="#0f6b4f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{--bg:#f7f5f0;--card:#fff;--ink:#1d2321;--mute:#66706b;--line:#e4e0d6;--acc:#0f6b4f;--acc2:#e8f2ed;--warn:#9a5b00}
+@media (prefers-color-scheme:dark){:root{--bg:#121614;--card:#1b201e;--ink:#e9ede9;--mute:#9aa49f;--line:#2b322f;--acc:#4fbf92;--acc2:#1c2a24}}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+header h1{margin:8px 0 0;font-size:28px;color:var(--acc)}header p{margin:0 0 12px;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+button{cursor:pointer}
+input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{border:0;border-radius:0;padding:8px 12px}.seg button+button{border-inline-start:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--acc2);color:var(--acc);font-weight:600}
+[hidden]{display:none!important}.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.err{color:var(--warn);font-size:14px;width:100%}
+.cl{flex:1;min-width:130px;display:grid;gap:2px}.cl span{font-size:13px;color:var(--mute)}#crow{align-items:end}
+.combo{position:relative;flex:1;min-width:150px}.combo input{width:100%}
+.dd{position:relative;min-width:0}
+.ddi{width:100%;padding-inline-end:28px;text-overflow:ellipsis}.ddi[aria-expanded=true]{border-color:var(--acc)}
+.dd .chev{position:absolute;inset-inline-end:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mute);display:flex}
+.list{position:absolute;inset-inline:0;top:calc(100% + 6px);z-index:10;margin:0;padding:6px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);max-height:min(320px,55vh);overflow-y:auto;overscroll-behavior:contain}
+.list[hidden]{display:none}
+.list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.list li small{color:var(--mute);font-size:13px;font-weight:400}
+.list li[aria-selected=true]{background:var(--acc2);color:var(--acc);font-weight:600}
+@media (hover:hover){.list li:not(.none):hover{background:var(--acc2)}}
+.list li.none{color:var(--mute);cursor:default}
+.drow{display:grid;grid-template-columns:72px minmax(0,1fr) 104px;gap:8px;margin-top:10px;max-width:440px}
+.nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}.nav .mid{flex:1;text-align:center;min-width:0}
+.nav h2{margin:0;font-size:20px}.date1{font-weight:600}
+.ib{flex:none;width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:50%;color:var(--acc)}
+.go{margin-top:6px;padding:3px 14px;font-size:14px;color:var(--acc);border-color:var(--acc);border-radius:999px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.p{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.p b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.p span{color:var(--mute);font-size:14px}
+.p b small{font-size:14px;color:var(--mute);margin-inline-start:4px}
+.p.next{border-color:var(--acc);background:var(--acc2)}
+.meta{color:var(--mute);font-size:14px}
+.left{text-align:center;margin-top:12px;color:var(--acc)}.left b{direction:ltr;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:center;white-space:nowrap}th{color:var(--mute);font-weight:600;background:var(--card)}
+tr.today td{background:var(--acc2)}tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:var(--acc2)}}
+h3{margin:16px 0 6px;color:var(--acc)}
+.scroll{overflow-x:auto}footer{color:var(--mute);font-size:13px;margin:20px 0}a{color:var(--acc)}
+@media print{.noprint{display:none!important}body{background:#fff}.card{border:none;padding:0}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>على وقتها</h1><p>مواقيت الصلاة مطابقة لموقع تقويم أم القرى، وتُحسب على جهازك بلا إنترنت</p></header>
+<section class="card noprint">
+  <div class="row">
+    <div class="combo">
+      <input id="city" role="combobox" aria-label="المدينة" aria-expanded="false" aria-controls="clist" aria-autocomplete="list" placeholder="ابحث عن مدينتك" autocomplete="off" spellcheck="false">
+      <ul id="clist" class="list" role="listbox" aria-label="المدن" hidden></ul>
+    </div>
+    <button id="gps">موقعي</button>
+    <button id="cbtn" aria-expanded="false" aria-controls="crow">إحداثيات</button>
+  </div>
+  <div class="row" id="crow" hidden style="margin-top:10px">
+    <label class="cl"><span>خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.4225" autocomplete="off"></label>
+    <label class="cl"><span>خط الطول</span><input id="clon" inputmode="decimal" placeholder="مثل 39.8262" autocomplete="off"></label>
+    <button id="cgo" class="pri">عرض الأوقات</button>
+    <div id="cerr" class="err" hidden></div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div class="seg" id="cal" role="group" aria-label="نوع التقويم"><button data-v="h">هجري</button><button data-v="g">ميلادي</button></div>
+    <div class="seg" id="view" role="group" aria-label="العرض"><button data-v="day">يوم</button><button data-v="month">شهر</button><button data-v="year">سنة</button></div>
+    <div class="seg" id="fmt" role="group" aria-label="نظام الساعة"><button data-v="12">12 ساعة</button><button data-v="24">24 ساعة</button></div>
+    <button id="print" style="margin-inline-start:auto">طباعة / PDF</button>
+  </div>
+  <div class="drow"><select id="sd" aria-label="اليوم" data-num="1"></select><select id="sm" aria-label="الشهر"></select><select id="sy" aria-label="السنة" data-num="1"></select></div>
+</section>
+<section class="card" id="out"></section>
+<footer>
+  الأوقات بتوقيت السعودية، وتُحسب بمعادلة مفتوحة أعيد بناؤها من مخرجات موقع تقويم أم القرى الرسمي، وتمت مطابقته في أكثر من 14 مليون وقت تم فحصه.
+  للتحقق: <a href="https://www.ummulqura.org.sa/ar/prayer-times" target="_blank" rel="noopener">الموقع الرسمي لتقويم أم القرى</a>.
+  هذا الموقع غير رسمي، ولا يتبع لأي جهة رسمية.
+</footer>
+</main>
+<script>
+/* umq.js — Umm al-Qura prayer times (reconstruction), browser + Node, no dependencies.
+   Reproduces the minute values of the official Umm al-Qura calendar service. Unofficial; not KACST code.
+   Spec: ALGORITHM.md. Verified against 14,657,797 server answers (tools: test/verify.js). MIT licence. */
+(function (root) {
+'use strict';
+const T = {"L0":[[1.75347,0.0,0.0],[0.033417,4.669257,6283.0758499914],[0.000349,4.626102,12566.1516999828],[3.497056e-05,2.74411800971,5753.3848848968],[3.417571e-05,2.82886579606,3.523118349],[3.135896e-05,3.62767041758,77713.7714681205],[2.676218e-05,4.41808351397,7860.4193924392],[2.342687e-05,6.13516237631,3930.2096962196],[1.324292e-05,0.74246356352,11506.7697697936],[1.273166e-05,2.03709655772,529.6909650946],[1.199167e-05,1.10962944315,1577.3435424478],[9.9025e-06,5.23268129594,5884.9268465832],[9.01855e-06,2.04505443513,26.2983197998],[8.57223e-06,3.50849156957,398.1490034082],[7.79786e-06,1.17882652114,5223.6939198022],[7.53141e-06,2.53339053818,5507.5532386674],[5.05264e-06,4.58292563052,18849.2275499742],[4.92379e-06,4.20506639861,775.522611324],[3.56655e-06,2.91954116867,0.0673103028],[3.17087e-06,5.84901952218,11790.6290886588],[2.84125e-06,1.89869034186,796.2980068164],[2.71039e-06,0.31488607649,10977.078804699],[2.4281e-06,0.34481140906,5486.777843175],[2.0616e-06,4.80646606059,2544.3144198834],[2.05385e-06,1.86947813692,5573.1428014331],[2.02261e-06,2.45767795458,6069.7767545534],[1.55516e-06,0.83306073807,213.299095438],[1.32212e-06,3.41118275555,2942.4634232916],[1.26184e-06,1.0830263021,20.7753954924],[1.15132e-06,0.64544911683,0.9803210682],[1.02851e-06,0.63599846727,4694.0029547076],[1.01895e-06,0.97569221824,15720.8387848784],[1.01724e-06,4.26679821365,7.1135470008],[9.9206e-07,6.20992940258,2146.1654164752],[9.7607e-07,0.6810127227,155.4203994342],[8.5803e-07,5.98322631256,161000.6857376741],[8.5128e-07,1.29870743025,6275.9623029906],[8.4711e-07,3.67080093025,71430.69561812909],[7.9637e-07,1.807913307,17260.1546546904],[7.8756e-07,3.03698313141,12036.4607348882],[7.4651e-07,1.75508916159,5088.6288397668],[7.3874e-07,3.50319443167,3154.6870848956],[7.3547e-07,4.67926565481,801.8209311238],[6.9627e-07,0.83297596966,9437.762934887],[6.2449e-07,3.97763880587,8827.3902698748],[6.1148e-07,1.81839811024,7084.8967811152],[5.6963e-07,2.78430398043,6286.5989683404],[5.6116e-07,4.38694880779,14143.4952424306],[5.5577e-07,3.47006009062,6279.5527316424],[5.1992e-07,0.18914945834,12139.5535091068],[5.1605e-07,1.33282746983,1748.016413067],[5.1145e-07,0.28306864501,5856.4776591154],[4.9e-07,0.48735065033,1194.4470102246],[4.1036e-07,5.36817351402,8429.2412664666],[4.0938e-07,2.39850881707,19651.048481098],[3.92e-07,6.16832995016,10447.3878396044],[3.677e-07,6.04133859347,10213.285546211],[3.6596e-07,2.56955238628,1059.3819301892],[3.5954e-07,1.70876111898,2352.8661537718],[3.5566e-07,1.77597314691,6812.766815086],[3.3291e-07,0.59309499459,17789.845619785],[3.0412e-07,0.44294464135,83996.84731811189],[3.0047e-07,2.73975123935,1349.8674096588],[2.5352e-07,3.16470953405,4690.4798363586]],"L1":[[6283.319667,0.0,0.0],[0.002061,2.678235,6283.0758499914],[4.30343e-05,2.63512650414,12566.1516999828],[4.25264e-06,1.59046980729,3.523118349],[1.19261e-06,5.79557487799,26.2983197998],[1.08977e-06,2.96618001993,1577.3435424478],[9.3478e-07,2.59212835365,18849.2275499742],[7.2122e-07,1.13846158196,529.6909650946],[6.7768e-07,1.87472304791,398.1490034082],[6.7327e-07,4.40918235168,5507.5532386674],[5.9027e-07,2.8879703846,5223.6939198022],[5.5976e-07,2.17471680261,155.4203994342],[4.5407e-07,0.39803079805,796.2980068164],[3.6369e-07,0.46624739835,775.522611324],[2.8958e-07,2.64707383882,7.1135470008],[2.0844e-07,5.34138275149,0.9803210682],[1.9097e-07,1.84628332577,5486.777843175],[1.8508e-07,4.96855124577,213.299095438],[1.7293e-07,2.99116864949,6275.9623029906],[1.6233e-07,0.03216483047,2544.3144198834],[1.5832e-07,1.43049285325,2146.1654164752],[1.4615e-07,1.20532366323,10977.078804699],[1.2461e-07,2.83432285512,1748.016413067],[1.1877e-07,3.25804815607,5088.6288397668],[1.1808e-07,5.2737979048,1194.4470102246],[1.1514e-07,2.07502418155,4694.0029547076],[1.0641e-07,0.76614199202,553.5694028424],[9.969e-08,1.30262991097,6286.5989683404],[9.721e-08,4.23925472239,1349.8674096588],[9.452e-08,2.69957062864,242.728603974],[8.577e-08,5.64475868067,951.7184062506],[7.576e-08,5.30062664886,2352.8661537718],[6.385e-08,2.65033984967,9437.762934887],[6.101e-08,4.66632584188,4690.4798363586]],"L2":[[0.000529,0.0,0.0],[8.719837e-05,1.07209665242,6283.0758499914],[3.09125e-06,0.86728818832,12566.1516999828],[2.7339e-07,0.05297871691,3.523118349],[1.6334e-07,5.18826691036,26.2983197998],[1.5752e-07,3.6845788943,155.4203994342],[9.541e-08,0.75742297675,18849.2275499742],[8.937e-08,2.05705419118,77713.7714681205],[6.952e-08,0.8267330541,775.522611324],[5.064e-08,4.66284525271,1577.3435424478],[4.061e-08,1.03057162962,7.1135470008],[3.81e-08,3.4405080349,5573.1428014331],[3.463e-08,5.14074632811,796.2980068164],[3.169e-08,6.05291851171,5507.5532386674],[3.02e-08,1.19246506441,242.728603974],[2.886e-08,6.11652627155,529.6909650946],[2.714e-08,0.30637881025,398.1490034082],[2.538e-08,2.27992810679,553.5694028424],[2.371e-08,4.38118838167,5223.6939198022],[2.079e-08,3.75435330484,0.9803210682]],"L3":[[2.89226e-06,5.84384198723,6283.0758499914],[3.4955e-07,0.0,0.0],[1.6819e-07,5.48766912348,12566.1516999828],[2.962e-08,5.19577265202,155.4203994342],[1.288e-08,4.72200252235,3.523118349],[7.14e-09,5.30045809128,18849.2275499742],[6.35e-09,5.96925937141,242.728603974]],"L4":[[1.14084e-06,3.14159265359,0.0],[7.717e-08,4.13446589358,6283.0758499914],[7.65e-09,3.83803776214,12566.1516999828]],"L5":[[8.78e-09,3.14159265359,0.0]],"B0":[[2.7962e-06,3.19870156017,84334.66158130829],[1.01643e-06,5.42248619256,5507.5532386674],[8.0445e-07,3.88013204458,5223.6939198022],[4.3806e-07,3.70444689758,2352.8661537718],[3.1933e-07,4.00026369781,1577.3435424478]],"B1":[[9.03e-08,3.8972906189,5507.5532386674],[6.177e-08,1.73038850355,5223.6939198022]]};
+const L_TERMS = [T.L0, T.L1, T.L2, T.L3, T.L4, T.L5];
+const B_TERMS = [T.B0, T.B1];
+const DT_TABLE = [1240, 1150, 1060, 980, 910, 850, 790, 740, 700, 650, 620, 580, 550, 530, 500, 480, 460, 440, 420, 400, 370, 350, 330, 310, 280, 260, 240, 220, 200, 180, 160, 140, 130, 120, 110, 100, 90, 90, 90, 90, 90, 90, 90, 90, 100, 100, 100, 100, 100, 110, 110, 110, 110, 110, 110, 110, 110, 120, 120, 120, 120, 120, 130, 130, 130, 130, 140, 140, 140, 150, 150, 150, 150, 160, 160, 160, 160, 160, 170, 170, 170, 170, 170, 170, 170, 170, 160, 160, 150, 140, 137, 131, 127, 125, 125, 125, 125, 125, 125, 123, 120, 114, 106, 96, 86, 75, 66, 60, 57, 56, 57, 59, 62, 65, 68, 71, 73, 75, 77, 78, 79, 75, 64, 54, 29, 16, -10, -27, -36, -47, -54, -52, -55, -56, -58, -59, -62, -64, -61, -47, -27, 0, 26, 54, 77, 105, 134, 160, 182, 202, 212, 224, 235, 239, 243, 240, 239, 239, 237, 240, 243, 253, 262, 273, 282, 291, 300, 307, 314, 322, 331, 340, 350, 365, 383, 402, 422, 445, 465, 485, 505, 522, 538, 549, 558, 569, 580]; // Meeus, Astronomical Algorithms 1st ed., Table 9.A: dT x 10 s, 1620..1992
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const integer = Math.trunc;
+function limitDeg(x) { x /= 360; let l = 360 * (x - Math.floor(x)); if (l < 0) l += 360; return l; }
+function limit180(x) { x /= 360; let l = 360 * (x - Math.floor(x)); if (l < -180) l += 360; else if (l > 180) l -= 360; return l; }
+function limit01(x) { let l = x - Math.floor(x); if (l < 0) l += 1; return l; }
+
+// NREL-SPA julian_day, Gregorian correction always applied (step 1)
+function julianDay(year, month, day, hour, minute, second, dut1, tz) {
+  const dayDecimal = day + (hour - tz + (minute + (second + dut1) / 60) / 60) / 24;
+  if (month < 3) { month += 12; year--; }
+  let jd = integer(365.25 * (year + 4716)) + integer(30.6001 * (month + 1)) + dayDecimal - 1524.5;
+  const a = integer(year / 100);
+  jd += (2 - a + integer(a / 4));
+  return jd;
+}
+
+// civil date <-> day number from 2000-01-01 (proleptic Gregorian)
+function daysFromCivil(y, m, d) {
+  y -= m <= 2 ? 1 : 0;
+  const era = Math.floor(y / 400), yoe = y - era * 400;
+  const doy = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe - 719468 - 10957;
+}
+function civilFromDays(z) {
+  z += 719468 + 10957;
+  const era = Math.floor(z / 146097), doe = z - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp + (mp < 10 ? 3 : -9);
+  return [yoe + era * 400 + (m <= 2 ? 1 : 0), m, d];
+}
+
+// Delta T (step 3): T from the requested LOCAL midnight; Meeus AA 1st ed.: table 1620..1992 (last interval extended),
+// Stephenson-Houlden before 1620, 102.3 + 123.5T + 32.5T^2 for y > 2000 (strictly).
+function deltaT(y, m, d, z) {
+  const T = (julianDay(y, m, d, 0, 0, 0, 0, z) - 2451545) / 36525;
+  const Y = 2000 + T * 100;
+  if (Y > 2000) return 102.3 + T * (123.5 + T * 32.5);
+  if (Y < 1620) return Y < 948 ? 2715.6 + T * (573.36 + T * 46.5) : 50.6 + T * (67.5 + T * 22.5);
+  const i = Math.min(Math.trunc((Y - 1620) / 2), DT_TABLE.length - 2);
+  const f = Y / 2 - (i + 810);
+  return (DT_TABLE[i] + (DT_TABLE[i + 1] - DT_TABLE[i]) * f) / 10;
+}
+
+function series(terms, tau) {
+  let sum = 0;
+  for (let i = 0; i < terms.length; i++) {
+    let s = 0; const tt = terms[i];
+    for (let j = 0; j < tt.length; j++) s += tt[j][0] * Math.cos(tt[j][1] + tt[j][2] * tau);
+    sum += s * Math.pow(tau, i);
+  }
+  return sum;
+}
+// Sun alpha/delta (deg) at JDE, obliquity eps (deg); no nutation, no aberration (step 4)
+function sunAD(jde, eps) {
+  const tau = (jde - 2451545) / 365250;
+  const L = limitDeg(series(L_TERMS, tau) * R2D);
+  const B = series(B_TERMS, tau) * R2D;
+  const lam = limitDeg(L + 180), beta = -B;
+  const l = lam * D2R, b = beta * D2R, e = eps * D2R;
+  const alpha = limitDeg(Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l)) * R2D);
+  const delta = Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l)) * R2D;
+  return [alpha, delta];
+}
+function laskar(jme) {
+  const u = jme / 10;
+  return 84381.448 + u * (-4680.93 + u * (-1.55 + u * (1999.25 + u * (-51.38 + u * (-249.67 + u * (-39.05 + u * (7.12 + u * (27.87 + u * (5.79 + u * 2.45)))))))));
+}
+function gmst(jd) {
+  const jc = (jd - 2451545) / 36525;
+  return limitDeg(280.46061837 + 360.98564736629 * (jd - 2451545) + jc * jc * (0.000387933 - jc / 38710000));
+}
+function interp(ad, n) {
+  let a = ad[1] - ad[0], b = ad[2] - ad[1];
+  if (Math.abs(a) >= 2) a = limit01(a);
+  if (Math.abs(b) >= 2) b = limit01(b);
+  return ad[1] + n * (a + b + (b - a) * n) / 2;
+}
+
+const GMST_OFF = 0.146457 / 3600, EPS_OFF = -0.039131 / 3600, SUNRISE_OFF = 0.0032001;
+const H0 = -0.8333, FAJR_ALT = -18.5, EID_ALT = 4.2;
+const FAJR_HA_LIMIT = 151.84401, TW_ADD = 58.99367;
+
+function altHA(alt, phi, dec) { // closed-form hour angle (deg) or NaN
+  const c = (Math.sin(alt * D2R) - Math.sin(phi * D2R) * Math.sin(dec * D2R)) / (Math.cos(phi * D2R) * Math.cos(dec * D2R));
+  if (c < -1 || c > 1) return NaN;
+  return Math.acos(c) * R2D;
+}
+
+// astronomy for a date/zone (latitude independent)
+function dayAstro(y, mo, d, lon, z) {
+  const jdReq = julianDay(y, mo, d, 0, 0, 0, 0, z);
+  const t = (jdReq - 2451545) / 36525;
+  const hours = Math.floor(t * 36525 * 24 + z);
+  const cdays = Math.floor((12 + hours) / 24);
+  const [cy, cm, cd] = civilFromDays(cdays);
+  const jd0 = julianDay(cy, cm, cd, 0, 0, 0, 0, z);
+  const err = (((jd0 - 2451545) - (cdays - 0.5)) + z / 24) * 86400;
+  const dT = deltaT(y, mo, d, z);
+  const eps = (laskar((jdReq + dT / 86400 - 2451545) / 365250) / 3600) + EPS_OFF;
+  const alpha = [], delta = [];
+  for (let k = -1; k <= 1; k++) { const r = sunAD(jd0 + k + dT / 86400, eps); alpha.push(r[0]); delta.push(r[1]); }
+  const nu = gmst(jd0) + GMST_OFF;
+  const A = { lon, z, dT, err, nu, alpha, delta };
+  A.H = (m) => limit180(nu + 360.985647 * m + lon - interp(alpha, m + dT / 86400));
+  let m0 = (alpha[1] - lon - nu) / 360;
+  if (m0 < 0) m0 += 1;
+  A.m0 = m0;
+  let tr = m0;                                   // transit iterated like rise/set (|step| < 0.0002 day)
+  for (let i = 0; i < 20; i++) { const st = -A.H(tr) / 360; tr += st; if (Math.abs(st) < 0.0002) break; }
+  if (tr < 0) tr += 1;
+  A.transit = tr;
+  return A;
+}
+
+function newton(A, phi, m) {
+  const sp = Math.sin(phi * D2R), cp = Math.cos(phi * D2R);
+  for (let i = 0; i < 20; i++) {
+    const n = m + A.dT / 86400;
+    const dec = interp(A.delta, n) * D2R;
+    const H = limit180(A.nu + 360.985647 * m + A.lon - interp(A.alpha, n)) * D2R;
+    const h = Math.asin(sp * Math.sin(dec) + cp * Math.cos(dec) * Math.cos(H)) * R2D;
+    const dm = (h - H0) * Math.cos(h * D2R) / (360 * Math.cos(dec) * cp * Math.sin(H));
+    m += dm;
+    if (Math.abs(dm) < 0.0002) return m;
+    if (Math.abs(dm) > 5) return null;
+  }
+  return null;
+}
+function intoDay(s) { if (s < 0) return s + 86400; if (s >= 86400) return s - 86400; return s; }
+const sec = (A, m) => m * 86400 + A.err;
+
+// latitude-dependent events (seconds, raw)
+function latEvents(A, phi) {
+  const r = { ok: false };
+  const H0d = altHA(H0, phi, A.delta[1]);
+  if (!isNaN(H0d)) {
+    let mr = A.m0 - H0d / 360; if (mr < 0) mr += 1;
+    let ms = A.m0 + H0d / 360; if (ms >= 1) ms -= 1;
+    const r1 = newton(A, phi, mr), r2 = newton(A, phi, ms);
+    if (r1 !== null && r2 !== null) {
+      r.sunrise = intoDay(sec(A, r1) + SUNRISE_OFF);
+      r.maghrib = intoDay(sec(A, r2));
+      const day = ((r.maghrib - r.sunrise) % 86400 + 86400) % 86400;
+      r.ok = day >= 3600 && 86400 - day >= 3600;
+    }
+  }
+  const d1 = A.delta[2];
+  r.fajrHA = altHA(FAJR_ALT, phi, d1);
+  r.fajr = sec(A, A.transit - r.fajrHA / 360);
+  const asrAlt = Math.atan(1 / (1 + Math.tan(Math.abs(phi - d1) * D2R))) * R2D;
+  r.asr = sec(A, A.transit + altHA(asrAlt, phi, d1) / 360);
+  const eidHA = altHA(EID_ALT, phi, d1);
+  r.eid = isNaN(eidHA) ? NaN : sec(A, A.transit - eidHA / 360);
+  return r;
+}
+
+function fmt(M) {
+  const h = integer(M / 60), mi = M - 60 * h;
+  const f = (v) => (v < 0 ? '-' : '') + String(Math.abs(v)).padStart(2, '0');
+  return f(h) + ':' + f(mi);
+}
+const up = (s) => { const t = integer(s); return integer((t + 59) / 60); };
+const down = (s) => integer(integer(s) / 60);
+
+const pCache = new Map();
+function solsticeP(y, phi, lon, z) {
+  const key = y + '|' + (phi < 0) + '|' + lon + '|' + z;
+  if (pCache.has(key)) return pCache.get(key);
+  const lat45 = phi < 0 ? -45 : 45;
+  const A = dayAstro(y, phi < 0 ? 12 : 6, 21, lon, z);
+  const e = latEvents(A, lat45);
+  const night = 86400 - e.maghrib + e.sunrise; // GAP: not reduced mod 86400
+  const p = (e.sunrise - e.fajr + TW_ADD) / night;
+  pCache.set(key, p);
+  return p;
+}
+
+function valid(y, mo, d, lat, lon, z) {
+  if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) return false;
+  if (!(z >= -12 && z <= 14)) return false;
+  const [a, b, c] = civilFromDays(daysFromCivil(y, mo, d));
+  return a === y && b === mo && c === d;
+}
+
+function prayerTimes(dateISO, lat, lon, zone = 3, ramadan = 0) {
+  const [y, mo, d] = dateISO.split('-').map(Number);
+  if (!valid(y, mo, d, lat, lon, zone)) return null;
+  const A = dayAstro(y, mo, d, lon, zone);
+  const raw = latEvents(A, lat);
+  let ev = raw;
+  if (!raw.ok) ev = latEvents(A, lat < 0 ? -45 : 45);
+  const dhuhr = sec(A, A.transit);
+  const out = {};
+  // Fajr
+  if (Math.abs(lat) > 48 && (isNaN(ev.fajrHA) || ev.fajrHA > FAJR_HA_LIMIT)) { // GAP: HA tested on the latitude in use
+    const p = solsticeP(y, lat, lon, zone);
+    const night = ((86400 - ev.maghrib + ev.sunrise) % 86400 + 86400) % 86400;
+    out.fajr = fmt(down(ev.sunrise - p * night));
+  } else out.fajr = fmt(up(ev.fajr));
+  out.sunrise = fmt(down(ev.sunrise));
+  out.dhuhr = fmt(up(dhuhr));
+  out.asr = fmt(up(ev.asr));
+  out.maghrib = fmt(up(ev.maghrib));
+  out.isha = fmt(up(ev.maghrib + (ramadan ? 7200 : 5400)));
+  out.eid = isNaN(ev.eid) ? fmt(down(ev.sunrise + 900)) : fmt(up(ev.eid)); // GAP: sunrise rounding
+  return out;
+}
+
+
+const api = { prayerTimes, deltaT, julianDay, siteCoordinate };
+// the website rounds GPS coordinates to 6 decimals (shortest decimal form, ties away from zero)
+function siteCoordinate(x) {
+  let s = String(x); const neg = s[0] === '-'; let a = neg ? s.slice(1) : s;
+  if (a.includes('e')) {                     // expand exponent form (shortest repr) to plain digits
+    const [mant, ex] = a.split('e'); const e = Number(ex); const [mi, mf = ''] = mant.split('.'); const dg = mi + mf;
+    const pt = mi.length + e;
+    a = pt <= 0 ? '0.' + '0'.repeat(-pt) + dg : pt >= dg.length ? dg + '0'.repeat(pt - dg.length) : dg.slice(0, pt) + '.' + dg.slice(pt);
+  }
+  s = (neg ? '-' : '') + a;
+  const [ip, fp = ''] = a.split('.');
+  if (fp.length <= 6) return Number(s);
+  let digits = (ip + fp.slice(0, 6)).split('').map(Number);
+  if (fp.charCodeAt(6) >= 53) { let k = digits.length - 1; while (k >= 0) { if (digits[k] < 9) { digits[k]++; break; } digits[k] = 0; k--; } if (k < 0) digits.unshift(1); }
+  const str = digits.join(''); const v = Number(str.slice(0, str.length - 6) + '.' + str.slice(-6));
+  return neg ? -v : v;
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.UMQ = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+const CITIES = [[1001,1001,"الرياض",24.67,46.69,1],[9,1001,"الأفلاج",22.22,46.656,0],[150,1001,"الحائر",24.404568,46.839516,0],[23,1001,"الحريق",23.62,46.52,0],[28,1001,"الخرج",24.15,47.32,0],[4,1001,"الدرعية",24.74,46.58,0],[151,1001,"الدلم",23.99649,47.138344,0],[64,1001,"الدوادمي",24.5,44.38,0],[49,1001,"الزلفي",26.3,44.82,0],[48,1001,"السليل",20.47,45.57,0],[191,1001,"العيينة",24.9018,46.3865,0],[19,1001,"الغاط",26.03,44.95,0],[22,1001,"القويعية",24.05,45.25,0],[85,1001,"المجمعة",25.9,45.34,0],[87,1001,"المزاحمية",24.48,46.29,0],[185,1001,"تمير",25.7134,45.8707,0],[112,1001,"ثادق",25.28,45.86,0],[186,1001,"جلاجل",25.6834,45.4592,0],[72,1001,"حريملاء",25.11,46.1,0],[71,1001,"حوطة بني تميم",23.49,46.86,0],[187,1001,"حوطة سدير",25.5947,45.6184,0],[95,1001,"رماح",25.56,47.17,0],[188,1001,"روضة سدير",25.6187,45.5543,0],[193,1001,"سدوس",24.993744,46.207878,0],[105,1001,"شقراء",25.26,45.26,0],[62,1001,"ضرماء",24.6,46.13,0],[5,1001,"عفيف",23.91,42.92,0],[190,1001,"ليلى",22.2899,46.7188,0],[152,1001,"مرات",25.0699,45.4639,0],[192,1001,"ملهم",25.1625,46.3337,0],[116,1001,"وادي الدواسر",20.4722,44.783,0],[197,1001,"الرين",23.542,45.5159,0],[1002,1002,"مكة المكرمة",21.426666,39.831666,1],[154,1002,"أضم",20.423,40.8624,0],[26,1002,"الجموم",21.63,39.7,0],[29,1002,"الخرمة",21.91,42.02,0],[109,1002,"الطائف",21.25,40.4,0],[157,1002,"العرضيات",19.41604388,41.74531637,0],[66,1002,"القنفذة",19.13,41.08,0],[27,1002,"الكامل",22.26,39.79,0],[30,1002,"الليث",20.15,40.28,0],[114,1002,"تربة",21.23,41.65,0],[189,1002,"ثول",22.2758,39.1132,0],[74,1002,"جدة",21.5,39.17,0],[82,1002,"خليص",22.11,39.31,0],[194,1002,"ذهبان",21.9309,39.116,0],[93,1002,"رابغ",22.79,39.03,0],[96,1002,"رنية",21.28,42.82,0],[155,1002,"ميسان",20.74756002,40.85031999,0],[198,1002,"المويه",22.4341,41.7615,0],[199,1002,"بحرة",21.4023,39.4631,0],[1003,1003,"المدينة المنورة",24.54,39.63,1],[25,1003,"الحناكية",24.88,40.52,0],[38,1003,"العلا",26.55,37.96,0],[158,1003,"العيص",25.0598,38.1167,0],[50,1003,"بدر",23.78,38.8,0],[77,1003,"خيبر",25.71,39.28,0],[31,1003,"مهد الذهب",23.52,40.89,0],[118,1003,"ينبع",24.09,38.07,0],[200,1003,"وادي الفرع",23.3127,39.7776,0],[1004,1004,"بريدة",26.35,43.96,1],[14,1004,"الأسياح",26.77,44.22,0],[15,1004,"البدائع",26,43.73,0],[17,1004,"البكيرية",26.15,43.67,0],[195,1004,"البصر",26.2888,43.8612,0],[42,1004,"الرس",25.86,43.48,0],[107,1004,"الشماسية",26.3189,44.2574,0],[33,1004,"المذنب",25.87,44.21,0],[46,1004,"النبهانية",25.94,42.95,0],[100,1004,"رياض الخبراء",26.04,43.55,0],[160,1004,"ضرية",24.7225,42.9327,0],[159,1004,"عقلة الصقور",25.8311,42.1879,0],[89,1004,"عنيزة",26.09,43.97,0],[90,1004,"عيون الجواء",26.51,43.62,0],[196,1004,"القوارة",26.7716,43.4742,0],[201,1004,"أبانات",25.5057,42.8464,0],[1005,1005,"الدمام",26.44,50.1,1],[75,1005,"الجبيل",27,49.66,0],[80,1005,"الخبر",26.26,50.21,0],[76,1005,"الخفجي",28.42,48.49,0],[161,1005,"الظهران",26.239291,50.040259,0],[91,1005,"القطيف",26.56,50,0],[165,1005,"المبرز",25.405807,49.548469,0],[37,1005,"النعيرية",27.47,48.47,0],[10,1005,"الهفوف",25.408,49.6132,0],[2,1005,"بقيق",25.93,49.66,0],[164,1005,"تاروت",26.57110001,50.07269982,0],[68,1005,"حفر الباطن",28.4,45.97,0],[97,1005,"رأس تنورة",26.71,50.07,0],[8,1005,"قرية العليا",27.56,47.7,0],[202,1005,"الأحساء",24.1389,49.4277,0],[203,1005,"العديد",24.147,50.919,0],[204,1005,"البيضاء",26.361417,49.969591,0],[209,1005,"راس تنورة",26.7065,50.0528,0],[1006,1006,"أبها",18.22,42.51,1],[7,1006,"أحد رفيدة",18.17,42.84,0],[170,1006,"الأمواه",18.7141,43.6591,0],[171,1006,"البرك",18.2071,41.5363,0],[169,1006,"الحرجة",17.9204,43.3729,0],[34,1006,"المجاردة",19.13,41.93,0],[36,1006,"النماص",19.14,42.14,0],[166,1006,"بارق",18.9305,41.9296,0],[55,1006,"بلقرن",19.57,41.96,0],[56,1006,"بيشة",20,42.6,0],[110,1006,"تثليث",19.55,43.52,0],[167,1006,"تنومة",18.929,42.177,0],[78,1006,"خميس مشيط",18.31,42.73,0],[98,1006,"رجال ألمع",18.23,42.28,0],[104,1006,"سراة عبيدة",18.08,43.14,0],[168,1006,"طريب",18.5667607,43.20690401,0],[60,1006,"ظهران الجنوب",17.69,43.51,0],[84,1006,"محايل عسير",18.54,42.05,0],[205,1006,"الفرشة",17.7532,43.1529,0],[1007,1007,"تبوك",28.4,36.58,1],[45,1007,"أملج",25.03,37.26,0],[44,1007,"الوجه",26.23,36.47,0],[111,1007,"تيماء",28.63,38.55,0],[70,1007,"حقل",29.3,34.95,0],[59,1007,"ضباء",27.35,35.69,0],[206,1007,"البدع",28.473,35.0278,0],[1008,1008,"حائل",27.52,41.7,1],[173,1008,"الحائط",25.9933,40.4669,0],[174,1008,"السليمي",26.2896,41.3661,0],[177,1008,"الشملي",26.858595,40.328537,0],[43,1008,"الشنان",27.17,42.44,0],[20,1008,"الغزالة",26.79,41.32,0],[54,1008,"بقعاء",27.9,42.4,0],[176,1008,"سميراء",26.49941,42.12939001,0],[175,1008,"موقق",27.378545,41.179762,0],[1009,1009,"عرعر",30.99,41.02,1],[178,1009,"العويقلية",30.361771,42.250924,0],[94,1009,"رفحاء",29.63,43.5,0],[115,1009,"طريف",31.68,38.66,0],[1010,1010,"جازان",16.89,42.54,1],[3,1010,"أبو عريش",16.97,42.83,0],[6,1010,"أحد المسارحة",16.7,42.95,0],[24,1010,"الحرث",16.78,43.22,0],[18,1010,"الدائر",17.34,43.14,0],[39,1010,"الدرب",17.71,42.09,0],[41,1010,"الريث",17.6,42.86,0],[181,1010,"الطوال",16.528,42.9685,0],[13,1010,"العارضة",17.04,43.09,0],[11,1010,"العيدابي",17.24,42.95,0],[52,1010,"بيش",17.378,42.538,0],[65,1010,"جزر فرسان",16.71,42.12,0],[103,1010,"صامطة",16.59,42.94,0],[101,1010,"صبيا",17.15,42.62,0],[61,1010,"ضمد",17.1,42.78,0],[179,1010,"فيفاء",17.2473,43.1069,0],[180,1010,"هروب",17.435,42.8857,0],[1011,1011,"نجران",17.52,44.2,1],[79,1011,"الخرخير",18.85,51.819,0],[51,1011,"بدر الجنوب",17.88,43.72,0],[113,1011,"ثار",17.97,44.11,0],[67,1011,"حبونا",17.85,43.02,0],[81,1011,"خباش",17.6,45.066,0],[106,1011,"شرورة",17.49,47.11,0],[117,1011,"يدمة",18.53,44.21,0],[1012,1012,"الباحة",20.01,41.47,1],[182,1012,"الحجرة",20.1954,41.0722,0],[12,1012,"العقيق",20.27,41.66,0],[40,1012,"القرى",20.25,41.36,0],[32,1012,"المخواة",19.78,41.43,0],[35,1012,"المندق",20.16,41.29,0],[53,1012,"بلجرشي",19.86,41.57,0],[183,1012,"غامد الزناد",19.6033,41.4813,0],[92,1012,"قلوة",19.95,41.24,0],[207,1012,"بني حسن",20.051578,41.37405,0],[1013,1013,"سكاكا",29.97,40.2,1],[21,1013,"القريات",31.33,37.34,0],[63,1013,"دومة الجندل",29.81,39.87,0],[184,1013,"طبرجل",30.50098005,38.22183997,0],[208,1013,"صوير",30.1147,40.3803,0]];   // [id, region_id, name_ar, lat, lon, capital]
+const REGIONS = {1001:'الرياض',1002:'مكة المكرمة',1003:'المدينة المنورة',1004:'القصيم',1005:'الشرقية',1006:'عسير',1007:'تبوك',1008:'حائل',1009:'الحدود الشمالية',1010:'جازان',1011:'نجران',1012:'الباحة',1013:'الجوف'};
+const NAMES = {fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
+const ORDER = ['fajr','sunrise','dhuhr','asr','maghrib','isha'];
+const HMONTHS = ['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
+const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const $ = s => document.querySelector(s);
+const st = { lat: 24.67, lon: 46.69, place: 'الرياض', view: 'day', fmt: '24', cal: 'h', date: null };
+const hparts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {year:'numeric', month:'numeric', day:'numeric', timeZone:'UTC'});
+const wkf = new Intl.DateTimeFormat('ar-SA-u-nu-latn', {weekday:'long', timeZone:'UTC'});
+const iso = d => d.toISOString().slice(0,10);
+const utc = s => new Date(s + 'T12:00:00Z');
+const addDays = (s, n) => iso(new Date(utc(s).getTime() + n * 864e5));
+const pad = n => String(n).padStart(2,'0');
+const G = s => s.split('-').map(Number);
+function H(s) { const o = {}; for (const x of hparts.formatToParts(utc(s))) o[x.type] = x.value; return [parseInt(o.year), +o.month, +o.day]; }
+const ymd = s => st.cal === 'h' ? H(s) : G(s);
+const hStr = (s, yr = true) => { const [y,m,d] = H(s); return d + ' ' + HMONTHS[m-1] + (yr ? ' ' + y + ' هـ' : ''); };
+const gStr = (s, yr = true) => { const [y,m,d] = G(s); return d + ' ' + MONTHS[m-1] + (yr ? ' ' + y : ''); };
+function todayRiyadh() { return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh'}).format(new Date()); }
+function times(s) { return UMQ.prayerTimes(s, st.lat, st.lon, 3, H(s)[1] === 9 ? 1 : 0); }
+function show(t, big) { if (st.fmt === '24') return t; const [h, m] = t.split(':').map(Number), ap = h % 24 >= 12 ? 'م' : 'ص', hm = '<span dir="ltr">' + pad(h % 12 || 12) + ':' + pad(m) + '</span>';
+  return big ? hm + '<small>' + ap + '</small>' : hm + ' ' + ap; }
+function save() { try { localStorage.setItem('ontime-prayer', JSON.stringify({lat:st.lat, lon:st.lon, place:st.place, fmt:st.fmt, cal:st.cal})); } catch (e) {} }
+
+// Umm al-Qura <-> Gregorian (the browser's islamic-umalqura calendar)
+function hFirst(y, m) {   // ISO date of 1/m/y
+  let t = Date.UTC(622, 6, 19, 12) + Math.round((y - 1) * 354.36707 + (m - 1) * 29.530589) * 864e5, s;
+  for (let k = 0; k < 60; k++) { s = iso(new Date(t)); const [a,b,c] = H(s), diff = ((y - a) * 12 + (m - b)) * 30 + (1 - c);
+    if (diff === 0) break; t += (Math.abs(diff) > 3 ? diff : Math.sign(diff)) * 864e5; }
+  return s; }
+const hLen = (y, m) => H(addDays(hFirst(y, m), 29))[1] === m ? 30 : 29;
+const gLen = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const wrap12 = (y, m) => [y + Math.floor((m - 1) / 12), ((m - 1) % 12 + 12) % 12 + 1];
+function fromH(y, m, d) { [y, m] = wrap12(y, m); return addDays(hFirst(y, m), Math.min(d, hLen(y, m)) - 1); }
+function fromG(y, m, d) { [y, m] = wrap12(y, m); return y + '-' + pad(m) + '-' + pad(Math.min(d, gLen(y, m))); }
+const MIND = hFirst(1350, 1), MAXD = addDays(hFirst(1551, 1), -1);   // Hijri 1350–1550
+const YEARS = { h: [1350, 1550], g: [+MIND.slice(0,4), +MAXD.slice(0,4)] };
+
+// date fields: type to search, or pick from the list (same look and behaviour as the city box)
+const CHEV = '<span class="chev"><svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>';
+const digits = t => t.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/[۰-۹]/g, d => d.charCodeAt(0) - 1776);
+function dropdown(sel) {
+  const box = document.createElement('div'), f = document.createElement('input'), ul = document.createElement('ul');
+  box.className = 'dd'; f.className = 'ddi'; f.autocomplete = 'off'; f.spellcheck = false; ul.className = 'list'; ul.hidden = true;
+  f.setAttribute('role', 'combobox'); f.setAttribute('aria-expanded', 'false'); f.setAttribute('aria-label', sel.getAttribute('aria-label'));
+  if (sel.dataset.num) f.inputMode = 'numeric';
+  ul.setAttribute('role', 'listbox'); sel.replaceWith(box); box.append(sel, f, ul); box.insertAdjacentHTML('beforeend', CHEV); sel.hidden = true;
+  let items = [], act = -1;
+  const text = () => { const o = sel.options[sel.selectedIndex]; return o ? o.text : ''; };
+  const mark = (j, scroll) => { if (ul.children[act]) ul.children[act].setAttribute('aria-selected', 'false'); act = j;
+    const li = ul.children[j]; if (li && items[j]) { li.setAttribute('aria-selected', 'true'); if (scroll) li.scrollIntoView({block: 'nearest'}); } };
+  const build = q => { q = norm(digits(q)); const all = [...sel.options].map(o => ({ i: o.index, t: o.text, k: norm(o.text), v: o.value }));
+    items = !q ? all : all.filter(x => x.v === q || x.k.startsWith(q)).concat(all.filter(x => x.v !== q && !x.k.startsWith(q) && x.k.includes(q)));
+    ul.innerHTML = items.length ? items.map((x, j) => `<li role="option" data-j="${j}" aria-selected="false">${x.t}</li>`).join('') : '<li class="none">لا توجد نتائج</li>';
+    act = -1; const cur = q ? 0 : items.findIndex(x => x.i === sel.selectedIndex); mark(cur, false);
+    const li = ul.children[cur]; ul.scrollTop = !q && li ? li.offsetTop - ul.clientHeight / 2 + li.offsetHeight / 2 : 0; };
+  const choose = j => { const x = items[j]; if (!x) return; if (x.i !== sel.selectedIndex) { sel.selectedIndex = x.i; sel.dispatchEvent(new Event('change')); } f.blur(); };
+  f.onfocus = () => { f.select(); ul.hidden = false; f.setAttribute('aria-expanded', 'true'); build(''); };
+  f.oninput = () => build(f.value);
+  f.onblur = () => { ul.hidden = true; f.setAttribute('aria-expanded', 'false'); f.value = text(); };
+  f.onkeydown = e => { const k = e.key;
+    if (k === 'ArrowDown') { e.preventDefault(); mark(Math.min(act + 1, items.length - 1), true); }
+    else if (k === 'ArrowUp') { e.preventDefault(); mark(Math.max(act - 1, 0), true); }
+    else if (k === 'Enter') { e.preventDefault(); choose(act); }
+    else if (k === 'Escape') f.blur(); };
+  ul.onmousedown = e => e.preventDefault();
+  ul.onclick = e => { const li = e.target.closest('li[data-j]'); if (li) choose(+li.dataset.j); };
+  sel._sync = () => { if (document.activeElement !== f) f.value = text(); }; sel._sync(); }
+function opts(sel, list, val) { const key = list.length + '|' + list[0][1];
+  if (sel._key !== key) { sel.innerHTML = list.map(([v, t]) => `<option value="${v}">${t}</option>`).join(''); sel._key = key; }
+  sel.value = val; sel._sync(); }
+function setPicker() { const [y, m, d] = ymd(st.date), h = st.cal === 'h', [y0, y1] = YEARS[st.cal];
+  opts($('#sd'), Array.from({length: h ? hLen(y, m) : gLen(y, m)}, (_, i) => [i + 1, i + 1]), d);
+  opts($('#sm'), (h ? HMONTHS : MONTHS).map((t, i) => [i + 1, t]), m);
+  opts($('#sy'), Array.from({length: y1 - y0 + 1}, (_, i) => [y0 + i, y0 + i]), y); }
+function setDate(s) { st.date = s < MIND ? MIND : s > MAXD ? MAXD : s; setPicker(); render(); }
+function step(k) { const [y, m, d] = ymd(st.date), f = st.cal === 'h' ? fromH : fromG;
+  setDate(st.view === 'day' ? addDays(st.date, k) : st.view === 'month' ? f(y, m + k, d) : f(y + k, m, d)); }
+
+// cities: search by city name only; the region is shown beside it
+const norm = t => t.replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
+const ITEMS = CITIES.map(c => ({ c, name: c[2], region: REGIONS[c[1]] }));
+const dup = {}; ITEMS.forEach(x => dup[x.name + x.region] = (dup[x.name + x.region] || 0) + 1);
+ITEMS.forEach(x => { x.key = norm(x.name); x.sub = x.region + (dup[x.name + x.region] > 1 ? ' · ' + (x.c[5] ? 'مدينة' : 'محافظة') : ''); });
+ITEMS.sort((a, b) => (b.c[5] - a.c[5]) || a.name.localeCompare(b.name, 'ar'));
+function matches(q) { q = norm(q); if (!q) return ITEMS; const qa = q.replace(/^ال/, '');
+  const sc = x => (x.key.startsWith(q) || x.key.replace(/^ال/, '').startsWith(qa)) ? 0 : x.key.includes(q) ? 1 : 9;
+  return ITEMS.map(x => [sc(x), x]).filter(a => a[0] < 9).sort((a, b) => a[0] - b[0]).map(a => a[1]); }
+const inp = $('#city'), clist = $('#clist'); let shown = [], cact = -1;
+function openList() { shown = matches(inp.value === st.place ? '' : inp.value); cact = shown.length ? 0 : -1;
+  clist.innerHTML = shown.length ? shown.map((x, i) => `<li role="option" id="o${i}" data-i="${i}" aria-selected="${i === cact}"><span>${x.name}</span><small>${x.sub}</small></li>`).join('')
+    : '<li class="none">لا توجد نتائج</li>';
+  clist.hidden = false; clist.scrollTop = 0; inp.setAttribute('aria-expanded', 'true'); }
+function cmove(d) { if (!shown.length) return; clist.children[cact].setAttribute('aria-selected', 'false');
+  cact = (cact + d + shown.length) % shown.length; const li = clist.children[cact];
+  li.setAttribute('aria-selected', 'true'); li.scrollIntoView({ block: 'nearest' }); inp.setAttribute('aria-activedescendant', li.id); }
+function pick(x) { st.lat = x.c[3]; st.lon = x.c[4]; st.place = x.name; inp.value = x.name; save(); render(); inp.blur(); }
+inp.oninput = openList;
+inp.onfocus = () => { inp.select(); openList(); };
+inp.onblur = () => { clist.hidden = true; inp.setAttribute('aria-expanded', 'false'); inp.value = st.place; };
+inp.onkeydown = e => { if (e.key === 'ArrowDown') { e.preventDefault(); clist.hidden ? openList() : cmove(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); cmove(-1); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (shown[cact]) pick(shown[cact]); }
+  else if (e.key === 'Escape') inp.blur(); };
+clist.onmousedown = e => e.preventDefault();
+clist.onclick = e => { const li = e.target.closest('li[data-i]'); if (li) pick(shown[+li.dataset.i]); };
+
+// views
+function nextPrayer() {   // [name, minutes left] counted from now (Saudi time)
+  const p = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Riyadh', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'}).format(new Date()).split(':').map(Number);
+  const now = p[0] * 60 + p[1] + p[2] / 60, td = todayRiyadh(), t = times(td);
+  for (const k of ORDER) { const [h, m] = t[k].split(':').map(Number); if (h * 60 + m > now) return [k, h * 60 + m - now]; }
+  const f = times(addDays(td, 1)).fajr.split(':').map(Number); return ['fajr', 1440 - now + f[0] * 60 + f[1]]; }
+const ARROW = d => `<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const LBL = {day: ['اليوم السابق', 'اليوم التالي'], month: ['الشهر السابق', 'الشهر التالي'], year: ['السنة السابقة', 'السنة التالية']};
+function inPeriod(a, b) { if (st.view === 'day') return a === b; const x = ymd(a), y = ymd(b); return x[0] === y[0] && (st.view === 'year' || x[1] === y[1]); }
+function nav(sub) {
+  const back = st.view === 'day' && st.date === todayRiyadh() ? '' : '<div><button class="go noprint" data-go="0">العودة إلى اليوم</button></div>';
+  return `<div class="nav"><button class="ib noprint" data-go="-1" aria-label="${LBL[st.view][0]}">${ARROW('M9 5l7 7-7 7')}</button>
+    <div class="mid"><h2>${st.place}</h2>${sub}${back}</div>
+    <button class="ib noprint" data-go="1" aria-label="${LBL[st.view][1]}">${ARROW('M15 5l-7 7 7 7')}</button></div>`; }
+function dayView(s) {
+  const t = times(s); if (!t) return '<p>تاريخ غير صالح</p>';
+  const nx = s === todayRiyadh() ? nextPrayer() : null, h = st.cal === 'h';
+  const cells = ORDER.map(k => `<div class="p${nx && k === nx[0] ? ' next' : ''}"><span>${NAMES[k]}</span><b>${show(t[k], true)}</b></div>`).join('');
+  let left = ''; if (nx) { const mins = Math.ceil(nx[1]); left = `<div class="left">المتبقي على ${NAMES[nx[0]]}: <b>${pad(Math.floor(mins / 60))}:${pad(mins % 60)}</b></div>`; }
+  return nav(`<div class="date1">${wkf.format(utc(s))}، ${h ? hStr(s) : gStr(s)}</div><div class="meta">${h ? gStr(s) : hStr(s)}</div>`) + `<div class="grid">${cells}</div>${left}`; }
+function monthDates(y, m) { const h = st.cal === 'h', first = h ? hFirst(y, m) : fromG(y, m, 1);
+  return Array.from({length: h ? hLen(y, m) : gLen(y, m)}, (_, i) => addDays(first, i)); }
+function span(a, b, yearOnly) {   // the other calendar's months/years covered by a..b
+  const h = st.cal === 'h', f = h ? G : H, M = h ? MONTHS : HMONTHS, u = h ? '' : ' هـ', [y1, m1] = f(a), [y2, m2] = f(b);
+  if (yearOnly) return y1 === y2 ? y1 + u : y1 + ' – ' + y2 + u;
+  return y1 === y2 ? (m1 === m2 ? M[m1-1] + ' ' + y1 + u : M[m1-1] + ' – ' + M[m2-1] + ' ' + y1 + u) : M[m1-1] + ' ' + y1 + ' – ' + M[m2-1] + ' ' + y2 + u; }
+function table(dates) { const td = todayRiyadh(), h = st.cal === 'h';
+  return `<div class="scroll"><table><thead><tr><th>اليوم</th><th>${h ? 'الميلادي' : 'الهجري'}</th>${ORDER.map(k => `<th>${NAMES[k]}</th>`).join('')}</tr></thead><tbody>` +
+    dates.map(s => { const t = times(s);
+      return `<tr data-d="${s}"${s === td ? ' class="today"' : ''}><td>${ymd(s)[2]}</td><td>${h ? gStr(s, false) : hStr(s, false)}</td>${ORDER.map(k => `<td class="t">${show(t[k])}</td>`).join('')}</tr>`; }).join('') +
+    '</tbody></table></div>'; }
+const mName = (y, m) => st.cal === 'h' ? HMONTHS[m-1] + ' ' + y + ' هـ' : MONTHS[m-1] + ' ' + y;
+function monthView(s) { const [y, m] = ymd(s), ds = monthDates(y, m);
+  return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length-1])}</div>`) + table(ds); }
+function yearView(s) { const y = ymd(s)[0], h = st.cal === 'h', all = [];
+  let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<h3>${(h ? HMONTHS : MONTHS)[m-1]}</h3>` + table(ds); }
+  return nav(`<div class="date1">${y}${h ? ' هـ' : ''}</div><div class="meta">${span(all[0], all[all.length-1], true)}</div>`) + body; }
+function render() { $('#out').innerHTML = st.view === 'day' ? dayView(st.date) : st.view === 'month' ? monthView(st.date) : yearView(st.date); }
+
+// toggles
+function seg(id, key, cb) { const g = $(id), upd = () => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === st[key]));
+  g.onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.v === st[key]) return; st[key] = b.dataset.v; upd(); save(); cb(); }; return upd; }
+
+let saved = null; try { saved = JSON.parse(localStorage.getItem('ontime-prayer')); } catch (e) {}
+if (saved) Object.assign(st, {lat: saved.lat, lon: saved.lon, place: saved.place, fmt: saved.fmt || '24', cal: saved.cal || 'h'});
+['#sd', '#sm', '#sy'].forEach(id => dropdown($(id)));
+$('#sd').onchange = $('#sm').onchange = $('#sy').onchange = () => setDate((st.cal === 'h' ? fromH : fromG)(+$('#sy').value, +$('#sm').value, +$('#sd').value));
+const updCal = seg('#cal', 'cal', () => setDate(st.date)), updView = seg('#view', 'view', render), updFmt = seg('#fmt', 'fmt', render);
+updCal(); updView(); updFmt(); inp.value = st.place;
+$('#print').onclick = () => window.print();
+$('#gps').onclick = () => { if (!navigator.geolocation) return alert('تحديد الموقع غير متاح');
+  navigator.geolocation.getCurrentPosition(p => { st.lat = UMQ.siteCoordinate(p.coords.latitude); st.lon = UMQ.siteCoordinate(p.coords.longitude);
+    st.place = 'موقعي (' + st.lat + '، ' + st.lon + ')'; inp.value = st.place; save(); render(); }, () => alert('تعذّر تحديد الموقع')); };
+// manual coordinates (decimal degrees; north and east positive). "21.4225, 39.8262" pasted in one box also works.
+const cnum = t => { t = digits(t).replace(/٫/g, '.').trim(); return /^[-+]?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; };
+$('#cbtn').onclick = () => { const r = $('#crow'), open = r.hidden; r.hidden = !open; $('#cbtn').setAttribute('aria-expanded', open);
+  if (open) { $('#clat').value = st.lat; $('#clon').value = st.lon; $('#cerr').hidden = true; $('#clat').focus(); $('#clat').select(); } };
+function applyCoords() {
+  let a = $('#clat').value, b = $('#clon').value; const two = digits(a).split(/[\s,،؛;]+/).filter(Boolean);
+  if (two.length === 2) { a = two[0]; b = two[1]; }
+  const lat = cnum(a), lon = cnum(b), err = $('#cerr');
+  if (!(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) { err.textContent = 'اكتب خط العرض بين −90 و90، وخط الطول بين −180 و180، بالأرقام العشرية.'; err.hidden = false; return; }
+  st.lat = UMQ.siteCoordinate(lat); st.lon = UMQ.siteCoordinate(lon); st.place = 'إحداثيات (' + st.lat + '، ' + st.lon + ')';
+  inp.value = st.place; save(); render(); $('#crow').hidden = true; $('#cbtn').setAttribute('aria-expanded', 'false'); }
+$('#cgo').onclick = applyCoords;
+$('#clat').onkeydown = $('#clon').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyCoords(); } };
+// moving between days/months/years: arrows, "back to today", tapping a table row, swipe (day view), keyboard arrows
+const out = $('#out');
+out.onclick = e => { const g = e.target.closest('[data-go]'); if (g) { if (+g.dataset.go) return step(+g.dataset.go); st.view = 'day'; updView(); return setDate(todayRiyadh()); }
+  const r = e.target.closest('tr[data-d]'); if (r) { st.view = 'day'; updView(); setDate(r.dataset.d); window.scrollTo({top: 0, behavior: 'smooth'}); } };
+let tx = null;
+out.addEventListener('touchstart', e => { tx = st.view === 'day' && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, {passive: true});
+out.addEventListener('touchend', e => { if (!tx) return; const dx = e.changedTouches[0].clientX - tx[0], dy = e.changedTouches[0].clientY - tx[1]; tx = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) step(dx > 0 ? 1 : -1); });   // right-to-left page: swipe right = next
+document.addEventListener('keydown', e => { if (e.target.closest('input,.dd') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'ArrowLeft') step(1); else if (e.key === 'ArrowRight') step(-1); });
+let lastToday = todayRiyadh();
+setDate(lastToday);
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+setInterval(() => { const t = todayRiyadh(); if (t !== lastToday) { if (st.date === lastToday) st.date = t; lastToday = t; setPicker(); }
+  if (st.view === 'day') render(); }, 30000);
+</script>
+</body>
+</html>
