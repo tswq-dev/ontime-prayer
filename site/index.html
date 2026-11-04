@@ -67,11 +67,23 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .p.next{border-color:var(--acc);background:var(--acc)}
 .meta{color:var(--mute);font-size:14px}
 .left{text-align:center;margin-top:10px;color:var(--acc)}.left b{direction:ltr;display:inline-block}
-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
-th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:center;white-space:nowrap}th{color:var(--mute);font-weight:600;background:var(--card)}
-tr.today td{background:var(--acc2)}tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:var(--acc2)}}
-h3{margin:16px 0 6px;color:var(--acc)}
-.scroll{overflow-x:auto}a{color:var(--acc)}
+/* month and year tables: fit the width (no side scrolling), so the header row can stay on screen while scrolling */
+.mt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:14.5px;font-variant-numeric:tabular-nums}
+.mt th{position:sticky;top:0;z-index:2;background:var(--card);color:var(--mute);font-weight:600;font-size:13px;padding:8px 1px;border-bottom:2px solid var(--line)}
+.mt th:first-child{width:19%}
+.mt td{padding:8px 1px;border-bottom:1px solid var(--line);text-align:center;line-height:1.25}
+.mt td+td,.mt th+th{border-inline-start:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.mt td.d b{display:block;font-size:16px}.mt td.d small{display:block;font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt td small{display:block;font-size:10px;color:var(--mute)}
+.mt tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--card) 55%,var(--bg))}
+.mt tr.fri td.d b{color:var(--brass)}
+.mt tr.today td{background:var(--acc2)}.mt tr.today td.d b{color:var(--acc)}
+tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:var(--acc2)}}
+.mon h3{position:sticky;top:0;z-index:3;margin:0;padding:14px 0 6px;height:50px;background:var(--card);color:var(--acc);font-size:19px}
+.mon .mt th{top:50px}
+html[dir=ltr] .mt th{font-size:11.5px}html[dir=ltr] .mt th:first-child{width:16%}
+@media (min-width:640px){.mt{font-size:16px}.mt th{font-size:14px}.mt th:first-child{width:16%}}
+a{color:var(--acc)}
 .near{background:var(--acc2);border:1px solid var(--line);border-radius:12px;padding:12px}.near p{margin:0 0 10px;font-weight:600}
 .nearb{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nearb button{white-space:normal;line-height:1.35}.near small{display:block;margin-top:8px;color:var(--mute)}
 .inst{position:fixed;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:10px;background:var(--band);color:var(--bandink);border-radius:14px;padding:10px 10px 10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:560px;margin:0 auto}
@@ -551,17 +563,20 @@ function span(a, b, yearOnly) {   // the other calendar's months/years covered b
   const h = st.cal === 'h', f = h ? G : H, M = h ? T.gm : T.hm, u = h ? '' : T.AH, [y1, m1] = f(a), [y2, m2] = f(b);
   if (yearOnly) return y1 === y2 ? y1 + u : y1 + ' – ' + y2 + u;
   return y1 === y2 ? (m1 === m2 ? M[m1 - 1] + ' ' + y1 + u : M[m1 - 1] + ' – ' + M[m2 - 1] + ' ' + y1 + u) : M[m1 - 1] + ' ' + y1 + ' – ' + M[m2 - 1] + ' ' + y2 + u; }
-function table(dates) { const td = todayRiyadh(), h = st.cal === 'h';
-  return `<div class="scroll"><table><thead><tr><th>${T.thDay}</th><th>${h ? T.thG : T.thH}</th>${ORDER.map(k => `<th>${T.names[k]}</th>`).join('')}</tr></thead><tbody>` +
-    dates.map(s => { const t = times(s);
-      return `<tr data-d="${s}"${s === td ? ' class="today"' : ''}><td>${ymd(s)[2]}</td><td>${h ? gStr(s, false) : hStr(s, false)}</td>${ORDER.map(k => `<td class="t">${show(t[k])}</td>`).join('')}</tr>`; }).join('') +
-    '</tbody></table></div>'; }
+function cellTime(t) { if (st.fmt === '24') return t; const [h, m] = t.split(':').map(Number);
+  return `<span dir="ltr">${h % 12 || 12}:${pad(m)}</span><small>${h % 24 >= 12 ? T.pm : T.am}</small>`; }
+function table(dates) { const td = todayRiyadh(), h = st.cal === 'h', other = h ? G : H, OM = h ? T.gm : T.hm;
+  return `<table class="mt"><thead><tr><th>${T.thDay}</th>${ORDER.map(k => `<th>${T.names[k]}</th>`).join('')}</tr></thead><tbody>` +
+    dates.map((s, i) => { const t = times(s), [, om, od] = other(s), cls = [s === td ? 'today' : '', utc(s).getUTCDay() === 5 ? 'fri' : ''].filter(Boolean).join(' ');
+      const sec = i === 0 || od === 1 ? od + ' ' + OM[om - 1] : od;
+      return `<tr data-d="${s}"${cls ? ` class="${cls}"` : ''}><td class="d"><b>${ymd(s)[2]}</b><small>${sec}</small></td>${ORDER.map(k => `<td>${cellTime(t[k])}</td>`).join('')}</tr>`; }).join('') +
+    '</tbody></table>'; }
 const printBtn = () => `<div class="pr noprint"><button data-print="1">${T.print}</button></div>`;
 const mName = (y, m) => st.cal === 'h' ? T.hm[m - 1] + ' ' + y + T.AH : T.gm[m - 1] + ' ' + y;
 function monthView(s) { const [y, m] = ymd(s), ds = monthDates(y, m);
   return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length - 1])}</div>`) + table(ds) + printBtn(); }
 function yearView(s) { const y = ymd(s)[0], h = st.cal === 'h', all = [];
-  let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<h3>${(h ? T.hm : T.gm)[m - 1]}</h3>` + table(ds); }
+  let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<section class="mon"><h3>${(h ? T.hm : T.gm)[m - 1]}</h3>` + table(ds) + '</section>'; }
   return nav(`<div class="date1">${y}${h ? T.AH : ''}</div><div class="meta">${span(all[0], all[all.length - 1], true)}</div>`) + body + printBtn(); }
 function render() { $('#out').innerHTML = st.view === 'day' ? dayView(st.date) : st.view === 'month' ? monthView(st.date) : yearView(st.date); }
 
