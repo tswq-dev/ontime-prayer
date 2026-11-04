@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300" font-family="'IBM Plex Sans Arabic','Segoe UI',Tahoma,system-ui,sans-serif">
+  <title>البحث عن لحظة تغيّر الدقيقة بتنصيف خط الطول</title>
+  <rect width="800" height="300" rx="18" fill="#FBF8F2"/>
+  <!-- the two answers of the server -->
+  <rect x="60" y="88" width="340" height="10" rx="5" fill="#C99A4B"/>
+  <rect x="400" y="88" width="340" height="10" rx="5" fill="#0B4D3B"/>
+  <text x="230" y="70" text-anchor="middle" font-size="18" fill="#6E6352">الخادم يعرض <tspan font-weight="700" fill="#8A6424">05:17</tspan></text>
+  <text x="570" y="70" text-anchor="middle" font-size="18" fill="#6E6352">الخادم يعرض <tspan font-weight="700" fill="#0B4D3B">05:16</tspan></text>
+  <!-- the minute change -->
+  <line x1="400" y1="40" x2="400" y2="262" stroke="#1F2A24" stroke-width="2" stroke-dasharray="5 5"/>
+  <text x="400" y="286" text-anchor="middle" font-size="16" font-weight="700" fill="#1F2A24">لحظة تغيّر الدقيقة: الوقت عند الخادم 05:16:00 تماماً</text>
+  <!-- brackets that shrink with every request -->
+  <g stroke-width="3" stroke-linecap="round">
+    <line x1="120" y1="128" x2="740" y2="128" stroke="#DCD2BF"/>
+    <line x1="120" y1="156" x2="430" y2="156" stroke="#DCD2BF"/>
+    <line x1="275" y1="184" x2="430" y2="184" stroke="#DCD2BF"/>
+    <line x1="352" y1="212" x2="430" y2="212" stroke="#DCD2BF"/>
+    <line x1="391" y1="240" x2="430" y2="240" stroke="#DCD2BF"/>
+  </g>
+  <g font-size="13" font-weight="700" text-anchor="middle" fill="#FFFFFF">
+    <circle cx="120" cy="128" r="11" fill="#C99A4B"/><text x="120" y="133">1</text>
+    <circle cx="740" cy="128" r="11" fill="#0B4D3B"/><text x="740" y="133">2</text>
+    <circle cx="430" cy="156" r="11" fill="#0B4D3B"/><text x="430" y="161">3</text>
+    <circle cx="275" cy="184" r="11" fill="#C99A4B"/><text x="275" y="189">4</text>
+    <circle cx="352" cy="212" r="11" fill="#C99A4B"/><text x="352" y="217">5</text>
+    <circle cx="391" cy="240" r="11" fill="#C99A4B"/><text x="391" y="245">6</text>
+  </g>
+  <text x="60" y="30" font-size="14" fill="#6E6352">غرباً: الأوقات تتأخر</text>
+  <text x="740" y="30" text-anchor="end" font-size="14" fill="#6E6352">شرقاً: الأوقات تبكّر</text>
+</svg>

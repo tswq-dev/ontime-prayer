@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "On Time Prayer (على وقتها): an open reconstruction of the Umm al-Qura prayer times"
+abstract: "An open, dependency-free formula that reproduces, to the minute, the prayer times shown by the official Umm al-Qura calendar website, verified on 14,657,797 server values."
+type: software
+authors:
+  - name: tswq-dev
+license: MIT
+repository-code: "https://github.com/tswq-dev/ontime-prayer"
+version: "1.0.0"
+date-released: "2026-11-04"
+keywords: [prayer times, Umm al-Qura, astronomy, Saudi Arabia, reverse engineering, Islamic calendar]

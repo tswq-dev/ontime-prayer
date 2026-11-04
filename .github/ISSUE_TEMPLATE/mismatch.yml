@@ -1,0 +1,38 @@
+name: اختلاف في وقت / Time mismatch
+description: وقت يختلف عن موقع تقويم أم القرى الرسمي — a time that differs from the official Umm al-Qura calendar website
+title: "اختلاف / Mismatch: "
+labels: [mismatch]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        شكراً لك. اكتب البيانات كما أدخلتها في موقع تقويم أم القرى الرسمي، حتى نعيد الطلب نفسه.
+        Thank you. Enter the data exactly as used on the official Umm al-Qura calendar website, so we can repeat the same request.
+  - type: input
+    id: date
+    attributes: { label: "التاريخ الميلادي / Gregorian date (YYYY-MM-DD)", placeholder: "2027-03-20" }
+    validations: { required: true }
+  - type: input
+    id: coords
+    attributes: { label: "خط العرض، خط الطول / Latitude, longitude", placeholder: "21.4225, 39.8262" }
+    validations: { required: true }
+  - type: input
+    id: zone
+    attributes: { label: "المنطقة الزمنية / Time zone", placeholder: "+3" }
+  - type: dropdown
+    id: prayer
+    attributes:
+      label: "الوقت / Time"
+      multiple: true
+      options: ["الفجر / Fajr", "الشروق / Sunrise", "الظهر / Dhuhr", "العصر / Asr", "المغرب / Maghrib", "العشاء / Isha", "صلاة العيد / Eid prayer"]
+    validations: { required: true }
+  - type: input
+    id: official
+    attributes: { label: "ما يعرضه موقع تقويم أم القرى الرسمي / Shown by the official website", placeholder: "05:17" }
+    validations: { required: true }
+  - type: input
+    id: ours
+    attributes: { label: "ما تعطيه المعادلة أو موقع «على وقتها» / Given by this formula or the «على وقتها» website", placeholder: "05:16" }
+  - type: textarea
+    id: notes
+    attributes: { label: "ملاحظات / Notes" }

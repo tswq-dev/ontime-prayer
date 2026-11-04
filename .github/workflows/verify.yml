@@ -1,0 +1,22 @@
+name: verify
+on:
+  push:
+    branches: [main]
+    paths: ['umm_al_qura_times.py', 'js/**', 'tools/**', 'data/**', '.github/workflows/verify.yml']
+  pull_request:
+    paths: ['umm_al_qura_times.py', 'js/**', 'tools/**', 'data/**', '.github/workflows/verify.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Python — every server value, exactly the 67 known mismatches
+        run: python3 tools/verify.py
+      - name: JavaScript — the same check
+        run: node js/verify.js
