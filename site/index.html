@@ -6,16 +6,27 @@
 <meta name="robots" content="noindex">
 <title>على وقتها — مواقيت الصلاة</title>
 <meta name="description" content="مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت">
-<meta name="theme-color" content="#0f6b4f">
+<meta name="theme-color" content="#0B4D3B">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="preload" href="fonts/plex-400.woff" as="font" type="font/woff" crossorigin>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-:root{--bg:#f7f5f0;--card:#fff;--ink:#1d2321;--mute:#66706b;--line:#e4e0d6;--acc:#0f6b4f;--acc2:#e8f2ed;--warn:#9a5b00}
-@media (prefers-color-scheme:dark){:root{--bg:#121614;--card:#1b201e;--ink:#e9ede9;--mute:#9aa49f;--line:#2b322f;--acc:#4fbf92;--acc2:#1c2a24}}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif}
+/* الهوية: «المحراب» — زمرد، نحاس، رمل نجدي، ورق، طين. الخطوط: ريم كوفي للاسم والعناوين، IBM Plex Sans Arabic للنص (OFL، في مجلد fonts). */
+@font-face{font-family:"Reem Kufi";src:url(fonts/reem-kufi.woff) format("woff");font-weight:400 700;font-display:swap}
+@font-face{font-family:"Plex Arabic";src:url(fonts/plex-400.woff) format("woff");font-weight:400;font-display:swap}
+@font-face{font-family:"Plex Arabic";src:url(fonts/plex-600.woff) format("woff");font-weight:600 700;font-display:swap}
+:root{--bg:#EFE7D8;--card:#FBF8F2;--ink:#1F2A24;--mute:#6E6352;--line:#DCD2BF;--acc:#0B4D3B;--acc2:#E3EDE6;--onacc:#FFFFFF;--brass:#C99A4B;--band:#0B4D3B;--bandink:#F6EFE1;--sun:#EFE7D8;--warn:#9A5B00}
+@media (prefers-color-scheme:dark){:root{--bg:#101A16;--card:#17241F;--ink:#ECE4D4;--mute:#A99F8B;--line:#2A3833;--acc:#D3A75A;--acc2:#22312A;--onacc:#13201B;--brass:#D3A75A;--band:#0A3328;--bandink:#F1E8D6;--sun:#F1E8D6;--warn:#E0A84F}}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Plex Arabic","Segoe UI",Tahoma,system-ui,sans-serif}
 main{max-width:860px;margin:0 auto;padding:16px}
-header h1{margin:8px 0 0;font-size:28px;color:var(--acc)}header p{margin:0 0 12px;color:var(--mute)}
+.band{background:var(--band);color:var(--bandink)}
+.band .in{max-width:860px;margin:0 auto;padding:18px 16px 20px;display:flex;align-items:center;gap:14px}
+.band svg{width:46px;height:47px;flex:none;color:var(--brass)}
+.band h1{margin:0;font:600 34px/1.25 "Reem Kufi","Plex Arabic",sans-serif;letter-spacing:0}
+.band p{margin:2px 0 0;font-size:14px;opacity:.82}
+.nav h2,h3{font-family:"Reem Kufi","Plex Arabic",sans-serif;font-weight:600}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 14px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 select,input,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
@@ -43,10 +54,11 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .ib{flex:none;width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:50%;color:var(--acc)}
 .go{margin-top:6px;padding:3px 14px;font-size:14px;color:var(--acc);border-color:var(--acc);border-radius:999px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
-.p{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.p{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center}
 .p b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.p span{color:var(--mute);font-size:14px}
 .p b small{font-size:14px;color:var(--mute);margin-inline-start:4px}
-.p.next{border-color:var(--acc);background:var(--acc2)}
+.p.next span,.p.next b,.p.next b small{color:var(--onacc)}
+.p.next{border-color:var(--acc);background:var(--acc)}
 .meta{color:var(--mute);font-size:14px}
 .left{text-align:center;margin-top:12px;color:var(--acc)}.left b{direction:ltr;display:inline-block}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
@@ -54,12 +66,12 @@ th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:center;whit
 tr.today td{background:var(--acc2)}tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:var(--acc2)}}
 h3{margin:16px 0 6px;color:var(--acc)}
 .scroll{overflow-x:auto}footer{color:var(--mute);font-size:13px;margin:20px 0}a{color:var(--acc)}
-@media print{.noprint{display:none!important}body{background:#fff}.card{border:none;padding:0}}
+@media print{.noprint{display:none!important}body{background:#fff}.card{border:none;padding:0}.band{background:none;color:#0B4D3B}.band p{display:none}.p.next{background:none}.p.next span,.p.next b{color:inherit}}
 </style>
 </head>
 <body>
+<header class="band"><div class="in"><svg viewBox="96 88 320 330" aria-hidden="true"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><line x1="118" y1="392" x2="394" y2="392" stroke="currentColor" stroke-width="20" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="var(--sun)"/></svg><div><h1>على وقتها</h1><p>مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت</p></div></div></header>
 <main>
-<header><h1>على وقتها</h1><p>مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت</p></header>
 <section class="card noprint">
   <div class="row">
     <div class="combo">
