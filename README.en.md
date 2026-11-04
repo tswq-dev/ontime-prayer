@@ -80,7 +80,7 @@ Moving one degree east makes every time about four minutes earlier, so moving th
 time by a tiny fraction of a second. We pick a time, find two longitudes where the server shows two different minutes, and halve
 the interval again and again.
 
-<p align="center"><img src="docs/assets/bisection.svg" width="640" alt="Each request to the server halves the interval until the moment the minute changes is found"></p>
+<p align="center"><img src="docs/assets/bisection-en.svg" width="640" alt="Each request to the server halves the interval until the moment the minute changes is found"></p>
 
 After about 14 requests we know where the minute changes, which gives the server's own time to within a fraction of a
 millisecond; we then compare that with the model. All data come from the official Umm al-Qura calendar website: complete exports for 173 Saudi cities,
