@@ -10,7 +10,7 @@
 ![values](https://img.shields.io/badge/verified-14%2C657%2C797_values-0B4D3B)
 ![license](https://img.shields.io/badge/code-MIT-C99A4B)
 
-[العربية](README.md) | [Specification](ALGORITHM.md) | [Research log](METHOD.md) | [Report a mismatch](../../issues/new?template=mismatch.yml)
+[Website](https://ontime-prayer.pages.dev/?lang=en) | [العربية](README.md) | [Specification](ALGORITHM.md) | [Research log](METHOD.md) | [Report a mismatch](../../issues/new?template=mismatch.yml)
 
 </div>
 
@@ -24,7 +24,7 @@
 | **14,657,797** times from the official Umm al-Qura calendar website | **67** only: grazing polar days and two historical days | **0** |
 
 - **An open formula** with no dependencies, in Python and JavaScript, plus a complete specification for porting it to any language.
-- **The On Time Prayer website** («على وقتها»), in Arabic and English, computes the times on the device, works offline and installs
+- **[The On Time Prayer website](https://ontime-prayer.pages.dev/?lang=en)** («على وقتها»), in Arabic and English, computes the times on the device, works offline and installs
   on a phone like an app.
 - **Verifiable**: every answer of the official Umm al-Qura calendar website we used is in this repository, and one script re-runs the
   whole check.
@@ -155,7 +155,7 @@ The comparison is reproducible: `tools/compare/adhan.mjs`, results in `data/comp
 
 ## Usage
 
-1. **The On Time Prayer website** (`site/`): one page that computes on the device, works offline after the first visit and
+1. **[The On Time Prayer website](https://ontime-prayer.pages.dev/?lang=en)** (`site/`): one page that computes on the device, works offline after the first visit and
    installs on a phone. Arabic and English, 173 Saudi cities, GPS or typed coordinates, and day, month and year views in the Hijri
    or Gregorian calendar. Add `?lang=en` to the address to open it in English.
 2. **Python:** `umm_al_qura_times.py`, one file, no dependencies (see Quick start).

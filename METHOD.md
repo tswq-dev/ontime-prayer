@@ -1,4 +1,4 @@
-# Umm al-Qura prayer times: reconstructed method — FINAL = compute_v14 / umm_al_qura_times.py (section 7g; clean spec in publish/ALGORITHM.md). Sections 1–7f are the history.
+# Umm al-Qura prayer times: reconstructed method — FINAL = compute_v14 / umm_al_qura_times.py (section 7g; clean spec in ALGORITHM.md). Sections 1–7f are the history.
 
 This document describes an algorithm that reproduces, to the minute, the prayer times published by the
 Umm al-Qura service (umqserv.kacst.gov.sa / ummulqura.org.sa) for the Saudi range. It is a **reconstruction**: we
@@ -9,6 +9,8 @@ a different, empirical stop test for the sunrise/maghrib iteration and three re-
 "v8 stop test"); everything else is identical. `compute_v7` is kept unchanged. v9 (`compute_v9`, `V9`) is v8 plus
 two **empirical** correction terms found in the full 173-city export (section 7b). v8 stays the reference
 without them.
+
+> **Note on paths.** This log was written in the original working folders. Paths such as `probe/`, `consult/`, `consult2/`, `data/r14/`, `data/r15/` and `data/double/` refer to those folders and are not part of this repository; the server data they held are in `data/raw/` and `data/vectors.csv.gz`, the browser scripts in `tools/browser/`.
 
 ## 1. Inputs, outputs, conventions
 
@@ -207,7 +209,7 @@ offset of 0 or +0.01 ms that depended on the year. Both are explained by two sma
 * the mean obliquity is evaluated **once**, at the **requested** date's local midnight, for all Sun nodes;
 * ΔT is computed once for the **requested** date with **t = (JD(0h UT) − 2451544.5)/36525** (Julian centuries), not
   from the calendar decimal year, which differs by up to 0.75 day over the leap-year cycle.
-With these (`compute_v14`, standalone `umm_al_qura_times.py`, spec in `publish/ALGORITHM.md`):
+With these (`compute_v14`, standalone `umm_al_qura_times.py`, spec in `ALGORITHM.md`):
 **full 173-city export 0 / 4,864,587 differences** (closest margin to a minute boundary 0.003 ms); official PDFs,
 5-year export, lag, longitude and latitude ≤ 58° probes all 0; ms-bisection rounds 1–9 each reproduced within the
 measurement resolution (rounds 7–9 RMS 0.0018–0.0021 ms). The only fitted constants left: GMST offset +0.146657″,
@@ -374,7 +376,7 @@ Second panel (clean-room implementer, dT historian, C#/.NET specialist, journal 
 
 ## 10g. Doubling the verification set (2026-11-02)
 
-`consult2/final/double_part*.js` → `data/double/double-{1..4}.json.gz`: 2,804 new city-years, none overlapping the old
+`tools/browser/double_part*.js` → `data/raw/double-{1..4}.json.gz`: 2,804 new city-years, none overlapping the old
 data (173 official Saudi cities in 2020–2024 and 2036–2040; 500 new random Saudi points, one random year 1950–2150
 each; 114 world cities in 2027/2030/2036/2045; 59 world-2 places in 2028/2035). 2 years lost to network errors.
 `double_compare.py`: **7,166,026 values, 49 mismatches** — Saudi cities 4,424,994: 0; world 1 1,165,878: 0;
