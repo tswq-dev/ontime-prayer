@@ -26,6 +26,8 @@ main{max-width:860px;margin:0 auto;padding:16px}
 .band svg{width:46px;height:47px;flex:none;color:var(--brass)}
 .band h1{margin:0;font:600 34px/1.25 "Reem Kufi","Plex Arabic",sans-serif;letter-spacing:0}
 .band p{margin:2px 0 0;font-size:14px;opacity:.82}
+.band .in{position:relative}.band h1{padding-inline-end:84px}html[dir=ltr] .band h1{font-size:26px;white-space:nowrap}
+.band .lang{position:absolute;top:16px;inset-inline-end:16px;background:transparent;color:var(--bandink);border:1px solid rgba(246,239,225,.45);border-radius:999px;padding:3px 14px;font-size:14px}
 .nav h2,h3{font-family:"Reem Kufi","Plex Arabic",sans-serif;font-weight:600}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 14px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -37,7 +39,7 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .seg button[aria-pressed=true]{background:var(--acc2);color:var(--acc);font-weight:600}
 [hidden]{display:none!important}.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.err{color:var(--warn);font-size:14px;width:100%}
 .cl{flex:1;min-width:130px;display:grid;gap:2px}.cl span{font-size:13px;color:var(--mute)}#crow{align-items:end}
-.combo{position:relative;flex:1;min-width:150px}.combo input{width:100%}
+.combo{position:relative;flex:1;min-width:120px}.combo input{width:100%}
 .dd{position:relative;min-width:0}
 .ddi{width:100%;padding-inline-end:28px;text-overflow:ellipsis}.ddi[aria-expanded=true]{border-color:var(--acc)}
 .dd .chev{position:absolute;inset-inline-end:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--mute);display:flex}
@@ -59,9 +61,9 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .go{margin-top:6px;padding:3px 14px;font-size:14px;color:var(--acc);border-color:var(--acc);border-radius:999px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
 .p{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center}
-.p b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.p span{color:var(--mute);font-size:14px}
+.p b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.p>span{color:var(--mute);font-size:14px}
 .p b small{font-size:14px;color:var(--mute);margin-inline-start:4px}
-.p.next span,.p.next b,.p.next b small{color:var(--onacc)}
+.p.next>span,.p.next b,.p.next b small{color:var(--onacc)}
 .p.next{border-color:var(--acc);background:var(--acc)}
 .meta{color:var(--mute);font-size:14px}
 .left{text-align:center;margin-top:12px;color:var(--acc)}.left b{direction:ltr;display:inline-block}
@@ -74,7 +76,7 @@ h3{margin:16px 0 6px;color:var(--acc)}
 </style>
 </head>
 <body>
-<header class="band"><div class="in"><svg viewBox="96 88 320 330" aria-hidden="true"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><line x1="118" y1="392" x2="394" y2="392" stroke="currentColor" stroke-width="20" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="var(--sun)"/></svg><div><h1>على وقتها</h1><p>مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت</p></div></div></header>
+<header class="band"><div class="in"><svg viewBox="96 88 320 330" aria-hidden="true"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><line x1="118" y1="392" x2="394" y2="392" stroke="currentColor" stroke-width="20" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="var(--sun)"/></svg><div><h1 id="bname">على وقتها</h1><p id="btag">مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت</p></div><button id="lang" class="lang noprint" type="button" lang="en">English</button></div></header>
 <main>
 <section class="card noprint ctl">
   <div class="row">
@@ -86,8 +88,8 @@ h3{margin:16px 0 6px;color:var(--acc)}
     <button id="cbtn" aria-expanded="false" aria-controls="crow">إحداثيات</button>
   </div>
   <div class="row" id="crow" hidden>
-    <label class="cl"><span>خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.4225" autocomplete="off"></label>
-    <label class="cl"><span>خط الطول</span><input id="clon" inputmode="decimal" placeholder="مثل 39.8262" autocomplete="off"></label>
+    <label class="cl"><span id="llat">خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.426666" autocomplete="off"></label>
+    <label class="cl"><span id="llon">خط الطول</span><input id="clon" inputmode="decimal" placeholder="مثل 39.831666" autocomplete="off"></label>
     <button id="cgo" class="pri">عرض الأوقات</button>
     <div id="cerr" class="err" hidden></div>
   </div>
@@ -351,34 +353,77 @@ if (typeof module !== 'undefined' && module.exports) module.exports = api; else 
 </script>
 <script>
 const CITIES = [[1001,1001,"الرياض",24.67,46.69,1],[9,1001,"الأفلاج",22.22,46.656,0],[150,1001,"الحائر",24.404568,46.839516,0],[23,1001,"الحريق",23.62,46.52,0],[28,1001,"الخرج",24.15,47.32,0],[4,1001,"الدرعية",24.74,46.58,0],[151,1001,"الدلم",23.99649,47.138344,0],[64,1001,"الدوادمي",24.5,44.38,0],[49,1001,"الزلفي",26.3,44.82,0],[48,1001,"السليل",20.47,45.57,0],[191,1001,"العيينة",24.9018,46.3865,0],[19,1001,"الغاط",26.03,44.95,0],[22,1001,"القويعية",24.05,45.25,0],[85,1001,"المجمعة",25.9,45.34,0],[87,1001,"المزاحمية",24.48,46.29,0],[185,1001,"تمير",25.7134,45.8707,0],[112,1001,"ثادق",25.28,45.86,0],[186,1001,"جلاجل",25.6834,45.4592,0],[72,1001,"حريملاء",25.11,46.1,0],[71,1001,"حوطة بني تميم",23.49,46.86,0],[187,1001,"حوطة سدير",25.5947,45.6184,0],[95,1001,"رماح",25.56,47.17,0],[188,1001,"روضة سدير",25.6187,45.5543,0],[193,1001,"سدوس",24.993744,46.207878,0],[105,1001,"شقراء",25.26,45.26,0],[62,1001,"ضرماء",24.6,46.13,0],[5,1001,"عفيف",23.91,42.92,0],[190,1001,"ليلى",22.2899,46.7188,0],[152,1001,"مرات",25.0699,45.4639,0],[192,1001,"ملهم",25.1625,46.3337,0],[116,1001,"وادي الدواسر",20.4722,44.783,0],[197,1001,"الرين",23.542,45.5159,0],[1002,1002,"مكة المكرمة",21.426666,39.831666,1],[154,1002,"أضم",20.423,40.8624,0],[26,1002,"الجموم",21.63,39.7,0],[29,1002,"الخرمة",21.91,42.02,0],[109,1002,"الطائف",21.25,40.4,0],[157,1002,"العرضيات",19.41604388,41.74531637,0],[66,1002,"القنفذة",19.13,41.08,0],[27,1002,"الكامل",22.26,39.79,0],[30,1002,"الليث",20.15,40.28,0],[114,1002,"تربة",21.23,41.65,0],[189,1002,"ثول",22.2758,39.1132,0],[74,1002,"جدة",21.5,39.17,0],[82,1002,"خليص",22.11,39.31,0],[194,1002,"ذهبان",21.9309,39.116,0],[93,1002,"رابغ",22.79,39.03,0],[96,1002,"رنية",21.28,42.82,0],[155,1002,"ميسان",20.74756002,40.85031999,0],[198,1002,"المويه",22.4341,41.7615,0],[199,1002,"بحرة",21.4023,39.4631,0],[1003,1003,"المدينة المنورة",24.54,39.63,1],[25,1003,"الحناكية",24.88,40.52,0],[38,1003,"العلا",26.55,37.96,0],[158,1003,"العيص",25.0598,38.1167,0],[50,1003,"بدر",23.78,38.8,0],[77,1003,"خيبر",25.71,39.28,0],[31,1003,"مهد الذهب",23.52,40.89,0],[118,1003,"ينبع",24.09,38.07,0],[200,1003,"وادي الفرع",23.3127,39.7776,0],[1004,1004,"بريدة",26.35,43.96,1],[14,1004,"الأسياح",26.77,44.22,0],[15,1004,"البدائع",26,43.73,0],[17,1004,"البكيرية",26.15,43.67,0],[195,1004,"البصر",26.2888,43.8612,0],[42,1004,"الرس",25.86,43.48,0],[107,1004,"الشماسية",26.3189,44.2574,0],[33,1004,"المذنب",25.87,44.21,0],[46,1004,"النبهانية",25.94,42.95,0],[100,1004,"رياض الخبراء",26.04,43.55,0],[160,1004,"ضرية",24.7225,42.9327,0],[159,1004,"عقلة الصقور",25.8311,42.1879,0],[89,1004,"عنيزة",26.09,43.97,0],[90,1004,"عيون الجواء",26.51,43.62,0],[196,1004,"القوارة",26.7716,43.4742,0],[201,1004,"أبانات",25.5057,42.8464,0],[1005,1005,"الدمام",26.44,50.1,1],[75,1005,"الجبيل",27,49.66,0],[80,1005,"الخبر",26.26,50.21,0],[76,1005,"الخفجي",28.42,48.49,0],[161,1005,"الظهران",26.239291,50.040259,0],[91,1005,"القطيف",26.56,50,0],[165,1005,"المبرز",25.405807,49.548469,0],[37,1005,"النعيرية",27.47,48.47,0],[10,1005,"الهفوف",25.408,49.6132,0],[2,1005,"بقيق",25.93,49.66,0],[164,1005,"تاروت",26.57110001,50.07269982,0],[68,1005,"حفر الباطن",28.4,45.97,0],[97,1005,"رأس تنورة",26.71,50.07,0],[8,1005,"قرية العليا",27.56,47.7,0],[202,1005,"الأحساء",24.1389,49.4277,0],[203,1005,"العديد",24.147,50.919,0],[204,1005,"البيضاء",26.361417,49.969591,0],[209,1005,"راس تنورة",26.7065,50.0528,0],[1006,1006,"أبها",18.22,42.51,1],[7,1006,"أحد رفيدة",18.17,42.84,0],[170,1006,"الأمواه",18.7141,43.6591,0],[171,1006,"البرك",18.2071,41.5363,0],[169,1006,"الحرجة",17.9204,43.3729,0],[34,1006,"المجاردة",19.13,41.93,0],[36,1006,"النماص",19.14,42.14,0],[166,1006,"بارق",18.9305,41.9296,0],[55,1006,"بلقرن",19.57,41.96,0],[56,1006,"بيشة",20,42.6,0],[110,1006,"تثليث",19.55,43.52,0],[167,1006,"تنومة",18.929,42.177,0],[78,1006,"خميس مشيط",18.31,42.73,0],[98,1006,"رجال ألمع",18.23,42.28,0],[104,1006,"سراة عبيدة",18.08,43.14,0],[168,1006,"طريب",18.5667607,43.20690401,0],[60,1006,"ظهران الجنوب",17.69,43.51,0],[84,1006,"محايل عسير",18.54,42.05,0],[205,1006,"الفرشة",17.7532,43.1529,0],[1007,1007,"تبوك",28.4,36.58,1],[45,1007,"أملج",25.03,37.26,0],[44,1007,"الوجه",26.23,36.47,0],[111,1007,"تيماء",28.63,38.55,0],[70,1007,"حقل",29.3,34.95,0],[59,1007,"ضباء",27.35,35.69,0],[206,1007,"البدع",28.473,35.0278,0],[1008,1008,"حائل",27.52,41.7,1],[173,1008,"الحائط",25.9933,40.4669,0],[174,1008,"السليمي",26.2896,41.3661,0],[177,1008,"الشملي",26.858595,40.328537,0],[43,1008,"الشنان",27.17,42.44,0],[20,1008,"الغزالة",26.79,41.32,0],[54,1008,"بقعاء",27.9,42.4,0],[176,1008,"سميراء",26.49941,42.12939001,0],[175,1008,"موقق",27.378545,41.179762,0],[1009,1009,"عرعر",30.99,41.02,1],[178,1009,"العويقلية",30.361771,42.250924,0],[94,1009,"رفحاء",29.63,43.5,0],[115,1009,"طريف",31.68,38.66,0],[1010,1010,"جازان",16.89,42.54,1],[3,1010,"أبو عريش",16.97,42.83,0],[6,1010,"أحد المسارحة",16.7,42.95,0],[24,1010,"الحرث",16.78,43.22,0],[18,1010,"الدائر",17.34,43.14,0],[39,1010,"الدرب",17.71,42.09,0],[41,1010,"الريث",17.6,42.86,0],[181,1010,"الطوال",16.528,42.9685,0],[13,1010,"العارضة",17.04,43.09,0],[11,1010,"العيدابي",17.24,42.95,0],[52,1010,"بيش",17.378,42.538,0],[65,1010,"جزر فرسان",16.71,42.12,0],[103,1010,"صامطة",16.59,42.94,0],[101,1010,"صبيا",17.15,42.62,0],[61,1010,"ضمد",17.1,42.78,0],[179,1010,"فيفاء",17.2473,43.1069,0],[180,1010,"هروب",17.435,42.8857,0],[1011,1011,"نجران",17.52,44.2,1],[79,1011,"الخرخير",18.85,51.819,0],[51,1011,"بدر الجنوب",17.88,43.72,0],[113,1011,"ثار",17.97,44.11,0],[67,1011,"حبونا",17.85,43.02,0],[81,1011,"خباش",17.6,45.066,0],[106,1011,"شرورة",17.49,47.11,0],[117,1011,"يدمة",18.53,44.21,0],[1012,1012,"الباحة",20.01,41.47,1],[182,1012,"الحجرة",20.1954,41.0722,0],[12,1012,"العقيق",20.27,41.66,0],[40,1012,"القرى",20.25,41.36,0],[32,1012,"المخواة",19.78,41.43,0],[35,1012,"المندق",20.16,41.29,0],[53,1012,"بلجرشي",19.86,41.57,0],[183,1012,"غامد الزناد",19.6033,41.4813,0],[92,1012,"قلوة",19.95,41.24,0],[207,1012,"بني حسن",20.051578,41.37405,0],[1013,1013,"سكاكا",29.97,40.2,1],[21,1013,"القريات",31.33,37.34,0],[63,1013,"دومة الجندل",29.81,39.87,0],[184,1013,"طبرجل",30.50098005,38.22183997,0],[208,1013,"صوير",30.1147,40.3803,0]];   // [id, region_id, name_ar, lat, lon, capital]
-const REGIONS = {1001:'الرياض',1002:'مكة المكرمة',1003:'المدينة المنورة',1004:'القصيم',1005:'الشرقية',1006:'عسير',1007:'تبوك',1008:'حائل',1009:'الحدود الشمالية',1010:'جازان',1011:'نجران',1012:'الباحة',1013:'الجوف'};
-const NAMES = {fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
-const ORDER = ['fajr','sunrise','dhuhr','asr','maghrib','isha'];
-const HMONTHS = ['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
-const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const CITY_EN = {"1001":"Riyadh","9":"Al Aflaj","150":"Al Hayr","23":"Al Hariq","28":"Al Kharj","4":"Ad Diriyah","151":"Ad Dilam","64":"Al Duwadimi","49":"Az Zulfi","48":"As Sulayyil","191":"Al Uyaynah","19":"Al Ghat","22":"Al Quwaiiyah","85":"Al Majmaah","87":"Al Muzahimiyah","185":"Tumair","112":"Thadig","186":"Jalajil","72":"Huraymila","71":"Howtat Bani Tamim","187":"Hawtat Sudayr","95":"Rumah","188":"Rawdat Sudayr","193":"Sudus","105":"Shagra","62":"Dhurma","5":"Afif","190":"Layla","152":"Marat","192":"Malham","116":"Wadi ad-Dawasir","197":"Ar Rayn","1002":"Mecca","154":"Adham","26":"Al Jumum","29":"Al Khurma","109":"Taif","157":"Al Ardhiyat","66":"Al Qunfudhah","27":"Al Kamil","30":"Al Lith","114":"Turbah","189":"Thuwal","74":"Jeddah","82":"Khulais","194":"Dhahban","93":"Rabigh","96":"Ranyah","155":"Maysan","198":"Al Muwayh","199":"Bahrah","1003":"Medina","25":"Al Henakiyah","38":"Al Ula","158":"Al 'Is","50":"Badr","77":"Khaybar","31":"Mahd Al Thahab","118":"Yanbu","200":"Wadi Al Fara","1004":"Buraydah","14":"Alasyah","15":"Al Badayea","17":"Al Bukayriyah","195":"Al Busur","42":"Ar Rass","107":"Ash Shimasiyah","33":"Al Mithnab","46":"An Nabhaniyah","100":"Riyadh Al Khabra","160":"Dariyah","159":"Uqlat As Suqur","89":"Unayzah","90":"Uyun Al Jawa","196":"Al Quwarah","201":"Abanat","1005":"Dammam","75":"Al Jubail","80":"Al Khobar","76":"Khafji","161":"Dhahran","91":"Al Qatif","165":"Al Mubarraz","37":"Nairyah","10":"Al Hofuf","2":"Abqaiq","164":"Tarut","68":"Hafar Al Batin","97":"Ras Tanura","8":"Qaryat Al Ulya","202":"Al Ahsa","203":"Al Udayd","204":"Al Bayda","209":"Ras Tannurah","1006":"Abha","7":"Ahad Rafidah","170":"Al Amwah","171":"Al Birk","169":"Al Harajah","34":"Almajaridah","36":"Al Namas","166":"Bariq","55":"Belqarn","56":"Bishah","110":"Tathleeth","167":"Tanumah","78":"Khamis Mushait","98":"Rojal","104":"Sarat Abidah","168":"Tarib","60":"Dhahran Al Janub","84":"Muhayil","205":"Al Farshah","1007":"Tabuk","45":"Umluj","44":"Al Wajh","111":"Tayma","70":"Haql","59":"Duba","206":"Al Bada","1008":"Hail","173":"Al Hait","174":"As Sulaymi","177":"Ash Shamli","43":"Ash Shinan","20":"Al Ghazalah","54":"Baqaa","176":"Simira'","175":"Mawqaq","1009":"Arar","178":"Al 'Uwayqiliyah","94":"Rafha","115":"Turaif","1010":"Jazan","3":"Abu Arish","6":"Ahad Al Masarihah","24":"Alharth","18":"Addayer","39":"Aldarb","41":"Al Reeth","181":"At Tuwal","13":"Al Aridhah","11":"Al Edabi","52":"Baish","65":"Farasan Island","103":"Samtah","101":"Sabya","61":"Damad","179":"Fayfa","180":"Harub","1011":"Najran","79":"Al Kharkhir","51":"Badr Al Janoub","113":"Thar","67":"Hubuna","81":"Khbash","106":"Sharorah","117":"Yadamah","1012":"Al Bahah","182":"Al Hajrah","12":"Al Aqiq","40":"Alqura","32":"Al Makhwah","35":"Almandaq","53":"Baljurashi","183":"Ghamid Az Zinad","92":"Qilwah","207":"Bani Hasan","1013":"Sakaka","21":"Al Qurayyat","63":"Dumah Al Jandal","184":"Tubarjal","208":"Suwayr"};
+// ---------- languages ----------
+const L = {
+  ar: {
+    dir: 'rtl', name: 'على وقتها', doc: 'على وقتها — مواقيت الصلاة', other: 'English',
+    tag: 'مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت',
+    search: 'ابحث عن مدينتك', city: 'المدينة', cities: 'المدن', gps: 'موقعي', coords: 'إحداثيات', lat: 'خط العرض', lon: 'خط الطول',
+    eg: 'مثل', showT: 'عرض الأوقات', views: { day: 'يوم', month: 'شهر', year: 'سنة' }, viewL: 'العرض',
+    cals: { h: 'هجري', g: 'ميلادي' }, calL: 'نوع التقويم', fmts: { 12: '12 ساعة', 24: '24 ساعة' }, fmtL: 'نظام الساعة',
+    dd: { sd: 'اليوم', sm: 'الشهر', sy: 'السنة' }, none: 'لا توجد نتائج', back: 'العودة إلى اليوم', print: 'طباعة / PDF',
+    invalid: 'تاريخ غير صالح', prev: { day: 'اليوم السابق', month: 'الشهر السابق', year: 'السنة السابقة' },
+    next: { day: 'اليوم التالي', month: 'الشهر التالي', year: 'السنة التالية' },
+    left: n => `المتبقي على ${n}:`, thDay: 'اليوم', thH: 'الهجري', thG: 'الميلادي', AH: ' هـ', am: 'ص', pm: 'م', wsep: '، ',
+    myloc: (a, b) => `موقعي (${a}، ${b})`, coordPlace: (a, b) => `إحداثيات (${a}، ${b})`, tCity: 'مدينة', tGov: 'محافظة',
+    coordErr: 'اكتب خط العرض بين −90 و90، وخط الطول بين −180 و180، بالأرقام العشرية.',
+    noGeo: 'تحديد الموقع غير متاح في هذا المتصفح', geoFail: 'تعذّر تحديد الموقع. تأكد من السماح للموقع بمعرفة موقعك.',
+    names: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
+    hm: ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'],
+    gm: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+    regions: { 1001: 'الرياض', 1002: 'مكة المكرمة', 1003: 'المدينة المنورة', 1004: 'القصيم', 1005: 'الشرقية', 1006: 'عسير', 1007: 'تبوك',
+      1008: 'حائل', 1009: 'الحدود الشمالية', 1010: 'جازان', 1011: 'نجران', 1012: 'الباحة', 1013: 'الجوف' },
+    wk: 'ar-SA-u-nu-latn', coll: 'ar',
+    footer: 'الأوقات بتوقيت السعودية، وتُحسب بمعادلة مفتوحة أعيد بناؤها من مخرجات موقع تقويم أم القرى الرسمي، وتمت مطابقته في أكثر من 14 مليون وقت تم فحصه. للتحقق: <a href="https://www.ummulqura.org.sa/ar/prayer-times" target="_blank" rel="noopener">الموقع الرسمي لتقويم أم القرى</a>. هذا الموقع غير رسمي، ولا يتبع لأي جهة رسمية.'
+  },
+  en: {
+    dir: 'ltr', name: 'On Time Prayer', doc: 'On Time Prayer — prayer times', other: 'العربية',
+    tag: 'Prayer times matching the official Umm al-Qura calendar website, computed on your device, offline',
+    search: 'Search for your city', city: 'City', cities: 'Cities', gps: 'Locate me', coords: 'Lat/Long', lat: 'Latitude', lon: 'Longitude',
+    eg: 'e.g.', showT: 'Show times', views: { day: 'Day', month: 'Month', year: 'Year' }, viewL: 'View',
+    cals: { h: 'Hijri', g: 'Gregorian' }, calL: 'Calendar', fmts: { 12: '12-hour', 24: '24-hour' }, fmtL: 'Clock',
+    dd: { sd: 'Day', sm: 'Month', sy: 'Year' }, none: 'No results', back: 'Back to today', print: 'Print / PDF',
+    invalid: 'Invalid date', prev: { day: 'Previous day', month: 'Previous month', year: 'Previous year' },
+    next: { day: 'Next day', month: 'Next month', year: 'Next year' },
+    left: n => `${n} in`, thDay: 'Day', thH: 'Hijri', thG: 'Gregorian', AH: ' AH', am: 'AM', pm: 'PM', wsep: ', ',
+    myloc: (a, b) => `My location (${a}, ${b})`, coordPlace: (a, b) => `Coordinates (${a}, ${b})`, tCity: 'city', tGov: 'governorate',
+    coordErr: 'Enter a latitude between −90 and 90 and a longitude between −180 and 180, in decimal degrees.',
+    noGeo: 'Location is not available in this browser', geoFail: 'Could not get your location. Allow this website to use your location.',
+    names: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
+    hm: ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", 'Jumada al-Ula', 'Jumada al-Akhirah', 'Rajab', "Sha'ban", 'Ramadan', 'Shawwal', "Dhu al-Qa'dah", 'Dhu al-Hijjah'],
+    gm: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    regions: { 1001: 'Riyadh', 1002: 'Mecca', 1003: 'Medina', 1004: 'Qassim', 1005: 'Eastern Province', 1006: 'Asir', 1007: 'Tabuk',
+      1008: 'Hail', 1009: 'Northern Borders', 1010: 'Jazan', 1011: 'Najran', 1012: 'Al Bahah', 1013: 'Al Jawf' },
+    wk: 'en-GB', coll: 'en',
+    footer: 'Times are in Saudi time and are computed with an open formula reconstructed from the outputs of the official Umm al-Qura calendar website, checked against more than 14 million times. To verify: <a href="https://www.ummulqura.org.sa/ar/prayer-times" target="_blank" rel="noopener">the official Umm al-Qura calendar website</a>. This website is unofficial and is not affiliated with any official body.'
+  }
+};
+let T = L.ar, wkf;
+
+const ORDER = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 const $ = s => document.querySelector(s);
-const st = { lat: 24.67, lon: 46.69, place: 'الرياض', view: 'day', fmt: '24', cal: 'h', date: null };
-const hparts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {year:'numeric', month:'numeric', day:'numeric', timeZone:'UTC'});
-const wkf = new Intl.DateTimeFormat('ar-SA-u-nu-latn', {weekday:'long', timeZone:'UTC'});
-const iso = d => d.toISOString().slice(0,10);
+const st = { lat: 24.67, lon: 46.69, kind: 'city', cid: 1001, view: 'day', fmt: '24', cal: 'h', lang: 'ar', date: null };
+const hparts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' });
+const iso = d => d.toISOString().slice(0, 10);
 const utc = s => new Date(s + 'T12:00:00Z');
 const addDays = (s, n) => iso(new Date(utc(s).getTime() + n * 864e5));
-const pad = n => String(n).padStart(2,'0');
+const pad = n => String(n).padStart(2, '0');
 const G = s => s.split('-').map(Number);
 function H(s) { const o = {}; for (const x of hparts.formatToParts(utc(s))) o[x.type] = x.value; return [parseInt(o.year), +o.month, +o.day]; }
 const ymd = s => st.cal === 'h' ? H(s) : G(s);
-const hStr = (s, yr = true) => { const [y,m,d] = H(s); return d + ' ' + HMONTHS[m-1] + (yr ? ' ' + y + ' هـ' : ''); };
-const gStr = (s, yr = true) => { const [y,m,d] = G(s); return d + ' ' + MONTHS[m-1] + (yr ? ' ' + y : ''); };
-function todayRiyadh() { return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Riyadh'}).format(new Date()); }
+const hStr = (s, yr = true) => { const [y, m, d] = H(s); return d + ' ' + T.hm[m - 1] + (yr ? ' ' + y + T.AH : ''); };
+const gStr = (s, yr = true) => { const [y, m, d] = G(s); return d + ' ' + T.gm[m - 1] + (yr ? ' ' + y : ''); };
+function todayRiyadh() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()); }
 function times(s) { return UMQ.prayerTimes(s, st.lat, st.lon, 3, H(s)[1] === 9 ? 1 : 0); }
-function show(t, big) { if (st.fmt === '24') return t; const [h, m] = t.split(':').map(Number), ap = h % 24 >= 12 ? 'م' : 'ص', hm = '<span dir="ltr">' + pad(h % 12 || 12) + ':' + pad(m) + '</span>';
+function show(t, big) { if (st.fmt === '24') return t; const [h, m] = t.split(':').map(Number), ap = h % 24 >= 12 ? T.pm : T.am, hm = '<span dir="ltr">' + pad(h % 12 || 12) + ':' + pad(m) + '</span>';
   return big ? hm + '<small>' + ap + '</small>' : hm + ' ' + ap; }
-function save() { try { localStorage.setItem('ontime-prayer', JSON.stringify({lat:st.lat, lon:st.lon, place:st.place, fmt:st.fmt, cal:st.cal})); } catch (e) {} }
+function save() { try { localStorage.setItem('ontime-prayer', JSON.stringify({ lat: st.lat, lon: st.lon, kind: st.kind, cid: st.cid, fmt: st.fmt, cal: st.cal, lang: st.lang })); } catch (e) {} }
 
 // Umm al-Qura <-> Gregorian (the browser's islamic-umalqura calendar)
 function hFirst(y, m) {   // ISO date of 1/m/y
   let t = Date.UTC(622, 6, 19, 12) + Math.round((y - 1) * 354.36707 + (m - 1) * 29.530589) * 864e5, s;
-  for (let k = 0; k < 60; k++) { s = iso(new Date(t)); const [a,b,c] = H(s), diff = ((y - a) * 12 + (m - b)) * 30 + (1 - c);
+  for (let k = 0; k < 60; k++) { s = iso(new Date(t)); const [a, b, c] = H(s), diff = ((y - a) * 12 + (m - b)) * 30 + (1 - c);
     if (diff === 0) break; t += (Math.abs(diff) > 3 ? diff : Math.sign(diff)) * 864e5; }
   return s; }
 const hLen = (y, m) => H(addDays(hFirst(y, m), 29))[1] === m ? 30 : 29;
@@ -387,7 +432,11 @@ const wrap12 = (y, m) => [y + Math.floor((m - 1) / 12), ((m - 1) % 12 + 12) % 12
 function fromH(y, m, d) { [y, m] = wrap12(y, m); return addDays(hFirst(y, m), Math.min(d, hLen(y, m)) - 1); }
 function fromG(y, m, d) { [y, m] = wrap12(y, m); return y + '-' + pad(m) + '-' + pad(Math.min(d, gLen(y, m))); }
 const MIND = hFirst(1350, 1), MAXD = addDays(hFirst(1551, 1), -1);   // Hijri 1350–1550
-const YEARS = { h: [1350, 1550], g: [+MIND.slice(0,4), +MAXD.slice(0,4)] };
+const YEARS = { h: [1350, 1550], g: [+MIND.slice(0, 4), +MAXD.slice(0, 4)] };
+
+// search keys: Arabic letters unified (hamza forms, taa marbuta, alif maqsura); Latin lower-cased without apostrophes/hyphens
+const norm = t => t.replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+  .toLowerCase().replace(/['’ʻ`-]/g, '').replace(/\s+/g, ' ').trim();
 
 // date fields: type to search, or pick from the list (same look and behaviour as the city box)
 const CHEV = '<span class="chev"><svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>';
@@ -395,16 +444,16 @@ const digits = t => t.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632).replace(/
 function dropdown(sel) {
   const box = document.createElement('div'), f = document.createElement('input'), ul = document.createElement('ul');
   box.className = 'dd'; f.className = 'ddi'; f.autocomplete = 'off'; f.spellcheck = false; ul.className = 'list'; ul.hidden = true;
-  f.setAttribute('role', 'combobox'); f.setAttribute('aria-expanded', 'false'); f.setAttribute('aria-label', sel.getAttribute('aria-label'));
+  f.setAttribute('role', 'combobox'); f.setAttribute('aria-expanded', 'false');
   if (sel.dataset.num) f.inputMode = 'numeric';
   ul.setAttribute('role', 'listbox'); sel.replaceWith(box); box.append(sel, f, ul); box.insertAdjacentHTML('beforeend', CHEV); sel.hidden = true;
   let items = [], act = -1;
   const text = () => { const o = sel.options[sel.selectedIndex]; return o ? o.text : ''; };
   const mark = (j, scroll) => { if (ul.children[act]) ul.children[act].setAttribute('aria-selected', 'false'); act = j;
-    const li = ul.children[j]; if (li && items[j]) { li.setAttribute('aria-selected', 'true'); if (scroll) li.scrollIntoView({block: 'nearest'}); } };
+    const li = ul.children[j]; if (li && items[j]) { li.setAttribute('aria-selected', 'true'); if (scroll) li.scrollIntoView({ block: 'nearest' }); } };
   const build = q => { q = norm(digits(q)); const all = [...sel.options].map(o => ({ i: o.index, t: o.text, k: norm(o.text), v: o.value }));
     items = !q ? all : all.filter(x => x.v === q || x.k.startsWith(q)).concat(all.filter(x => x.v !== q && !x.k.startsWith(q) && x.k.includes(q)));
-    ul.innerHTML = items.length ? items.map((x, j) => `<li role="option" data-j="${j}" aria-selected="false">${x.t}</li>`).join('') : '<li class="none">لا توجد نتائج</li>';
+    ul.innerHTML = items.length ? items.map((x, j) => `<li role="option" data-j="${j}" aria-selected="false">${x.t}</li>`).join('') : `<li class="none">${T.none}</li>`;
     act = -1; const cur = q ? 0 : items.findIndex(x => x.i === sel.selectedIndex); mark(cur, false);
     const li = ul.children[cur]; ul.scrollTop = !q && li ? li.offsetTop - ul.clientHeight / 2 + li.offsetHeight / 2 : 0; };
   const choose = j => { const x = items[j]; if (!x) return; if (x.i !== sel.selectedIndex) { sel.selectedIndex = x.i; sel.dispatchEvent(new Event('change')); } f.blur(); };
@@ -418,39 +467,46 @@ function dropdown(sel) {
     else if (k === 'Escape') f.blur(); };
   ul.onmousedown = e => e.preventDefault();
   ul.onclick = e => { const li = e.target.closest('li[data-j]'); if (li) choose(+li.dataset.j); };
-  sel._sync = () => { if (document.activeElement !== f) f.value = text(); }; sel._sync(); }
+  sel._input = f; sel._sync = () => { if (document.activeElement !== f) f.value = text(); }; sel._sync(); }
 function opts(sel, list, val) { const key = list.length + '|' + list[0][1];
   if (sel._key !== key) { sel.innerHTML = list.map(([v, t]) => `<option value="${v}">${t}</option>`).join(''); sel._key = key; }
   sel.value = val; sel._sync(); }
 function setPicker() { const [y, m, d] = ymd(st.date), h = st.cal === 'h', [y0, y1] = YEARS[st.cal];
-  opts($('#sd'), Array.from({length: h ? hLen(y, m) : gLen(y, m)}, (_, i) => [i + 1, i + 1]), d);
-  opts($('#sm'), (h ? HMONTHS : MONTHS).map((t, i) => [i + 1, t]), m);
-  opts($('#sy'), Array.from({length: y1 - y0 + 1}, (_, i) => [y0 + i, y0 + i]), y); }
+  opts($('#sd'), Array.from({ length: h ? hLen(y, m) : gLen(y, m) }, (_, i) => [i + 1, i + 1]), d);
+  opts($('#sm'), (h ? T.hm : T.gm).map((t, i) => [i + 1, t]), m);
+  opts($('#sy'), Array.from({ length: y1 - y0 + 1 }, (_, i) => [y0 + i, y0 + i]), y); }
 function setDate(s) { st.date = s < MIND ? MIND : s > MAXD ? MAXD : s; setPicker(); render(); }
 function step(k) { const [y, m, d] = ymd(st.date), f = st.cal === 'h' ? fromH : fromG;
   setDate(st.view === 'day' ? addDays(st.date, k) : st.view === 'month' ? f(y, m + k, d) : f(y + k, m, d)); }
 
-// cities: search by city name only; the region is shown beside it
-const norm = t => t.replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
-const ITEMS = CITIES.map(c => ({ c, name: c[2], region: REGIONS[c[1]] }));
-const dup = {}; ITEMS.forEach(x => dup[x.name + x.region] = (dup[x.name + x.region] || 0) + 1);
-ITEMS.forEach(x => { x.key = norm(x.name); x.sub = x.region + (dup[x.name + x.region] > 1 ? ' · ' + (x.c[5] ? 'مدينة' : 'محافظة') : ''); });
-ITEMS.sort((a, b) => (b.c[5] - a.c[5]) || a.name.localeCompare(b.name, 'ar'));
-function matches(q) { q = norm(q); if (!q) return ITEMS; const qa = q.replace(/^ال/, '');
-  const sc = x => (x.key.startsWith(q) || x.key.replace(/^ال/, '').startsWith(qa)) ? 0 : x.key.includes(q) ? 1 : 9;
+// cities: search by city name (Arabic or English); the region is shown beside it
+const ITEMS = CITIES.map(c => ({ c, ar: c[2], en: CITY_EN[c[0]] || c[2] }));
+ITEMS.forEach(x => { x.kar = norm(x.ar); x.ken = norm(x.en); });
+const cityName = x => st.lang === 'en' ? x.en : x.ar;
+function sortItems() { ITEMS.sort((a, b) => (b.c[5] - a.c[5]) || cityName(a).localeCompare(cityName(b), T.coll)); }
+const strip = k => k.replace(/^(ال|al |al|ad |an |ar |as |at |az )/, '');
+function matches(q) { q = norm(q); if (!q) return ITEMS; const qa = strip(q);
+  const sc = x => { let best = 9;
+    for (const k of [x.kar, x.ken]) best = Math.min(best, (k.startsWith(q) || strip(k).startsWith(qa)) ? 0 : k.includes(q) ? 1 : 9);
+    return best; };
   return ITEMS.map(x => [sc(x), x]).filter(a => a[0] < 9).sort((a, b) => a[0] - b[0]).map(a => a[1]); }
+const sub = x => T.regions[x.c[1]];
+function placeName() {
+  if (st.kind === 'gps') return T.myloc(st.lat, st.lon);
+  if (st.kind === 'coord') return T.coordPlace(st.lat, st.lon);
+  const x = ITEMS.find(i => i.c[0] === st.cid); return x ? cityName(x) : T.coordPlace(st.lat, st.lon); }
 const inp = $('#city'), clist = $('#clist'); let shown = [], cact = -1;
-function openList() { shown = matches(inp.value === st.place ? '' : inp.value); cact = shown.length ? 0 : -1;
-  clist.innerHTML = shown.length ? shown.map((x, i) => `<li role="option" id="o${i}" data-i="${i}" aria-selected="${i === cact}"><span>${x.name}</span><small>${x.sub}</small></li>`).join('')
-    : '<li class="none">لا توجد نتائج</li>';
+function openList() { shown = matches(inp.value === placeName() ? '' : inp.value); cact = shown.length ? 0 : -1;
+  clist.innerHTML = shown.length ? shown.map((x, i) => `<li role="option" id="o${i}" data-i="${i}" aria-selected="${i === cact}"><span>${cityName(x)}</span><small>${sub(x)}</small></li>`).join('')
+    : `<li class="none">${T.none}</li>`;
   clist.hidden = false; clist.scrollTop = 0; inp.setAttribute('aria-expanded', 'true'); }
 function cmove(d) { if (!shown.length) return; clist.children[cact].setAttribute('aria-selected', 'false');
   cact = (cact + d + shown.length) % shown.length; const li = clist.children[cact];
   li.setAttribute('aria-selected', 'true'); li.scrollIntoView({ block: 'nearest' }); inp.setAttribute('aria-activedescendant', li.id); }
-function pick(x) { st.lat = x.c[3]; st.lon = x.c[4]; st.place = x.name; inp.value = x.name; save(); render(); inp.blur(); }
+function pick(x) { Object.assign(st, { lat: x.c[3], lon: x.c[4], kind: 'city', cid: x.c[0] }); inp.value = placeName(); save(); render(); inp.blur(); }
 inp.oninput = openList;
 inp.onfocus = () => { inp.select(); openList(); };
-inp.onblur = () => { clist.hidden = true; inp.setAttribute('aria-expanded', 'false'); inp.value = st.place; };
+inp.onblur = () => { clist.hidden = true; inp.setAttribute('aria-expanded', 'false'); inp.value = placeName(); };
 inp.onkeydown = e => { if (e.key === 'ArrowDown') { e.preventDefault(); clist.hidden ? openList() : cmove(1); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); cmove(-1); }
   else if (e.key === 'Enter') { e.preventDefault(); if (shown[cact]) pick(shown[cact]); }
@@ -460,58 +516,82 @@ clist.onclick = e => { const li = e.target.closest('li[data-i]'); if (li) pick(s
 
 // views
 function nextPrayer() {   // [name, minutes left] counted from now (Saudi time)
-  const p = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Riyadh', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'}).format(new Date()).split(':').map(Number);
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number);
   const now = p[0] * 60 + p[1] + p[2] / 60, td = todayRiyadh(), t = times(td);
   for (const k of ORDER) { const [h, m] = t[k].split(':').map(Number); if (h * 60 + m > now) return [k, h * 60 + m - now]; }
   const f = times(addDays(td, 1)).fajr.split(':').map(Number); return ['fajr', 1440 - now + f[0] * 60 + f[1]]; }
 const ARROW = d => `<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const LBL = {day: ['اليوم السابق', 'اليوم التالي'], month: ['الشهر السابق', 'الشهر التالي'], year: ['السنة السابقة', 'السنة التالية']};
-function inPeriod(a, b) { if (st.view === 'day') return a === b; const x = ymd(a), y = ymd(b); return x[0] === y[0] && (st.view === 'year' || x[1] === y[1]); }
-function nav(sub) {
-  const back = st.view === 'day' && st.date === todayRiyadh() ? '' : '<div><button class="go noprint" data-go="0">العودة إلى اليوم</button></div>';
-  return `<div class="nav"><button class="ib noprint" data-go="-1" aria-label="${LBL[st.view][0]}">${ARROW('M9 5l7 7-7 7')}</button>
-    <div class="mid"><h2>${st.place}</h2>${sub}${back}</div>
-    <button class="ib noprint" data-go="1" aria-label="${LBL[st.view][1]}">${ARROW('M15 5l-7 7 7 7')}</button></div>`; }
+const RIGHT = 'M9 5l7 7-7 7', LEFT = 'M15 5l-7 7 7 7';
+function nav(subline) {
+  const back = st.view === 'day' && st.date === todayRiyadh() ? '' : `<div><button class="go noprint" data-go="0">${T.back}</button></div>`;
+  const rtl = T.dir === 'rtl';   // "previous" points backwards in the reading direction
+  return `<div class="nav"><button class="ib noprint" data-go="-1" aria-label="${T.prev[st.view]}">${ARROW(rtl ? RIGHT : LEFT)}</button>
+    <div class="mid"><h2>${placeName()}</h2>${subline}${back}</div>
+    <button class="ib noprint" data-go="1" aria-label="${T.next[st.view]}">${ARROW(rtl ? LEFT : RIGHT)}</button></div>`; }
 function dayView(s) {
-  const t = times(s); if (!t) return '<p>تاريخ غير صالح</p>';
+  const t = times(s); if (!t) return `<p>${T.invalid}</p>`;
   const nx = s === todayRiyadh() ? nextPrayer() : null, h = st.cal === 'h';
-  const cells = ORDER.map(k => `<div class="p${nx && k === nx[0] ? ' next' : ''}"><span>${NAMES[k]}</span><b>${show(t[k], true)}</b></div>`).join('');
-  let left = ''; if (nx) { const mins = Math.ceil(nx[1]); left = `<div class="left">المتبقي على ${NAMES[nx[0]]}: <b>${pad(Math.floor(mins / 60))}:${pad(mins % 60)}</b></div>`; }
-  return nav(`<div class="date1">${wkf.format(utc(s))}، ${h ? hStr(s) : gStr(s)}</div><div class="meta">${h ? gStr(s) : hStr(s)}</div>`) + `<div class="grid">${cells}</div>${left}`; }
+  const cells = ORDER.map(k => `<div class="p${nx && k === nx[0] ? ' next' : ''}"><span>${T.names[k]}</span><b>${show(t[k], true)}</b></div>`).join('');
+  let left = ''; if (nx) { const mins = Math.ceil(nx[1]); left = `<div class="left">${T.left(T.names[nx[0]])} <b>${pad(Math.floor(mins / 60))}:${pad(mins % 60)}</b></div>`; }
+  return nav(`<div class="date1">${wkf.format(utc(s))}${T.wsep}${h ? hStr(s) : gStr(s)}</div><div class="meta">${h ? gStr(s) : hStr(s)}</div>`) + `<div class="grid">${cells}</div>${left}`; }
 function monthDates(y, m) { const h = st.cal === 'h', first = h ? hFirst(y, m) : fromG(y, m, 1);
-  return Array.from({length: h ? hLen(y, m) : gLen(y, m)}, (_, i) => addDays(first, i)); }
+  return Array.from({ length: h ? hLen(y, m) : gLen(y, m) }, (_, i) => addDays(first, i)); }
 function span(a, b, yearOnly) {   // the other calendar's months/years covered by a..b
-  const h = st.cal === 'h', f = h ? G : H, M = h ? MONTHS : HMONTHS, u = h ? '' : ' هـ', [y1, m1] = f(a), [y2, m2] = f(b);
+  const h = st.cal === 'h', f = h ? G : H, M = h ? T.gm : T.hm, u = h ? '' : T.AH, [y1, m1] = f(a), [y2, m2] = f(b);
   if (yearOnly) return y1 === y2 ? y1 + u : y1 + ' – ' + y2 + u;
-  return y1 === y2 ? (m1 === m2 ? M[m1-1] + ' ' + y1 + u : M[m1-1] + ' – ' + M[m2-1] + ' ' + y1 + u) : M[m1-1] + ' ' + y1 + ' – ' + M[m2-1] + ' ' + y2 + u; }
+  return y1 === y2 ? (m1 === m2 ? M[m1 - 1] + ' ' + y1 + u : M[m1 - 1] + ' – ' + M[m2 - 1] + ' ' + y1 + u) : M[m1 - 1] + ' ' + y1 + ' – ' + M[m2 - 1] + ' ' + y2 + u; }
 function table(dates) { const td = todayRiyadh(), h = st.cal === 'h';
-  return `<div class="scroll"><table><thead><tr><th>اليوم</th><th>${h ? 'الميلادي' : 'الهجري'}</th>${ORDER.map(k => `<th>${NAMES[k]}</th>`).join('')}</tr></thead><tbody>` +
+  return `<div class="scroll"><table><thead><tr><th>${T.thDay}</th><th>${h ? T.thG : T.thH}</th>${ORDER.map(k => `<th>${T.names[k]}</th>`).join('')}</tr></thead><tbody>` +
     dates.map(s => { const t = times(s);
       return `<tr data-d="${s}"${s === td ? ' class="today"' : ''}><td>${ymd(s)[2]}</td><td>${h ? gStr(s, false) : hStr(s, false)}</td>${ORDER.map(k => `<td class="t">${show(t[k])}</td>`).join('')}</tr>`; }).join('') +
     '</tbody></table></div>'; }
-const PRINT = '<div class="pr noprint"><button data-print="1">طباعة / PDF</button></div>';
-const mName = (y, m) => st.cal === 'h' ? HMONTHS[m-1] + ' ' + y + ' هـ' : MONTHS[m-1] + ' ' + y;
+const printBtn = () => `<div class="pr noprint"><button data-print="1">${T.print}</button></div>`;
+const mName = (y, m) => st.cal === 'h' ? T.hm[m - 1] + ' ' + y + T.AH : T.gm[m - 1] + ' ' + y;
 function monthView(s) { const [y, m] = ymd(s), ds = monthDates(y, m);
-  return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length-1])}</div>`) + table(ds) + PRINT; }
+  return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length - 1])}</div>`) + table(ds) + printBtn(); }
 function yearView(s) { const y = ymd(s)[0], h = st.cal === 'h', all = [];
-  let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<h3>${(h ? HMONTHS : MONTHS)[m-1]}</h3>` + table(ds); }
-  return nav(`<div class="date1">${y}${h ? ' هـ' : ''}</div><div class="meta">${span(all[0], all[all.length-1], true)}</div>`) + body + PRINT; }
+  let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<h3>${(h ? T.hm : T.gm)[m - 1]}</h3>` + table(ds); }
+  return nav(`<div class="date1">${y}${h ? T.AH : ''}</div><div class="meta">${span(all[0], all[all.length - 1], true)}</div>`) + body + printBtn(); }
 function render() { $('#out').innerHTML = st.view === 'day' ? dayView(st.date) : st.view === 'month' ? monthView(st.date) : yearView(st.date); }
 
 // toggles
 function seg(id, key, cb) { const g = $(id), upd = () => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === st[key]));
   g.onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.v === st[key]) return; st[key] = b.dataset.v; upd(); save(); cb(); }; return upd; }
 
+// language: every visible string comes from L
+function applyLang() {
+  T = L[st.lang]; wkf = new Intl.DateTimeFormat(T.wk, { weekday: 'long', timeZone: 'UTC' });
+  const root = document.documentElement; root.lang = st.lang; root.dir = T.dir; document.title = T.doc;
+  $('#bname').textContent = T.name; $('#btag').textContent = T.tag; $('#lang').textContent = T.other;
+  $('#lang').setAttribute('lang', st.lang === 'ar' ? 'en' : 'ar');
+  inp.placeholder = T.search; inp.setAttribute('aria-label', T.city); clist.setAttribute('aria-label', T.cities);
+  $('#gps').textContent = T.gps; $('#cbtn').textContent = T.coords; $('#cgo').textContent = T.showT;
+  $('#llat').textContent = T.lat; $('#llon').textContent = T.lon;
+  $('#clat').placeholder = T.eg + ' 21.426666'; $('#clon').placeholder = T.eg + ' 39.831666';
+  $('#view').setAttribute('aria-label', T.viewL); $('#cal').setAttribute('aria-label', T.calL); $('#fmt').setAttribute('aria-label', T.fmtL);
+  document.querySelectorAll('#view button').forEach(b => b.textContent = T.views[b.dataset.v]);
+  document.querySelectorAll('#cal button').forEach(b => b.textContent = T.cals[b.dataset.v]);
+  document.querySelectorAll('#fmt button').forEach(b => b.textContent = T.fmts[b.dataset.v]);
+  for (const id of ['sd', 'sm', 'sy']) $('#' + id)._input.setAttribute('aria-label', T.dd[id]);
+  $('footer').innerHTML = T.footer; $('#cerr').hidden = true;
+  sortItems(); inp.value = placeName(); if (st.date) setDate(st.date); }
+
 let saved = null; try { saved = JSON.parse(localStorage.getItem('ontime-prayer')); } catch (e) {}
-if (saved) Object.assign(st, {lat: saved.lat, lon: saved.lon, place: saved.place, fmt: saved.fmt || '24', cal: saved.cal || 'h'});
+if (saved) {
+  Object.assign(st, { lat: saved.lat, lon: saved.lon, fmt: saved.fmt || '24', cal: saved.cal || 'h', lang: saved.lang === 'en' ? 'en' : 'ar' });
+  if (saved.kind) Object.assign(st, { kind: saved.kind, cid: saved.cid });
+  else { const c = CITIES.find(c => c[3] === saved.lat && c[4] === saved.lon); Object.assign(st, c ? { kind: 'city', cid: c[0] } : { kind: String(saved.place || '').startsWith('موقعي') ? 'gps' : 'coord' }); }
+}
+const qlang = new URLSearchParams(location.search).get('lang'); if (qlang === 'en' || qlang === 'ar') st.lang = qlang;
 ['#sd', '#sm', '#sy'].forEach(id => dropdown($(id)));
 $('#sd').onchange = $('#sm').onchange = $('#sy').onchange = () => setDate((st.cal === 'h' ? fromH : fromG)(+$('#sy').value, +$('#sm').value, +$('#sd').value));
 const updCal = seg('#cal', 'cal', () => setDate(st.date)), updView = seg('#view', 'view', render), updFmt = seg('#fmt', 'fmt', render);
-updCal(); updView(); updFmt(); inp.value = st.place;
-$('#gps').onclick = () => { if (!navigator.geolocation) return alert('تحديد الموقع غير متاح');
-  navigator.geolocation.getCurrentPosition(p => { st.lat = UMQ.siteCoordinate(p.coords.latitude); st.lon = UMQ.siteCoordinate(p.coords.longitude);
-    st.place = 'موقعي (' + st.lat + '، ' + st.lon + ')'; inp.value = st.place; save(); render(); }, () => alert('تعذّر تحديد الموقع')); };
-// manual coordinates (decimal degrees; north and east positive). "21.4225, 39.8262" pasted in one box also works.
+updCal(); updView(); updFmt();
+$('#lang').onclick = () => { st.lang = st.lang === 'ar' ? 'en' : 'ar'; save(); applyLang(); };
+$('#gps').onclick = () => { if (!navigator.geolocation) return alert(T.noGeo);
+  navigator.geolocation.getCurrentPosition(p => { Object.assign(st, { lat: UMQ.siteCoordinate(p.coords.latitude), lon: UMQ.siteCoordinate(p.coords.longitude), kind: 'gps' });
+    inp.value = placeName(); save(); render(); }, () => alert(T.geoFail)); };
+// manual coordinates (decimal degrees; north and east positive). "21.426666, 39.831666" pasted in one box also works.
 const cnum = t => { t = digits(t).replace(/٫/g, '.').trim(); return /^[-+]?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; };
 $('#cbtn').onclick = () => { const r = $('#crow'), open = r.hidden; r.hidden = !open; $('#cbtn').setAttribute('aria-expanded', open);
   if (open) { $('#clat').value = st.lat; $('#clon').value = st.lon; $('#cerr').hidden = true; $('#clat').focus(); $('#clat').select(); } };
@@ -519,23 +599,24 @@ function applyCoords() {
   let a = $('#clat').value, b = $('#clon').value; const two = digits(a).split(/[\s,،؛;]+/).filter(Boolean);
   if (two.length === 2) { a = two[0]; b = two[1]; }
   const lat = cnum(a), lon = cnum(b), err = $('#cerr');
-  if (!(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) { err.textContent = 'اكتب خط العرض بين −90 و90، وخط الطول بين −180 و180، بالأرقام العشرية.'; err.hidden = false; return; }
-  st.lat = UMQ.siteCoordinate(lat); st.lon = UMQ.siteCoordinate(lon); st.place = 'إحداثيات (' + st.lat + '، ' + st.lon + ')';
-  inp.value = st.place; save(); render(); $('#crow').hidden = true; $('#cbtn').setAttribute('aria-expanded', 'false'); }
+  if (!(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) { err.textContent = T.coordErr; err.hidden = false; return; }
+  Object.assign(st, { lat: UMQ.siteCoordinate(lat), lon: UMQ.siteCoordinate(lon), kind: 'coord' });
+  inp.value = placeName(); save(); render(); $('#crow').hidden = true; $('#cbtn').setAttribute('aria-expanded', 'false'); }
 $('#cgo').onclick = applyCoords;
 $('#clat').onkeydown = $('#clon').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyCoords(); } };
 // moving between days/months/years: arrows, "back to today", tapping a table row, swipe (day view), keyboard arrows
 const out = $('#out');
 out.onclick = e => { if (e.target.closest('[data-print]')) return window.print(); const g = e.target.closest('[data-go]'); if (g) { if (+g.dataset.go) return step(+g.dataset.go); st.view = 'day'; updView(); return setDate(todayRiyadh()); }
-  const r = e.target.closest('tr[data-d]'); if (r) { st.view = 'day'; updView(); setDate(r.dataset.d); window.scrollTo({top: 0, behavior: 'smooth'}); } };
+  const r = e.target.closest('tr[data-d]'); if (r) { st.view = 'day'; updView(); setDate(r.dataset.d); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
 let tx = null;
-out.addEventListener('touchstart', e => { tx = st.view === 'day' && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, {passive: true});
+out.addEventListener('touchstart', e => { tx = st.view === 'day' && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
 out.addEventListener('touchend', e => { if (!tx) return; const dx = e.changedTouches[0].clientX - tx[0], dy = e.changedTouches[0].clientY - tx[1]; tx = null;
-  if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) step(dx > 0 ? 1 : -1); });   // right-to-left page: swipe right = next
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) step((dx > 0) === (T.dir === 'rtl') ? 1 : -1); });   // like turning a page in the reading direction
 document.addEventListener('keydown', e => { if (e.target.closest('input,.dd') || e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.key === 'ArrowLeft') step(1); else if (e.key === 'ArrowRight') step(-1); });
+  const fwd = T.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight', bwd = T.dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+  if (e.key === fwd) step(1); else if (e.key === bwd) step(-1); });
 let lastToday = todayRiyadh();
-setDate(lastToday);
+st.date = lastToday; applyLang();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 setInterval(() => { const t = todayRiyadh(); if (t !== lastToday) { if (st.date === lastToday) st.date = t; lastToday = t; setPicker(); }
   if (st.view === 'day') render(); }, 30000);

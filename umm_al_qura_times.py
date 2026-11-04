@@ -23,7 +23,7 @@ Fitted constants (see METHOD.md): SID_OFFSET, EPS_OFFSET, SUNRISE_OFFSET; outsid
 Usage:
     from datetime import date
     from umm_al_qura_times import prayer_times
-    prayer_times(date(2027, 3, 20), 21.4225, 39.8262)                 # Makkah (zone 3)
+    prayer_times(date(2027, 3, 20), 21.426666, 39.831666)             # Makkah (zone 3)
     prayer_times(date(2027, 3, 20), 30.0444, 31.2357, tz=2)           # Cairo, API zone=2
     prayer_times_gps(date(2027, 3, 20), 21.42666712, 39.83166689)     # raw GPS, rounded like the website
 """
@@ -465,4 +465,4 @@ def prayer_times_gps(d, lat, lon, ramadan=False, tz=TZ):
 
 
 if __name__ == "__main__":
-    print(prayer_times(date(2027, 3, 20), 21.4225, 39.8262))
+    print(prayer_times(date(2027, 3, 20), 21.426666, 39.831666))

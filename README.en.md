@@ -14,8 +14,8 @@
 
 </div>
 
-> The name comes from the hadith of Ibn Mas'ud: *"I asked the Prophet ﷺ which deed is most beloved to Allah. He said: prayer on
-> its time"* (al-Bukhari and Muslim).
+> The name comes from the hadith of ʿAbdullah ibn Masʿud: *I asked the Prophet ﷺ: "Which deed is most beloved to Allah?" He said:
+> "Prayer on its time"* (*al-ṣalātu ʿalā waqtihā*). Sahih al-Bukhari 527 and Sahih Muslim 85; literal translation.
 
 ## At a glance
 
@@ -24,7 +24,8 @@
 | **14,657,797** times from the official Umm al-Qura calendar website | **67** only: grazing polar days and two historical days | **0** |
 
 - **An open formula** with no dependencies, in Python and JavaScript, plus a complete specification for porting it to any language.
-- **The «على وقتها» website** computes the times on the device, works offline and installs on a phone like an app.
+- **The On Time Prayer website** («على وقتها»), in Arabic and English, computes the times on the device, works offline and installs
+  on a phone like an app.
 - **Verifiable**: every answer of the official Umm al-Qura calendar website we used is in this repository, and one script re-runs the
   whole check.
 
@@ -38,28 +39,28 @@
 from datetime import date
 from umm_al_qura_times import prayer_times
 
-prayer_times(date(2027, 3, 20), 21.4225, 39.8262)          # Makkah, zone +3
+prayer_times(date(2027, 3, 20), 21.426666, 39.831666)      # Makkah, zone +3
 # {'fajr': '05:09', 'sunrise': '06:25', 'dhuhr': '12:29', 'asr': '15:54',
 #  'maghrib': '18:32', 'eid': '06:47', 'isha': '20:02'}
 ```
 
 ```js
 const UMQ = require('./js/umq.js');                          // browser: <script src="umq.js"></script>
-UMQ.prayerTimes('2027-03-20', 21.4225, 39.8262, 3, 0);       // date, lat, lon, zone, ramadan (1/0)
+UMQ.prayerTimes('2027-03-20', 21.426666, 39.831666, 3, 0);   // date, lat, lon, zone, ramadan (1/0)
 // { fajr: '05:09', sunrise: '06:25', dhuhr: '12:29', asr: '15:54', maghrib: '18:32', isha: '20:02', eid: '06:47' }
 ```
 
-These are the times the official Umm al-Qura calendar website shows for Makkah on 20 March 2027. In Ramadan pass `ramadan=True`
-(or `1`): Isha is then 120 minutes after Maghrib instead of 90.
+These are the times the official Umm al-Qura calendar website shows for Makkah on 20 March 2027, using the coordinates of its own
+city list. In Ramadan pass `ramadan=True` (or `1`): Isha is then 120 minutes after Maghrib instead of 90.
 
-<p align="center"><img src="docs/assets/site.png" width="560" alt="The «على وقتها» website on a phone, light and dark"></p>
+<p align="center"><img src="docs/assets/site-en.png" width="560" alt="The On Time Prayer website on a phone, in light and dark mode"></p>
 
 ---
 
 ## Why
 
 Most prayer apps compute the times with well-known astronomical formulas, and each app picks its own details: the Fajr angle,
-refraction, how seconds are rounded. So even an app set to the "Umm al-Qura method" may say 05:16 while the official Umm al-Qura
+refraction, how seconds are rounded. So an app set to its "Umm al-Qura method" may still say 05:16 when the official Umm al-Qura
 calendar website says 05:17. The Umm al-Qura calendar is the official reference in Saudi Arabia, but the formula the official
 website uses has never been published.
 
@@ -69,8 +70,9 @@ Every difference, even one time in millions, has a cause, and we did not stop un
 
 ## The difficulty: a minute hides sixty seconds
 
-The server of the official website takes a date, coordinates and a time zone and returns seven times, in whole minutes only. A model
-that is off by half a second still matches about 99 % of them, so comparing minutes, however many, proves little.
+The server behind the official Umm al-Qura calendar website takes a date, coordinates and a time zone and returns seven times, in
+whole minutes only. A model that is off by half a second still matches about 99 % of them, so comparing minutes, however many,
+proves little.
 
 ## The idea: find the moment the minute changes
 
@@ -80,8 +82,8 @@ the interval again and again.
 
 <p align="center"><img src="docs/assets/bisection.svg" width="640" alt="Each request to the server halves the interval until the moment the minute changes is found"></p>
 
-After about 14 requests we know where the minute changes, which gives the server's own time to a fraction of a millisecond, and we
-compare that with the model. All data come from the official Umm al-Qura calendar website: complete exports for 173 Saudi cities,
+After about 14 requests we know where the minute changes, which gives the server's own time to within a fraction of a
+millisecond; we then compare that with the model. All data come from the official Umm al-Qura calendar website: complete exports for 173 Saudi cities,
 cities around the world, and about 1,700 measurements at minute boundaries.
 
 ## The journey: from 99 % to zero
@@ -100,7 +102,7 @@ cities around the world, and about 1,700 measurements at minute boundaries.
 - **Outside review.** Consultants (AI agents with roles: statistician, code reviewer, attacker, numerical analyst, astronomer), blind
   tests on frozen code, and an independent JavaScript port written from the specification alone that reproduced the same results.
   ΔT was read directly from the server at 48 dates between the years 1000 and 2000.
-- **Doubling the check.** 2,804 new city-years never used to build the model.
+- **Doubling the check.** 2,804 new years of data for cities and points never used to build the model.
 
 Every step was the discovery of how the server computes, not fitting numbers to data; the empirical corrections tried on the way
 were all removed once the real cause appeared. Everything, dead ends included, is in the [research log](METHOD.md).
@@ -153,8 +155,9 @@ The comparison is reproducible: `tools/compare/adhan.mjs`, results in `data/comp
 
 ## Usage
 
-1. **The «على وقتها» website** (`site/`): one page that computes on the device, works offline after the first visit and installs
-   on a phone. 173 Saudi cities, GPS or typed coordinates, day, month and year views in the Hijri or Gregorian calendar.
+1. **The On Time Prayer website** (`site/`): one page that computes on the device, works offline after the first visit and
+   installs on a phone. Arabic and English, 173 Saudi cities, GPS or typed coordinates, and day, month and year views in the Hijri
+   or Gregorian calendar. Add `?lang=en` to the address to open it in English.
 2. **Python:** `umm_al_qura_times.py`, one file, no dependencies (see Quick start).
 3. **JavaScript:** `js/umq.js`, browser and Node, no dependencies.
 4. **Any other language:** the full specification is `ALGORITHM.md`; every server answer is in `data/vectors.csv.gz` to check your
@@ -176,7 +179,7 @@ node js/verify.js           # the same check, JavaScript
 |---|---|
 | `umm_al_qura_times.py` | Reference implementation (Python) |
 | `js/` | JavaScript port and its full check |
-| `site/` | The «على وقتها» website |
+| `site/` | The On Time Prayer website («على وقتها») |
 | `ALGORITHM.md` | Full specification for porting |
 | `METHOD.md` | Research log: every round, dead ends included |
 | `data/vectors.csv.gz` | Every server answer used: one row per date, place and time zone |
@@ -190,8 +193,8 @@ node js/verify.js           # the same check, JavaScript
 
 We do not claim "100 % guaranteed", but "matches everything we checked, with known limits":
 
-- **Not the original code.** The confidence is statistical: in Saudi Arabia the model error is below about 7 microseconds, so a time
-  lying closer than that to a minute boundary could differ. This is very rare.
+- **Not the original code.** The confidence is statistical: in Saudi Arabia the model error is below about 7 microseconds, so only
+  a time lying closer than that to a minute boundary could differ, which is very rare.
 - **If the server code of the official Umm al-Qura calendar website changes**, the formula may differ from that day; we will update it.
 - **Grazing polar days** and two historical Saudi days (1997 and 1999) are not reproduced yet.
 
