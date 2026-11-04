@@ -48,7 +48,11 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .list li[aria-selected=true]{background:var(--acc2);color:var(--acc);font-weight:600}
 @media (hover:hover){.list li:not(.none):hover{background:var(--acc2)}}
 .list li.none{color:var(--mute);cursor:default}
-.drow{display:grid;grid-template-columns:72px minmax(0,1fr) 104px;gap:8px;margin-top:10px;max-width:440px}
+.ctl{display:grid;gap:10px}
+.seg.fill{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}.seg.fill button{text-align:center;white-space:nowrap;padding-inline:6px}
+.drow{display:grid;grid-template-columns:76px minmax(0,1fr) 108px;gap:8px}
+.prefs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pr{text-align:center;margin-top:16px}
 .nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}.nav .mid{flex:1;text-align:center;min-width:0}
 .nav h2{margin:0;font-size:20px}.date1{font-weight:600}
 .ib{flex:none;width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:50%;color:var(--acc)}
@@ -72,7 +76,7 @@ h3{margin:16px 0 6px;color:var(--acc)}
 <body>
 <header class="band"><div class="in"><svg viewBox="96 88 320 330" aria-hidden="true"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/><line x1="118" y1="392" x2="394" y2="392" stroke="currentColor" stroke-width="20" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="var(--sun)"/></svg><div><h1>على وقتها</h1><p>مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت</p></div></div></header>
 <main>
-<section class="card noprint">
+<section class="card noprint ctl">
   <div class="row">
     <div class="combo">
       <input id="city" role="combobox" aria-label="المدينة" aria-expanded="false" aria-controls="clist" aria-autocomplete="list" placeholder="ابحث عن مدينتك" autocomplete="off" spellcheck="false">
@@ -81,19 +85,18 @@ h3{margin:16px 0 6px;color:var(--acc)}
     <button id="gps">موقعي</button>
     <button id="cbtn" aria-expanded="false" aria-controls="crow">إحداثيات</button>
   </div>
-  <div class="row" id="crow" hidden style="margin-top:10px">
+  <div class="row" id="crow" hidden>
     <label class="cl"><span>خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.4225" autocomplete="off"></label>
     <label class="cl"><span>خط الطول</span><input id="clon" inputmode="decimal" placeholder="مثل 39.8262" autocomplete="off"></label>
     <button id="cgo" class="pri">عرض الأوقات</button>
     <div id="cerr" class="err" hidden></div>
   </div>
-  <div class="row" style="margin-top:10px">
-    <div class="seg" id="cal" role="group" aria-label="نوع التقويم"><button data-v="h">هجري</button><button data-v="g">ميلادي</button></div>
-    <div class="seg" id="view" role="group" aria-label="العرض"><button data-v="day">يوم</button><button data-v="month">شهر</button><button data-v="year">سنة</button></div>
-    <div class="seg" id="fmt" role="group" aria-label="نظام الساعة"><button data-v="12">12 ساعة</button><button data-v="24">24 ساعة</button></div>
-    <button id="print" style="margin-inline-start:auto">طباعة / PDF</button>
-  </div>
+  <div class="seg fill" id="view" role="group" aria-label="العرض"><button data-v="day">يوم</button><button data-v="month">شهر</button><button data-v="year">سنة</button></div>
   <div class="drow"><select id="sd" aria-label="اليوم" data-num="1"></select><select id="sm" aria-label="الشهر"></select><select id="sy" aria-label="السنة" data-num="1"></select></div>
+  <div class="prefs">
+    <div class="seg fill" id="cal" role="group" aria-label="نوع التقويم"><button data-v="h">هجري</button><button data-v="g">ميلادي</button></div>
+    <div class="seg fill" id="fmt" role="group" aria-label="نظام الساعة"><button data-v="12">12 ساعة</button><button data-v="24">24 ساعة</button></div>
+  </div>
 </section>
 <section class="card" id="out"></section>
 <footer>
@@ -486,12 +489,13 @@ function table(dates) { const td = todayRiyadh(), h = st.cal === 'h';
     dates.map(s => { const t = times(s);
       return `<tr data-d="${s}"${s === td ? ' class="today"' : ''}><td>${ymd(s)[2]}</td><td>${h ? gStr(s, false) : hStr(s, false)}</td>${ORDER.map(k => `<td class="t">${show(t[k])}</td>`).join('')}</tr>`; }).join('') +
     '</tbody></table></div>'; }
+const PRINT = '<div class="pr noprint"><button data-print="1">طباعة / PDF</button></div>';
 const mName = (y, m) => st.cal === 'h' ? HMONTHS[m-1] + ' ' + y + ' هـ' : MONTHS[m-1] + ' ' + y;
 function monthView(s) { const [y, m] = ymd(s), ds = monthDates(y, m);
-  return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length-1])}</div>`) + table(ds); }
+  return nav(`<div class="date1">${mName(y, m)}</div><div class="meta">${span(ds[0], ds[ds.length-1])}</div>`) + table(ds) + PRINT; }
 function yearView(s) { const y = ymd(s)[0], h = st.cal === 'h', all = [];
   let body = ''; for (let m = 1; m <= 12; m++) { const ds = monthDates(y, m); all.push(...ds); body += `<h3>${(h ? HMONTHS : MONTHS)[m-1]}</h3>` + table(ds); }
-  return nav(`<div class="date1">${y}${h ? ' هـ' : ''}</div><div class="meta">${span(all[0], all[all.length-1], true)}</div>`) + body; }
+  return nav(`<div class="date1">${y}${h ? ' هـ' : ''}</div><div class="meta">${span(all[0], all[all.length-1], true)}</div>`) + body + PRINT; }
 function render() { $('#out').innerHTML = st.view === 'day' ? dayView(st.date) : st.view === 'month' ? monthView(st.date) : yearView(st.date); }
 
 // toggles
@@ -504,7 +508,6 @@ if (saved) Object.assign(st, {lat: saved.lat, lon: saved.lon, place: saved.place
 $('#sd').onchange = $('#sm').onchange = $('#sy').onchange = () => setDate((st.cal === 'h' ? fromH : fromG)(+$('#sy').value, +$('#sm').value, +$('#sd').value));
 const updCal = seg('#cal', 'cal', () => setDate(st.date)), updView = seg('#view', 'view', render), updFmt = seg('#fmt', 'fmt', render);
 updCal(); updView(); updFmt(); inp.value = st.place;
-$('#print').onclick = () => window.print();
 $('#gps').onclick = () => { if (!navigator.geolocation) return alert('تحديد الموقع غير متاح');
   navigator.geolocation.getCurrentPosition(p => { st.lat = UMQ.siteCoordinate(p.coords.latitude); st.lon = UMQ.siteCoordinate(p.coords.longitude);
     st.place = 'موقعي (' + st.lat + '، ' + st.lon + ')'; inp.value = st.place; save(); render(); }, () => alert('تعذّر تحديد الموقع')); };
@@ -523,7 +526,7 @@ $('#cgo').onclick = applyCoords;
 $('#clat').onkeydown = $('#clon').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyCoords(); } };
 // moving between days/months/years: arrows, "back to today", tapping a table row, swipe (day view), keyboard arrows
 const out = $('#out');
-out.onclick = e => { const g = e.target.closest('[data-go]'); if (g) { if (+g.dataset.go) return step(+g.dataset.go); st.view = 'day'; updView(); return setDate(todayRiyadh()); }
+out.onclick = e => { if (e.target.closest('[data-print]')) return window.print(); const g = e.target.closest('[data-go]'); if (g) { if (+g.dataset.go) return step(+g.dataset.go); st.view = 'day'; updView(); return setDate(todayRiyadh()); }
   const r = e.target.closest('tr[data-d]'); if (r) { st.view = 'day'; updView(); setDate(r.dataset.d); window.scrollTo({top: 0, behavior: 'smooth'}); } };
 let tx = null;
 out.addEventListener('touchstart', e => { tx = st.view === 'day' && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, {passive: true});
