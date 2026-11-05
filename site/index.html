@@ -405,7 +405,7 @@ const L = {
       1008: 'حائل', 1009: 'الحدود الشمالية', 1010: 'جازان', 1011: 'نجران', 1012: 'الباحة', 1013: 'الجوف' },
     wk: 'ar-SA-u-nu-latn', coll: 'ar',
     nearQ: c => `أنت قرب ${c}. أي الأوقات نعرض؟`, nearCity: (c, d) => `${c}<br><small>كما في موقع تقويم أم القرى الرسمي، على بعد ${d} كم</small>`,
-    nearHere: 'موقعك الحالي', same: 'الأوقات اليوم متطابقة في الخيارين.',
+    nearHere: 'موقعك الحالي<br><small>بإحداثياتك بالضبط</small>', same: 'الأوقات اليوم متطابقة في الخيارين.',
     diff: n => `يختلف اليوم ${n === 1 ? 'وقت واحد' : n === 2 ? 'وقتان' : n + ' أوقات'} بين الخيارين، بدقيقة أو أكثر.`,
     instA: 'ثبّت «على وقتها» على جوالك، ويعمل بلا إنترنت.', instGo: 'تثبيت', instI: 'لتثبيت «على وقتها»: اضغط زر المشاركة في Safari، ثم «إضافة إلى الشاشة الرئيسية».', close: 'إغلاق',
   },
@@ -430,7 +430,7 @@ const L = {
       1008: 'Hail', 1009: 'Northern Borders', 1010: 'Jazan', 1011: 'Najran', 1012: 'Al Bahah', 1013: 'Al Jawf' },
     wk: 'en-GB', coll: 'en',
     nearQ: c => `You are near ${c}. Which times should we show?`, nearCity: (c, d) => `${c}<br><small>as on the official Umm al-Qura calendar website, ${d} km away</small>`,
-    nearHere: 'Your location', same: 'Today both choices give the same times.',
+    nearHere: 'Your location<br><small>your exact coordinates</small>', same: 'Today both choices give the same times.',
     diff: n => `Today ${n === 1 ? 'one time differs' : n + ' times differ'} between the two choices, by a minute or more.`,
     instA: 'Install On Time Prayer on your phone; it works offline.', instGo: 'Install', instI: 'To install On Time Prayer: tap Share in Safari, then “Add to Home Screen”.', close: 'Close',
   }
