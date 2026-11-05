@@ -41,7 +41,7 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .seg button[aria-pressed=true]{background:var(--acc2);color:var(--acc);font-weight:600}
 [hidden]{display:none!important}.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.err{color:var(--warn);font-size:14px;width:100%}
 #crow{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}#crow[hidden]{display:none}
-.cl{display:grid;gap:2px;min-width:0}.cl input{width:100%;min-width:0}.cl span{font-size:13px;color:var(--mute)}#cgo,#cerr{grid-column:1/-1}
+.cl{display:grid;gap:2px;min-width:0}.cl input{width:100%;min-width:0}.cl span{font-size:13px;color:var(--mute)}#cerr{grid-column:1/-1}
 .r1{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px}
 .combo{position:relative;min-width:0}.combo input{width:100%}
 .dd{position:relative;min-width:0}
@@ -123,6 +123,7 @@ a{color:var(--acc)}
     <label class="cl"><span id="llat">خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.426666" autocomplete="off"></label>
     <label class="cl"><span id="llon">خط الطول</span><input id="clon" inputmode="decimal" placeholder="مثل 39.831666" autocomplete="off"></label>
     <button id="cgo" class="pri">عرض الأوقات</button>
+    <button id="cx" type="button">إلغاء</button>
     <div id="cerr" class="err" hidden></div>
   </div>
   <div class="seg fill" id="view" role="group" aria-label="العرض"><button data-v="day">يوم</button><button data-v="month">شهر</button><button data-v="year">سنة</button></div>
@@ -389,7 +390,7 @@ const L = {
     themes: { auto: 'الثيم: تلقائي حسب الجهاز', light: 'الثيم: فاتح', dark: 'الثيم: داكن' },
     tag: 'مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت',
     search: 'ابحث عن مدينتك', city: 'المدينة', cities: 'المدن', gps: 'موقعي', coords: 'إحداثيات', lat: 'خط العرض', lon: 'خط الطول',
-    eg: 'مثل', showT: 'عرض الأوقات', views: { day: 'يوم', month: 'شهر', year: 'سنة' }, viewL: 'العرض',
+    eg: 'مثل', showT: 'عرض الأوقات', cancel: 'إلغاء', views: { day: 'يوم', month: 'شهر', year: 'سنة' }, viewL: 'العرض',
     cals: { h: 'هجري', g: 'ميلادي' }, calL: 'نوع التقويم', fmts: { 12: '12 ساعة', 24: '24 ساعة' }, fmtL: 'نظام الساعة',
     dd: { sd: 'اليوم', sm: 'الشهر', sy: 'السنة' }, none: 'لا توجد نتائج', back: 'العودة إلى اليوم', print: 'طباعة / PDF',
     invalid: 'تاريخ غير صالح', prev: { day: 'اليوم السابق', month: 'الشهر السابق', year: 'السنة السابقة' },
@@ -414,7 +415,7 @@ const L = {
     themes: { auto: 'Theme: automatic (device)', light: 'Theme: light', dark: 'Theme: dark' },
     tag: 'Prayer times matching the official Umm al-Qura calendar website, computed on your device, offline',
     search: 'Search for your city', city: 'City', cities: 'Cities', gps: 'Locate me', coords: 'Lat/Long', lat: 'Latitude', lon: 'Longitude',
-    eg: 'e.g.', showT: 'Show times', views: { day: 'Day', month: 'Month', year: 'Year' }, viewL: 'View',
+    eg: 'e.g.', showT: 'Show times', cancel: 'Cancel', views: { day: 'Day', month: 'Month', year: 'Year' }, viewL: 'View',
     cals: { h: 'Hijri', g: 'Gregorian' }, calL: 'Calendar', fmts: { 12: '12-hour', 24: '24-hour' }, fmtL: 'Clock',
     dd: { sd: 'Day', sm: 'Month', sy: 'Year' }, none: 'No results', back: 'Back to today', print: 'Print / PDF',
     invalid: 'Invalid date', prev: { day: 'Previous day', month: 'Previous month', year: 'Previous year' },
@@ -601,7 +602,7 @@ function applyLang() {
   $('#bname').textContent = T.name; $('#btag').textContent = T.tag; $('#lang').textContent = T.other; $('#lang').setAttribute('aria-label', T.otherL); $('#lang').title = T.otherL; applyTheme();
   $('#lang').setAttribute('lang', st.lang === 'ar' ? 'en' : 'ar');
   inp.placeholder = T.search; inp.setAttribute('aria-label', T.city); clist.setAttribute('aria-label', T.cities);
-  $('#gps').textContent = T.gps; $('#cbtn').textContent = T.coords; $('#cgo').textContent = T.showT;
+  $('#gps').textContent = T.gps; $('#cbtn').textContent = T.coords; $('#cgo').textContent = T.showT; $('#cx').textContent = T.cancel;
   $('#llat').textContent = T.lat; $('#llon').textContent = T.lon;
   $('#clat').placeholder = T.eg + ' 21.426666'; $('#clon').placeholder = T.eg + ' 39.831666';
   $('#view').setAttribute('aria-label', T.viewL); $('#cal').setAttribute('aria-label', T.calL); $('#fmt').setAttribute('aria-label', T.fmtL);
@@ -671,7 +672,9 @@ function applyCoords() {
   Object.assign(st, { lat: UMQ.siteCoordinate(lat), lon: UMQ.siteCoordinate(lon), kind: 'coord' });
   inp.value = placeName(); save(); render(); $('#crow').hidden = true; $('#cbtn').setAttribute('aria-expanded', 'false'); }
 $('#cgo').onclick = applyCoords;
-$('#clat').onkeydown = $('#clon').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyCoords(); } };
+function closeCoords() { $('#crow').hidden = true; $('#cerr').hidden = true; $('#cbtn').setAttribute('aria-expanded', 'false'); $('#cbtn').focus(); }
+$('#cx').onclick = closeCoords;
+$('#clat').onkeydown = $('#clon').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyCoords(); } else if (e.key === 'Escape') closeCoords(); };
 // moving between days/months/years: arrows, "back to today", tapping a table row, swipe (day view), keyboard arrows
 const out = $('#out');
 out.onclick = e => { if (e.target.closest('[data-print]')) return window.print(); const g = e.target.closest('[data-go]'); if (g) { if (+g.dataset.go) return step(+g.dataset.go); st.view = 'day'; updView(); return setDate(todayRiyadh()); }
