@@ -39,7 +39,7 @@ input:focus-visible,button:focus-visible{outline:none;border-color:var(--acc);bo
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
 .seg button{border:0;border-radius:0;padding:8px 12px}.seg button+button{border-inline-start:1px solid var(--line)}
 .seg button[aria-pressed=true]{background:var(--acc2);color:var(--acc);font-weight:600}
-[hidden]{display:none!important}.pri{background:var(--acc);color:#fff;border-color:var(--acc)}.err{color:var(--warn);font-size:14px;width:100%}
+[hidden]{display:none!important}.pri{background:var(--acc);color:var(--onacc);border-color:var(--acc)}.err{color:var(--warn);font-size:14px;width:100%}
 #crow{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}#crow[hidden]{display:none}
 .cl{display:grid;gap:2px;min-width:0}.cl input{width:100%;min-width:0}.cl span{font-size:13px;color:var(--mute)}#cerr{grid-column:1/-1}
 .r1{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px}
@@ -95,7 +95,7 @@ tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:va
 .mon h3{margin:18px 2px 8px;color:var(--acc);font-size:19px}.mon:first-of-type h3{margin-top:6px}
 a{color:var(--acc)}
 .near{background:var(--acc2);border:1px solid var(--line);border-radius:12px;padding:12px}.near p{margin:0 0 10px;font-weight:600}
-.nearb{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nearb button{white-space:normal;line-height:1.35}.near small{display:block;margin-top:8px;color:var(--mute)}
+.nearb{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nearb button{white-space:normal;line-height:1.35;font-weight:600}.nearb small{display:block;margin-top:3px;font-size:13px;font-weight:400;color:inherit;opacity:.88}
 .inst{position:fixed;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:10px;background:var(--band);color:var(--bandink);border-radius:14px;padding:10px 10px 10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:560px;margin:0 auto}
 .inst span{flex:1;font-size:14px;line-height:1.5}.inst .pri{background:var(--brass);border-color:var(--brass);color:#13201B;font-weight:600}.inst .x{background:transparent;border:0;color:var(--bandink);font-size:22px;padding:2px 8px}
 @page{size:A4;margin:12mm}
@@ -117,7 +117,6 @@ a{color:var(--acc)}
   <div id="near" class="near" hidden>
     <p id="nearq"></p>
     <div class="nearb"><button id="ncity" class="pri"></button><button id="nhere"></button></div>
-    <small id="nnote"></small>
   </div>
   <div id="crow" hidden>
     <label class="cl"><span id="llat">خط العرض</span><input id="clat" inputmode="decimal" placeholder="مثل 21.426666" autocomplete="off"></label>
@@ -396,7 +395,7 @@ const L = {
     invalid: 'تاريخ غير صالح', prev: { day: 'اليوم السابق', month: 'الشهر السابق', year: 'السنة السابقة' },
     next: { day: 'اليوم التالي', month: 'الشهر التالي', year: 'السنة التالية' },
     left: n => `المتبقي على ${n}:`, after: 'بعد', thWk: 'اليوم', wks: ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'], thDay: 'اليوم', thH: 'الهجري', thG: 'الميلادي', AH: ' هـ', am: 'ص', pm: 'م', wsep: '، ',
-    myloc: (a, b) => `موقعي (${a}، ${b})`, coordPlace: (a, b) => `إحداثيات (${a}، ${b})`, tCity: 'مدينة', tGov: 'محافظة',
+    myloc: () => 'موقعي', coordPlace: (a, b) => `إحداثيات (${a}، ${b})`, tCity: 'مدينة', tGov: 'محافظة',
     coordErr: 'اكتب خط العرض بين −90 و90، وخط الطول بين −180 و180، بالأرقام العشرية.',
     noGeo: 'تحديد الموقع غير متاح في هذا المتصفح', geoFail: 'تعذّر تحديد الموقع. تأكد من السماح للموقع بمعرفة موقعك.',
     names: { fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' },
@@ -406,7 +405,7 @@ const L = {
       1008: 'حائل', 1009: 'الحدود الشمالية', 1010: 'جازان', 1011: 'نجران', 1012: 'الباحة', 1013: 'الجوف' },
     wk: 'ar-SA-u-nu-latn', coll: 'ar',
     nearQ: c => `أنت قرب ${c}. أي الأوقات نعرض؟`, nearCity: (c, d) => `${c}<br><small>كما في موقع تقويم أم القرى الرسمي، على بعد ${d} كم</small>`,
-    nearHere: 'موقعك الحالي<br><small>بإحداثياتك بالضبط</small>', same: 'الأوقات اليوم متطابقة في الخيارين.',
+    nearHere: 'موقعك الحالي', same: 'الأوقات اليوم متطابقة في الخيارين.',
     diff: n => `يختلف اليوم ${n === 1 ? 'وقت واحد' : n === 2 ? 'وقتان' : n + ' أوقات'} بين الخيارين، بدقيقة أو أكثر.`,
     instA: 'ثبّت «على وقتها» على جوالك، ويعمل بلا إنترنت.', instGo: 'تثبيت', instI: 'لتثبيت «على وقتها»: اضغط زر المشاركة في Safari، ثم «إضافة إلى الشاشة الرئيسية».', close: 'إغلاق',
   },
@@ -421,7 +420,7 @@ const L = {
     invalid: 'Invalid date', prev: { day: 'Previous day', month: 'Previous month', year: 'Previous year' },
     next: { day: 'Next day', month: 'Next month', year: 'Next year' },
     left: n => `${n} in`, after: 'in', thWk: 'Day', wks: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], thDay: 'Day', thH: 'Hijri', thG: 'Gregorian', AH: ' AH', am: 'AM', pm: 'PM', wsep: ', ',
-    myloc: (a, b) => `My location (${a}, ${b})`, coordPlace: (a, b) => `Coordinates (${a}, ${b})`, tCity: 'city', tGov: 'governorate',
+    myloc: () => 'My location', coordPlace: (a, b) => `Coordinates (${a}, ${b})`, tCity: 'city', tGov: 'governorate',
     coordErr: 'Enter a latitude between −90 and 90 and a longitude between −180 and 180, in decimal degrees.',
     noGeo: 'Location is not available in this browser', geoFail: 'Could not get your location. Allow this website to use your location.',
     names: { fajr: 'Fajr', sunrise: 'Sunrise', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' },
@@ -431,7 +430,7 @@ const L = {
       1008: 'Hail', 1009: 'Northern Borders', 1010: 'Jazan', 1011: 'Najran', 1012: 'Al Bahah', 1013: 'Al Jawf' },
     wk: 'en-GB', coll: 'en',
     nearQ: c => `You are near ${c}. Which times should we show?`, nearCity: (c, d) => `${c}<br><small>as on the official Umm al-Qura calendar website, ${d} km away</small>`,
-    nearHere: 'Your location<br><small>your exact coordinates</small>', same: 'Today both choices give the same times.',
+    nearHere: 'Your location', same: 'Today both choices give the same times.',
     diff: n => `Today ${n === 1 ? 'one time differs' : n + ' times differ'} between the two choices, by a minute or more.`,
     instA: 'Install On Time Prayer on your phone; it works offline.', instGo: 'Install', instI: 'To install On Time Prayer: tap Share in Safari, then “Add to Home Screen”.', close: 'Close',
   }
@@ -640,10 +639,8 @@ $('#gps').onclick = () => { if (!navigator.geolocation) return alert(T.noGeo);
     const lat = UMQ.siteCoordinate(p.coords.latitude), lon = UMQ.siteCoordinate(p.coords.longitude);
     let best = null, bd = Infinity; for (const x of ITEMS) { const d = km(lat, lon, x.c[3], x.c[4]); if (d < bd) { bd = d; best = x; } }
     if (!best || bd > NEAR_KM) return useGps(lat, lon);
-    const td = todayRiyadh(), r = H(td)[1] === 9 ? 1 : 0, a = UMQ.prayerTimes(td, lat, lon, 3, r), b = UMQ.prayerTimes(td, best.c[3], best.c[4], 3, r);
-    const n = ORDER.filter(k => a && b && a[k] !== b[k]).length;
     $('#nearq').textContent = T.nearQ(cityName(best)); $('#ncity').innerHTML = T.nearCity(cityName(best), Math.max(1, Math.round(bd)));
-    $('#nhere').innerHTML = T.nearHere; $('#nnote').textContent = n ? T.diff(n) : T.same; $('#near').hidden = false;
+    $('#nhere').innerHTML = T.nearHere; $('#near').hidden = false;
     $('#ncity').onclick = () => { $('#near').hidden = true; pick(best); };
     $('#nhere').onclick = () => useGps(lat, lon);
   }, () => alert(T.geoFail), { enableHighAccuracy: true, timeout: 15000 }); };
