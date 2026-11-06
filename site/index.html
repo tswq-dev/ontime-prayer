@@ -6,6 +6,19 @@
 <title>على وقتها — مواقيت الصلاة</title>
 <meta name="description" content="مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت">
 <meta name="theme-color" content="#0B4D3B">
+<meta name="google-site-verification" content="tPSMAjZ41yGuZuZSSlLQb-bqGrQCKecxAlLtaZ9j8bI">
+<link rel="alternate" hreflang="ar" href="https://ontime-prayer.pages.dev/">
+<link rel="alternate" hreflang="en" href="https://ontime-prayer.pages.dev/?lang=en">
+<link rel="alternate" hreflang="x-default" href="https://ontime-prayer.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="على وقتها — On Time Prayer">
+<meta property="og:title" content="على وقتها — مواقيت الصلاة">
+<meta property="og:description" content="مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت">
+<meta property="og:url" content="https://ontime-prayer.pages.dev/">
+<meta property="og:image" content="https://ontime-prayer.pages.dev/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:locale" content="ar_SA"><meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" href="favicon.png">
@@ -600,7 +613,7 @@ function seg(id, key, cb) { const g = $(id), upd = () => g.querySelectorAll('but
 // language: every visible string comes from L
 function applyLang() {
   T = L[st.lang]; wkf = new Intl.DateTimeFormat(T.wk, { weekday: 'long', timeZone: 'UTC' });
-  const root = document.documentElement; root.lang = st.lang; root.dir = T.dir; document.title = T.doc;
+  const root = document.documentElement; root.lang = st.lang; root.dir = T.dir; document.title = T.doc; document.querySelector('meta[name=description]').content = T.tag;
   $('#bname').textContent = T.name; $('#btag').textContent = T.tag; $('#lang').textContent = T.other; $('#lang').setAttribute('aria-label', T.otherL); $('#lang').title = T.otherL; applyTheme();
   $('#lang').setAttribute('lang', st.lang === 'ar' ? 'en' : 'ar');
   inp.placeholder = T.search; inp.setAttribute('aria-label', T.city); clist.setAttribute('aria-label', T.cities);
