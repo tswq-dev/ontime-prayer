@@ -23,7 +23,8 @@
 |---|---|---|
 | **14,657,797** times from the official Umm al-Qura calendar website | **67** only: grazing polar days and two historical days | **0** |
 
-- **An open formula** with no dependencies, in Python and JavaScript, plus a complete specification for porting it to any language.
+- **An open formula** with no dependencies, in five languages: Python, JavaScript, Kotlin (Android), Swift (iOS) and Dart (Flutter),
+  each checked automatically on all the data, plus a complete specification for porting it to any other language.
 - **[The On Time Prayer website](https://ontime-prayer.pages.dev/?lang=en)** («على وقتها»), in Arabic and English, computes the times on the device, works offline and installs
   on a phone like an app.
 - **Verifiable**: every answer of the official Umm al-Qura calendar website we used is in this repository, and one script re-runs the
@@ -48,6 +49,18 @@ prayer_times(date(2027, 3, 20), 21.426666, 39.831666)      # Makkah, zone +3
 const UMQ = require('./js/umq.js');                          // browser: <script src="umq.js"></script>
 UMQ.prayerTimes('2027-03-20', 21.426666, 39.831666, 3, 0);   // date, lat, lon, zone, ramadan (1/0)
 // { fajr: '05:09', sunrise: '06:25', dhuhr: '12:29', asr: '15:54', maghrib: '18:32', isha: '20:02', eid: '06:47' }
+```
+
+```kotlin
+UmmAlQura.prayerTimes("2027-03-20", 21.426666, 39.831666)                       // Kotlin (Android)
+```
+
+```swift
+UmmAlQura.prayerTimes(date: "2027-03-20", lat: 21.426666, lon: 39.831666)       // Swift (iOS)
+```
+
+```dart
+UmmAlQura.prayerTimes('2027-03-20', 21.426666, 39.831666)                       // Dart (Flutter)
 ```
 
 These are the times the official Umm al-Qura calendar website shows for Makkah on 20 March 2027, using the coordinates of its own
@@ -160,7 +173,9 @@ The comparison is reproducible: `tools/compare/adhan.mjs`, results in `data/comp
    or Gregorian calendar. Add `?lang=en` to the address to open it in English.
 2. **Python:** `umm_al_qura_times.py`, one file, no dependencies (see Quick start).
 3. **JavaScript:** `js/umq.js`, browser and Node, no dependencies.
-4. **Any other language:** the full specification is `ALGORITHM.md`; every server answer is in `data/vectors.csv.gz` to check your
+4. **Mobile apps:** `ports/kotlin/UmmAlQura.kt` (Android), `ports/swift/UmmAlQura.swift` (iOS) and `ports/dart/umm_al_qura.dart`
+   (Flutter): one file per language, no dependencies, each checked automatically on all 14,657,797 values on every change.
+5. **Any other language:** the full specification is `ALGORITHM.md`; every server answer is in `data/vectors.csv.gz` to check your
    port.
 
 Ramadan follows the Umm al-Qura Hijri calendar. In a browser the built-in `islamic-umalqura` calendar is enough: it matched the
@@ -179,6 +194,7 @@ node js/verify.js           # the same check, JavaScript
 |---|---|
 | `umm_al_qura_times.py` | Reference implementation (Python) |
 | `js/` | JavaScript port and its full check |
+| `ports/` | Kotlin, Swift and Dart ports, each with a full check |
 | `site/` | The On Time Prayer website («على وقتها») |
 | `ALGORITHM.md` | Full specification for porting |
 | `METHOD.md` | Research log: every round, dead ends included |
@@ -187,6 +203,7 @@ node js/verify.js           # the same check, JavaScript
 | `data/raw/` | Raw data as collected |
 | `tools/` | Verification script and the browser scripts used to collect the data |
 | `tools/compare/` | Comparison of the adhan library with the official website |
+| `docs/brief/` | Two-page brief (Arabic and English) for organisations and app makers |
 | `docs/reviews/` | Reviews by the consultants (AI agents) |
 
 ## Known limits
