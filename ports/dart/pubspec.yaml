@@ -1,0 +1,7 @@
+name: ontime_prayer
+description: Prayer times identical to the official Umm al-Qura calendar website, to the minute. One file, no dependencies, works offline.
+version: 1.0.0
+homepage: https://ontime-prayer.pages.dev
+repository: https://github.com/tswq-dev/ontime-prayer
+environment:
+  sdk: ">=3.0.0 <4.0.0"

@@ -171,9 +171,31 @@ UmmAlQura.prayerTimes('2027-03-20', 21.426666, 39.831666)                       
    والإنجليزية.
 2. **بايثون:** `umm_al_qura_times.py`، ملف واحد بلا مكتبات خارجية (مثاله في البدء السريع).
 3. **جافاسكربت:** `js/umq.js`، للمتصفح وNode، بلا مكتبات.
-4. **تطبيقات الجوال:** `ports/kotlin/UmmAlQura.kt` لأندرويد، و`ports/swift/UmmAlQura.swift` لآيفون، و`ports/dart/umm_al_qura.dart`
-   لـ Flutter. ملف واحد لكل لغة بلا مكتبات، وكل نسخة تُفحص تلقائياً على الأوقات الـ14,657,797 مع كل تعديل.
+4. **تطبيقات الجوال:** `ports/kotlin/UmmAlQura.kt` لأندرويد، و`ports/swift/UmmAlQura.swift` لآيفون، و`ports/dart/lib/umm_al_qura.dart`
+   لـ Flutter. ملف واحد لكل لغة بلا مكتبات، وكل نسخة تُفحص تلقائياً على الأوقات الـ14,657,797 مع كل تعديل. وتُضاف إلى التطبيق
+   بسطر واحد كما تحت القائمة، أو بنسخ الملف.
 5. **لغة أخرى:** المواصفة الكاملة في `ALGORITHM.md`، وكل أجوبة الخادم في `data/vectors.csv.gz` لتتحقق من نسختك.
+
+</div>
+
+```kotlin
+// Android: build.gradle.kts, with maven("https://jitpack.io") in repositories
+implementation("com.github.tswq-dev:ontime-prayer:1.0.0")              // import org.ontimeprayer.UmmAlQura
+```
+
+```swift
+// iOS: Xcode › File › Add Package Dependencies…, or in Package.swift
+.package(url: "https://github.com/tswq-dev/ontime-prayer", from: "1.0.0")  // import OnTimePrayer
+```
+
+```yaml
+# Flutter: pubspec.yaml                       # import 'package:ontime_prayer/umm_al_qura.dart';
+dependencies:
+  ontime_prayer:
+    git: { url: https://github.com/tswq-dev/ontime-prayer, path: ports/dart, ref: 1.0.0 }
+```
+
+<div dir="rtl">
 
 يُعرف رمضان من التاريخ الهجري في تقويم أم القرى. في المتصفح يكفي تقويم `islamic-umalqura` المدمج، وقد طابق التاريخ الهجري في موقع
 تقويم أم القرى الرسمي في كل يوم من 1940 إلى 2150.

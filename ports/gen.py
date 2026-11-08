@@ -15,7 +15,7 @@ def terms(keys, lang):
     return (',\n        ' if lang == 'kt' else ',\n    ').join(out)
 L, B = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'], ['B0', 'B1']
 dt = ', '.join(num(x) for x in DT)
-for tpl, out, lang in [('UmmAlQura.kt.tpl', 'kotlin/UmmAlQura.kt', 'kt'), ('UmmAlQura.swift.tpl', 'swift/UmmAlQura.swift', 'sw'), ('umm_al_qura.dart.tpl', 'dart/umm_al_qura.dart', 'dart')]:
+for tpl, out, lang in [('UmmAlQura.kt.tpl', 'kotlin/UmmAlQura.kt', 'kt'), ('UmmAlQura.swift.tpl', 'swift/UmmAlQura.swift', 'sw'), ('umm_al_qura.dart.tpl', 'dart/lib/umm_al_qura.dart', 'dart')]:
     p = R / 'templates' / tpl
     if not p.exists(): continue
     s = p.read_text().replace('%L_TERMS%', terms(L, lang)).replace('%B_TERMS%', terms(B, lang)).replace('%DT_TABLE%', dt)

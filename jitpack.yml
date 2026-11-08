@@ -1,0 +1,5 @@
+# JitPack: implementation("com.github.tswq-dev:ontime-prayer:<tag>"), with maven("https://jitpack.io") in repositories.
+jdk:
+  - openjdk17
+install:
+  - cd ports/kotlin && ./gradlew publishToMavenLocal

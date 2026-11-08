@@ -1,9 +1,9 @@
 name: ports
 on:
   push:
-    paths: ['ports/**', 'js/umq.js', 'data/**', '.github/workflows/ports.yml']
+    paths: ['ports/**', 'js/umq.js', 'data/**', 'Package.swift', 'jitpack.yml', '.github/workflows/ports.yml']
   pull_request:
-    paths: ['ports/**', 'js/umq.js', 'data/**', '.github/workflows/ports.yml']
+    paths: ['ports/**', 'js/umq.js', 'data/**', 'Package.swift', 'jitpack.yml', '.github/workflows/ports.yml']
   workflow_dispatch:
 jobs:
   kotlin:
@@ -21,6 +21,10 @@ jobs:
         run: |
           ./kotlinc/bin/kotlinc ports/kotlin/UmmAlQura.kt ports/kotlin/Verify.kt -include-runtime -d verify.jar
           zcat data/vectors.csv.gz | java -jar verify.jar | python3 ports/check.py
+      - name: Library package builds (what JitPack runs)
+        run: |
+          cd ports/kotlin && ./gradlew --no-daemon -q publishToMavenLocal
+          unzip -l ~/.m2/repository/com/github/tswq-dev/ontime-prayer/1.0.0/ontime-prayer-1.0.0.jar | grep 'org/ontimeprayer/UmmAlQura.class'
   swift:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -31,6 +35,8 @@ jobs:
           swiftc --version
           swiftc -O ports/swift/UmmAlQura.swift ports/swift/Verify/main.swift -o verify
           zcat data/vectors.csv.gz | ./verify | python3 ports/check.py
+      - name: Swift package builds
+        run: swift build
   dart:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -39,5 +45,5 @@ jobs:
       - uses: dart-lang/setup-dart@v1
       - name: Every server value, exactly the 67 known mismatches
         run: |
-          dart compile exe ports/dart/verify.dart -o verify
+          (cd ports/dart && dart pub get && dart compile exe bin/verify.dart -o ../../verify)
           zcat data/vectors.csv.gz | ./verify | python3 ports/check.py

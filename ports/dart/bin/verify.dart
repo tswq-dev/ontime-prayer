@@ -1,7 +1,7 @@
 // Reads data/vectors.csv (plain CSV on stdin), prints one line per mismatch (ds|date|lat|lon|zone|field|want) and "values N".
 import 'dart:convert';
 import 'dart:io';
-import 'umm_al_qura.dart';
+import 'package:ontime_prayer/umm_al_qura.dart';
 
 Future<void> main() async {
   const ev = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha', 'eid'];

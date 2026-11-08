@@ -173,10 +173,28 @@ The comparison is reproducible: `tools/compare/adhan.mjs`, results in `data/comp
    or Gregorian calendar. Add `?lang=en` to the address to open it in English.
 2. **Python:** `umm_al_qura_times.py`, one file, no dependencies (see Quick start).
 3. **JavaScript:** `js/umq.js`, browser and Node, no dependencies.
-4. **Mobile apps:** `ports/kotlin/UmmAlQura.kt` (Android), `ports/swift/UmmAlQura.swift` (iOS) and `ports/dart/umm_al_qura.dart`
+4. **Mobile apps:** `ports/kotlin/UmmAlQura.kt` (Android), `ports/swift/UmmAlQura.swift` (iOS) and `ports/dart/lib/umm_al_qura.dart`
    (Flutter): one file per language, no dependencies, each checked automatically on all 14,657,797 values on every change.
+   Add one to an app with a single line, as shown below this list, or copy the file.
 5. **Any other language:** the full specification is `ALGORITHM.md`; every server answer is in `data/vectors.csv.gz` to check your
    port.
+
+```kotlin
+// Android: build.gradle.kts, with maven("https://jitpack.io") in repositories
+implementation("com.github.tswq-dev:ontime-prayer:1.0.0")              // import org.ontimeprayer.UmmAlQura
+```
+
+```swift
+// iOS: Xcode › File › Add Package Dependencies…, or in Package.swift
+.package(url: "https://github.com/tswq-dev/ontime-prayer", from: "1.0.0")  // import OnTimePrayer
+```
+
+```yaml
+# Flutter: pubspec.yaml                       # import 'package:ontime_prayer/umm_al_qura.dart';
+dependencies:
+  ontime_prayer:
+    git: { url: https://github.com/tswq-dev/ontime-prayer, path: ports/dart, ref: 1.0.0 }
+```
 
 Ramadan follows the Umm al-Qura Hijri calendar. In a browser the built-in `islamic-umalqura` calendar is enough: it matched the
 Hijri date of the official Umm al-Qura calendar website on every day from 1940 to 2150.

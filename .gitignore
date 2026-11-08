@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+ports/dart/.dart_tool/
+ports/dart/pubspec.lock
+ports/kotlin/build/
+ports/kotlin/.gradle/
+.build/
