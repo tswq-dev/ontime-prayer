@@ -21,8 +21,8 @@ java {
 }
 
 // Readable by apps on Kotlin 1.9 and later.
-coreLibrariesVersion = "1.9.24"
 kotlin {
+    coreLibrariesVersion = "1.9.24"
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_1_8)
         languageVersion.set(KotlinVersion.KOTLIN_1_9)
