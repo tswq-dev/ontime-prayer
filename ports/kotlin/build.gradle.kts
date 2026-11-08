@@ -17,7 +17,11 @@ sourceSets { main { kotlin { setSrcDirs(listOf(".")); include("UmmAlQura.kt") } 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
-    withSourcesJar()
+}
+
+val sourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from("UmmAlQura.kt")
 }
 
 // Readable by apps on Kotlin 1.9 and later.
@@ -35,6 +39,7 @@ publishing {
         create<MavenPublication>("maven") {
             artifactId = "ontime-prayer"
             from(components["java"])
+            artifact(sourcesJar)
         }
     }
 }
