@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -30,3 +30,12 @@ jobs:
         with:
           name: ontime-prayer-apk
           path: ontime-prayer.apk
+      # Trial builds are released only from the private repo, so the public one stays clean.
+      - uses: softprops/action-gh-release@v2
+        if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+        with:
+          tag_name: app-${{ github.run_number }}
+          name: "على وقتها - نسخة تجريبية ${{ github.run_number }}"
+          body: "حمّل ملف ontime-prayer.apk وثبّته على جوال أندرويد."
+          files: ontime-prayer.apk
+          prerelease: true
