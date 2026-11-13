@@ -106,7 +106,8 @@ object Alerts {
     }
 
     /** Sound for a voice: a bundled recording (res/raw/adhan_<voice>) if present, else a system sound. */
-    fun soundUri(ctx: Context, voice: String): Pair<Uri?, Boolean> {
+    fun soundUri(ctx: Context, voice: String, userFile: Boolean = true): Pair<Uri?, Boolean> {
+        if (userFile) Scheduler.prefs(ctx).getString("soundUri_$voice", null)?.let { return Uri.parse(it) to true }
         val id = ctx.resources.getIdentifier("adhan_$voice", "raw", ctx.packageName)
         if (id != 0) return Uri.parse("android.resource://${ctx.packageName}/$id") to true
         val type = if (voice == "tone") RingtoneManager.TYPE_NOTIFICATION else RingtoneManager.TYPE_ALARM
@@ -127,6 +128,7 @@ object Alerts {
         val uri = soundUri(ctx, voice).first ?: return
         try {
             preview = MediaPlayer().apply {
+                setOnErrorListener { _, _, _ -> stopPreview(); true }
                 setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                 setDataSource(ctx, uri)
                 setOnCompletionListener { stopPreview() }

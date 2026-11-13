@@ -42,19 +42,28 @@ class AdhanService : Service() {
 
         player?.release(); player = null
         main.removeCallbacksAndMessages(null)
-        val (uri, recorded) = Alerts.soundUri(this, voice)
-        try {
+        // The user's file first; if it can no longer be read (deleted, moved), fall back to the built-in sound.
+        var recorded = play(Alerts.soundUri(this, voice))
+        if (recorded == null) recorded = play(Alerts.soundUri(this, voice, userFile = false))
+        if (recorded == null) { stopSelf(); return START_NOT_STICKY }
+        // A full recording ends by itself; a system sound is cut after half a minute.
+        main.postDelayed({ stopSelf() }, if (recorded) 6 * 60_000L else 30_000L)
+        return START_NOT_STICKY
+    }
+
+    private fun play(src: Pair<android.net.Uri?, Boolean>): Boolean? {
+        val uri = src.first ?: return null
+        player?.release(); player = null
+        return try {
             player = MediaPlayer().apply {
                 setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                setDataSource(this@AdhanService, uri!!)
+                setDataSource(this@AdhanService, uri)
                 setOnCompletionListener { stopSelf() }
                 setOnErrorListener { _, _, _ -> stopSelf(); true }
                 prepare(); start()
             }
-        } catch (e: Exception) { stopSelf() }
-        // A full recording ends by itself; a system sound is cut after half a minute.
-        main.postDelayed({ stopSelf() }, if (recorded) 6 * 60_000L else 30_000L)
-        return START_NOT_STICKY
+            src.second
+        } catch (e: Exception) { player?.release(); player = null; null }
     }
 
     override fun onDestroy() {
