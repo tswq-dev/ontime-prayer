@@ -19,6 +19,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
@@ -34,6 +35,10 @@ class MainActivity : ComponentActivity() {
         if (res.values.any { it }) locateNow() else jsError("denied")
     }
     private var pendingVoice = ""
+    // While a settings sheet is open, Back closes it instead of leaving the app.
+    private val closeSheet = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() { web.evaluateJavascript("window.__closeSheet&&__closeSheet()", null) }
+    }
     private val pickAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) keepSound(pendingVoice, uri) }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -53,6 +58,7 @@ class MainActivity : ComponentActivity() {
             WindowInsetsCompat.CONSUMED
         }
         setContentView(root)
+        onBackPressedDispatcher.addCallback(this, closeSheet)
 
         web.setBackgroundColor(getColor(R.color.bg))
         web.settings.javaScriptEnabled = true
@@ -99,6 +105,9 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun schedule(json: String) {
             runCatching { Scheduler.save(applicationContext, json) }
         }
+        @JavascriptInterface fun sheet(open: Boolean) { main.post { closeSheet.isEnabled = open } }
+        @JavascriptInterface fun reminder(pk: String): String = Reminders.find(applicationContext, pk)?.optLong("at")?.toString() ?: ""
+        @JavascriptInterface fun cancelRemind(pk: String) { main.post { runCatching { Alerts.unremind(applicationContext, pk) } } }
         @JavascriptInterface fun remind(json: String) {
             main.post { runCatching { Alerts.channels(applicationContext); Alerts.remind(applicationContext, org.json.JSONObject(json)) } }
         }

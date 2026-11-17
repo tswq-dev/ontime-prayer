@@ -63,7 +63,7 @@ object Alerts {
             "adhan" -> when (soundOf(ev)) {
                 "none" -> {}
                 "vibrate" -> post(ctx, prayerBuilder(ctx, ev, CH_VIBRATE, null), noteId(ev))
-                "notify" -> notify(ctx, CH_REMIND, title, text, id)
+                "notify" -> if (Exits.hasEx(ev)) post(ctx, prayerBuilder(ctx, ev, CH_REMIND, null), noteId(ev)) else notify(ctx, CH_REMIND, title, text, id)
                 else -> {
                     val i = Intent(ctx, AdhanService::class.java).putExtra("ev", ev.toString())
                     try {
@@ -76,11 +76,6 @@ object Alerts {
             "pre", "iqama" -> notify(ctx, if (ev.optString("voice") == "vibrate") CH_VIBRATE else CH_REMIND, title, text, id)
             "silence" -> silence(ctx, ev.optInt("min", 20), title, text)
             "exit" -> if (!Prayed.has(ctx, pk)) exitNote(ctx, ev)
-            "darura" -> if (!Prayed.has(ctx, pk)) {
-                val b = builder(ctx, CH_EXIT, title, text)
-                b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (Exits.ar(ev)) "صلّيت" else "I prayed", "pk", pk))
-                post(ctx, b, exitId(pk))
-            }
         }
     }
 
@@ -149,6 +144,15 @@ object Alerts {
         // swap the button for a confirmation
         if (AdhanService.playingPk() == pk) AdhanService.refresh()
         else if (activeNote(ctx, noteIdOf(pk))) post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+    }
+
+    /** Cancel a reminder from the app: the adhan notification gets its "Remind me" button back. */
+    fun unremind(ctx: Context, pk: String) {
+        val r = Reminders.find(ctx, pk)
+        Reminders.remove(ctx, pk)
+        Scheduler.reschedule(ctx)
+        if (AdhanService.playingPk() == pk) AdhanService.refresh()
+        else if (r != null && activeNote(ctx, noteIdOf(pk))) post(ctx, prayerBuilder(ctx, r, CH_AFTER, null), noteIdOf(pk))
     }
 
     fun snooze(ctx: Context, r: JSONObject) {
