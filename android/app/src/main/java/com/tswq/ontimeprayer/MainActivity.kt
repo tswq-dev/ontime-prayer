@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.os.SystemClock
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -36,7 +35,6 @@ class MainActivity : ComponentActivity() {
     }
     private var pendingVoice = ""
     private val pickAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) keepSound(pendingVoice, uri) }
-    private var stoppedAt = 0L
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,19 +75,10 @@ class MainActivity : ComponentActivity() {
         web.saveState(outState)
     }
 
+    // The opening plays when the page loads, so only after the app was fully closed (not when it comes back from the background).
     override fun onStop() {
         super.onStop()
         Alerts.stopPreview()
-        stoppedAt = SystemClock.elapsedRealtime()
-    }
-
-    // Since Android 12, Back only sends the app to the background, so "opening" it again resumes this page.
-    // Replay the opening when the app comes back after a few seconds away.
-    override fun onRestart() {
-        super.onRestart()
-        if (stoppedAt > 0 && SystemClock.elapsedRealtime() - stoppedAt > 5_000) {
-            web.evaluateJavascript("window.__replayIntro&&__replayIntro()", null)
-        }
     }
 
     private fun keepSound(voice: String, uri: Uri) {
@@ -109,6 +98,9 @@ class MainActivity : ComponentActivity() {
     inner class Bridge {
         @JavascriptInterface fun schedule(json: String) {
             runCatching { Scheduler.save(applicationContext, json) }
+        }
+        @JavascriptInterface fun remind(json: String) {
+            main.post { runCatching { Alerts.channels(applicationContext); Alerts.remind(applicationContext, org.json.JSONObject(json)) } }
         }
         @JavascriptInterface fun preview(voice: String) {
             main.post { Alerts.preview(applicationContext, voice) }

@@ -7,10 +7,11 @@ import org.json.JSONObject
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
+        fun json(key: String) = intent.getStringExtra(key)?.let { runCatching { JSONObject(it) }.getOrNull() }
         when (intent.action) {
             Scheduler.ACTION_RESTORE -> Alerts.restoreRinger(ctx)
             Scheduler.ACTION_FIRE -> {
-                val ev = intent.getStringExtra("ev")?.let { runCatching { JSONObject(it) }.getOrNull() }
+                val ev = json("ev")
                 if (ev != null) {
                     Scheduler.markFired(ctx, ev.optString("id"), ev.optLong("at"))
                     // Skip alerts delivered very late (phone was off): they would only confuse.
@@ -18,7 +19,24 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
                 Scheduler.reschedule(ctx)
             }
+            Scheduler.ACTION_REMINDER -> {
+                val r = json("rem")
+                if (r != null) {
+                    Reminders.remove(ctx, r.optString("pk"))
+                    if (!Prayed.has(ctx, r.optString("pk"))) { Alerts.channels(ctx); Alerts.exitNote(ctx, r) }
+                }
+                Scheduler.reschedule(ctx)
+            }
+            ACTION_REMIND -> json("ev")?.let { Alerts.channels(ctx); Alerts.remind(ctx, it) }
+            ACTION_SNOOZE -> json("rem")?.let { Alerts.snooze(ctx, it) }
+            ACTION_PRAYED -> intent.getStringExtra("pk")?.let { Alerts.prayed(ctx, it) }
         }
+    }
+
+    companion object {
+        const val ACTION_REMIND = "com.tswq.ontimeprayer.REMIND"
+        const val ACTION_SNOOZE = "com.tswq.ontimeprayer.SNOOZE"
+        const val ACTION_PRAYED = "com.tswq.ontimeprayer.PRAYED"
     }
 }
 

@@ -17,6 +17,9 @@ object Scheduler {
     private const val BATCH = 24
     const val ACTION_FIRE = "com.tswq.ontimeprayer.FIRE"
     const val ACTION_RESTORE = "com.tswq.ontimeprayer.RESTORE"
+    const val ACTION_REMINDER = "com.tswq.ontimeprayer.REMINDER"
+    const val REM_SLOTS = 16
+    private const val REM_CODE = 100
 
     fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -57,7 +60,21 @@ object Scheduler {
             )
             setExact(am, maxOf(ev.optLong("at"), now + 500), pi)
         }
+        // "Remind me before it ends" reminders, kept in prefs so they survive a restart
+        for (i in 0 until REM_SLOTS) {
+            PendingIntent.getBroadcast(ctx, REM_CODE + i, remIntent(ctx), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+                ?.let { am.cancel(it); it.cancel() }
+        }
+        Reminders.all(ctx).take(REM_SLOTS).forEachIndexed { i, r ->
+            val pi = PendingIntent.getBroadcast(
+                ctx, REM_CODE + i, remIntent(ctx).putExtra("rem", r.toString()),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            setExact(am, maxOf(r.optLong("at"), now + 500), pi)
+        }
     }
+
+    private fun remIntent(ctx: Context) = Intent(ctx, AlarmReceiver::class.java).setAction(ACTION_REMINDER)
 
     fun setExact(am: AlarmManager, at: Long, pi: PendingIntent) {
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
