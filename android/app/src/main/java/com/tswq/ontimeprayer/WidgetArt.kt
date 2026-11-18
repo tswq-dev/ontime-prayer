@@ -259,7 +259,8 @@ object WidgetArt {
 
     private fun window(cv: Canvas, x: X) {
         val s = min(x.w, x.h); val ox = (x.w - s) / 2; val oy = (x.h - s) / 2; val k = s / 170f
-        fun X0(v: Float) = ox + v * k; fun Y0(v: Float) = oy + v * k
+        fun X0(v: Float) = ox + v * k
+        fun Y0(v: Float) = oy + v * k
         val arch = Path().apply { moveTo(X0(8f), Y0(170f)); lineTo(X0(8f), Y0(78f)); cubicTo(X0(8f), Y0(40f), X0(46f), Y0(14f), X0(85f), Y0(4f))
             cubicTo(X0(124f), Y0(14f), X0(162f), Y0(40f), X0(162f), Y0(78f)); lineTo(X0(162f), Y0(170f)); close() }
         cv.save(); cv.clipPath(arch)
