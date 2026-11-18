@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_pano">Panorama</string>
+    <string name="wd_pano">Your live sky and the next prayer</string>
+    <string name="w_window">Window</string>
+    <string name="wd_window">The sky now through a window</string>
+    <string name="w_ring">Ring</string>
+    <string name="wd_ring">A ring that fills until the next prayer</string>
+    <string name="w_orbit">Day orbit</string>
+    <string name="wd_orbit">The sun on the orbit of your day and night</string>
+    <string name="w_script">Calligraphy</string>
+    <string name="wd_script">The next prayer in large Arabic script</string>
+    <string name="w_table">Table</string>
+    <string name="wd_table">Today\'s times, with the rows you pick</string>
+    <string name="w_clock">Sky clock</string>
+    <string name="wd_clock">The sky\'s colours around the 24 hours</string>
+    <string name="w_moon">Moon</string>
+    <string name="wd_moon">Tonight\'s moon and the Hijri date</string>
+    <string name="w_ribbon">Day ribbon</string>
+    <string name="wd_ribbon">Your whole day in one ribbon</string>
+    <string name="w_exit">Time left</string>
+    <string name="wd_exit">How long until the prayer time ends</string>
+    <string name="w_actions">With buttons</string>
+    <string name="wd_actions">I prayed, mute the next adhan, remind me before it ends</string>
+    <string name="w_line">One line</string>
+    <string name="wd_line">The next prayer in one line</string>
+</resources>

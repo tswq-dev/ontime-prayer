@@ -71,7 +71,7 @@ object Alerts {
         fun say(name: String, then: () -> Unit = {}) { speaking = true; Speaker.play(ctx, name) { then(); done() } }
         fun quietNote() = post(ctx, if (Exits.hasEx(ev)) prayerBuilder(ctx, ev, CH_SILENT, null) else builder(ctx, CH_SILENT, title, text), noteId(ev))
         when (ev.optString("kind")) {
-            "adhan" -> when (val s = soundOf(ev)) {
+            "adhan" -> when (val s = soundOf(ev).let { if (it != "none" && WidgetUpdater.takeMute(ctx, ev)) "notify" else it }) {
                 "none" -> {}
                 "vibrate" -> post(ctx, prayerBuilder(ctx, ev, CH_VIBRATE, null), noteId(ev))
                 "notify" -> quietNote()
@@ -163,6 +163,7 @@ object Alerts {
         // swap the button for a confirmation
         if (AdhanService.playingPk() == pk) AdhanService.refresh()
         else if (activeNote(ctx, noteIdOf(pk))) post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+        WidgetUpdater.refresh(ctx, "actions")
     }
 
     /** Cancel a reminder from the app: the adhan notification gets its "Remind me" button back. */
@@ -172,6 +173,7 @@ object Alerts {
         Scheduler.reschedule(ctx)
         if (AdhanService.playingPk() == pk) AdhanService.refresh()
         else if (r != null && activeNote(ctx, noteIdOf(pk))) post(ctx, prayerBuilder(ctx, r, CH_AFTER, null), noteIdOf(pk))
+        WidgetUpdater.refresh(ctx, "actions")
     }
 
     fun snooze(ctx: Context, r: JSONObject) {
@@ -188,6 +190,7 @@ object Alerts {
         if (AdhanService.playingPk() == pk) AdhanService.dismiss(ctx)
         cancel(ctx, noteIdOf(pk)); cancel(ctx, exitId(pk))
         Scheduler.reschedule(ctx)
+        WidgetUpdater.refresh(ctx, "actions")
     }
 
     private fun activeNote(ctx: Context, id: Int): Boolean =

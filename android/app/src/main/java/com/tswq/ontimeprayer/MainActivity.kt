@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) web.loadUrl("file:///android_asset/www/index.html")
         else web.restoreState(savedInstanceState)
 
+        takeWidget(intent)
         Alerts.channels(this)
         // Notification permission is asked from the page, after a card that explains it (first run, or when an alert is turned on).
         Scheduler.reschedule(this)
@@ -89,10 +90,24 @@ class MainActivity : ComponentActivity() {
         return perm && getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() != false
     }
 
-    // Back from the phone's settings: the page re-checks whether notifications are allowed.
+    // Back from the phone's settings: the page re-checks whether notifications are allowed (and which widgets were added).
     override fun onResume() {
         super.onResume()
-        if (::web.isInitialized) tellNotify()
+        if (::web.isInitialized) { tellNotify(); web.evaluateJavascript("window.__onWidgets&&__onWidgets()", null) }
+    }
+
+    // "Customize" on a home screen widget: the page opens that widget's look.
+    private var pendingWidget = ""
+    private fun takeWidget(i: Intent?): Boolean {
+        if (i == null) return false
+        val id = i.getIntExtra("widgetId", 0); val type = i.getStringExtra("widgetType")
+        if (id == 0 || type == null || type !in WidgetUpdater.CLASSES) return false
+        i.removeExtra("widgetId"); pendingWidget = "$id,$type"; return true
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (takeWidget(intent) && ::web.isInitialized)
+            web.evaluateJavascript("if(window.__openWidget){var p=Android.pendingWidget().split(',');__openWidget(p[0],p[1])}", null)
     }
 
     override fun onStop() {
@@ -135,6 +150,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         @JavascriptInterface fun sheet(open: Boolean) { main.post { closeSheet.isEnabled = open } }
+        // home screen widgets
+        @JavascriptInterface fun widgetData(json: String) {
+            runCatching { org.json.JSONObject(json); Scheduler.prefs(applicationContext).edit().putString("widgetData", json).apply(); WidgetUpdater.updateAll(applicationContext) }
+        }
+        @JavascriptInterface fun widgets(): String = runCatching { WidgetUpdater.info(applicationContext) }.getOrDefault("{\"placed\":[],\"styles\":{},\"pin\":false}")
+        @JavascriptInterface fun widgetPreview(type: String, json: String): String = runCatching { WidgetUpdater.preview(applicationContext, type, json) }.getOrDefault("")
+        @JavascriptInterface fun widgetStyle(type: String, id: Int, json: String) { runCatching { WidgetUpdater.setStyle(applicationContext, type, id, json) } }
+        @JavascriptInterface fun pinWidget(type: String) { main.post { WidgetUpdater.pin(applicationContext, type) } }
+        @JavascriptInterface fun pendingWidget(): String { val p = pendingWidget; pendingWidget = ""; return p }
         @JavascriptInterface fun reminder(pk: String): String = Reminders.find(applicationContext, pk)?.optLong("at")?.toString() ?: ""
         @JavascriptInterface fun cancelRemind(pk: String) { main.post { runCatching { Alerts.unremind(applicationContext, pk) } } }
         @JavascriptInterface fun remind(json: String) {

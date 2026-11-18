@@ -47,6 +47,65 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home screen widgets: each one is a picture drawn by the app, refreshed every minute while on the screen. -->
+        <receiver android:name=".WPano" android:exported="true" android:label="@string/w_pano">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_pano" />
+        </receiver>
+        <receiver android:name=".WWindow" android:exported="true" android:label="@string/w_window">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_window" />
+        </receiver>
+        <receiver android:name=".WRing" android:exported="true" android:label="@string/w_ring">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_ring" />
+        </receiver>
+        <receiver android:name=".WOrbit" android:exported="true" android:label="@string/w_orbit">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_orbit" />
+        </receiver>
+        <receiver android:name=".WScript" android:exported="true" android:label="@string/w_script">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_script" />
+        </receiver>
+        <receiver android:name=".WTable" android:exported="true" android:label="@string/w_table">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_table" />
+        </receiver>
+        <receiver android:name=".WClock" android:exported="true" android:label="@string/w_clock">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_clock" />
+        </receiver>
+        <receiver android:name=".WMoon" android:exported="true" android:label="@string/w_moon">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_moon" />
+        </receiver>
+        <receiver android:name=".WRibbon" android:exported="true" android:label="@string/w_ribbon">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_ribbon" />
+        </receiver>
+        <receiver android:name=".WExit" android:exported="true" android:label="@string/w_exit">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_exit" />
+        </receiver>
+        <receiver android:name=".WActions" android:exported="true" android:label="@string/w_actions">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_actions" />
+        </receiver>
+        <receiver android:name=".WLine" android:exported="true" android:label="@string/w_line">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_line" />
+        </receiver>
+        <receiver android:name=".WidgetReceiver" android:exported="false" />
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+
         <service
             android:name=".AdhanService"
             android:exported="false"

@@ -21,15 +21,39 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
+      # Every widget drawn by the app's own code (real fonts and canvas, on the JVM) for a sample day:
+      # the sheets are for checking the designs, the wp_*.png become the previews in the widget picker.
+      - name: Widget pictures
+        working-directory: android
+        continue-on-error: true
+        run: |
+          mkdir -p ../ci-out
+          set -o pipefail
+          gradle :app:testDebugUnitTest --tests com.tswq.ontimeprayer.WidgetShots --no-daemon 2>&1 | tee ../ci-out/shots.log
+      - name: Widget picker previews
+        run: |
+          if ls android/app/build/shots/wp_*.png >/dev/null 2>&1; then cp android/app/build/shots/wp_*.png android/app/src/main/res/drawable-nodpi/; fi
       - name: Build APK
         working-directory: android
-        run: gradle :app:assembleDebug --no-daemon
+        run: |
+          mkdir -p ../ci-out
+          set -o pipefail
+          gradle :app:assembleDebug --no-daemon 2>&1 | tee ../ci-out/build.log
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk ontime-prayer.apk
       - uses: actions/upload-artifact@v4
         with:
           name: ontime-prayer-apk
           path: ontime-prayer.apk
+      # The pictures and logs go to the "shots" branch of the private repo only.
+      - name: Publish pictures and logs
+        if: always() && github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+        run: |
+          mkdir -p ci-out && cp -r android/app/build/shots/. ci-out/ 2>/dev/null || true
+          cp android/app/build/test-results/testDebugUnitTest/*.xml ci-out/ 2>/dev/null || true
+          cd ci-out && git init -q -b shots && git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "run ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" shots
       # Trial builds are released only from the private repo, so the public one stays clean.
       - uses: softprops/action-gh-release@v2
         if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'

@@ -45,5 +45,6 @@ class AlarmReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Scheduler.reschedule(ctx)
+        runCatching { WidgetUpdater.updateAll(ctx) }
     }
 }
