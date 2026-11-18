@@ -86,7 +86,9 @@ class WData(val o: JSONObject) {
         val EXK = listOf("fajr", "duha", "dhuhr", "asr", "maghrib", "isha")
         private val KSA = TimeZone.getTimeZone("GMT+03:00")
         fun cal(ms: Long): Calendar = Calendar.getInstance(KSA).apply { timeInMillis = ms }
-        fun dateKey(ms: Long): String { val c = cal(ms); return "%04d-%02d-%02d".format(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH)) }
+        // Built by hand: String.format follows the phone's language, and in Arabic it writes ٢٠٢٦ (the days never matched).
+        fun dateKey(ms: Long): String { val c = cal(ms); fun p(n: Int) = n.toString().padStart(2, '0')
+            return c.get(Calendar.YEAR).toString() + "-" + p(c.get(Calendar.MONTH) + 1) + "-" + p(c.get(Calendar.DAY_OF_MONTH)) }
         fun minuteOfDay(ms: Long): Int { val c = cal(ms); return c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE) }
 
         fun load(prefs: android.content.SharedPreferences): WData? =
@@ -94,18 +96,39 @@ class WData(val o: JSONObject) {
     }
 }
 
-/** One widget's own look, chosen in the app (or by default). */
-data class WStyle(val bg: String, val font: String, val rows: Set<String>) {
-    fun toJson(): JSONObject = JSONObject().put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList()))
+/**
+ * One widget's own look, chosen in the app: background (live sky, light, green, clear, the phone's colours),
+ * the font of the prayer name, what it shows, and what a tap opens.
+ */
+data class WStyle(val bg: String, val font: String, val rows: Set<String>, val tap: String = "app") {
+    fun has(k: String) = k in rows
+    fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
     companion object {
-        val ROWS_DEFAULT = setOf("times", "exit")
+        /** What each widget can show; the first set is what it shows until the user changes it. */
+        val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
+            "pano" to (listOf("count", "time", "hijri", "exit", "labels", "sky") to setOf("count", "time", "labels", "sky")),
+            "window" to (listOf("count", "time", "hijri", "sky") to setOf("count", "sky")),
+            "ring" to (listOf("count", "time", "prev") to setOf("count", "prev")),
+            "orbit" to (listOf("count", "time", "hijri", "exit") to setOf("count", "time")),
+            "script" to (listOf("count", "time", "hijri", "exit") to setOf("count", "time")),
+            "table" to (listOf("city", "date", "count", "times", "exit", "iqama") to setOf("times", "exit")),
+            "clock" to (listOf("count", "time") to setOf("count", "time")),
+            "moon" to (listOf("wd", "next") to setOf("wd", "next")),
+            "ribbon" to (listOf("count", "labels") to setOf("count", "labels")),
+            "exit" to (listOf("time", "bar") to setOf("time", "bar")),
+            "actions" to (listOf("count", "time") to setOf("count", "time")),
+            "line" to (listOf("count", "time", "hijri") to setOf("count", "time")))
+        val BGS = setOf("sky", "light", "dark", "clear", "dyn")
+
         /** Until the user picks, a widget uses the name font chosen for the app's own screen. */
         fun defaultFor(type: String, font: String? = null) = WStyle(if (type == "script" || type == "line") "clear" else "sky",
-            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", if (type == "table") ROWS_DEFAULT else emptySet())
+            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", SHOW[type]?.second ?: emptySet())
         fun from(type: String, j: JSONObject?, font: String? = null): WStyle {
             val d = defaultFor(type, font); if (j == null) return d
             val r = j.optJSONArray("rows")
-            return WStyle(j.optString("bg", d.bg), j.optString("font", d.font), if (r == null) d.rows else (0 until r.length()).map { r.optString(it) }.toSet())
+            // looks saved before "what it shows" existed keep the defaults (only the table had rows then)
+            val rows = if (r == null || (j.optInt("v") < 2 && type != "table")) d.rows else (0 until r.length()).map { r.optString(it) }.toSet()
+            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", "app"))
         }
     }
 }

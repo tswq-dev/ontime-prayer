@@ -51,6 +51,8 @@ class WidgetShots {
     }
 
     @Test fun shots() {
+        // as on a phone set to Arabic (String.format would write Arabic-Indic digits here)
+        java.util.Locale.setDefault(java.util.Locale("ar", "SA"))
         val ctx = RuntimeEnvironment.getApplication()
         val fonts = WFonts.get(ctx.assets)
         val all = JSONObject(javaClass.classLoader!!.getResource("wdata.json")!!.readText())
@@ -62,6 +64,8 @@ class WidgetShots {
             "1-fajr" to day.getLong("fajr") + 25 * mn, "2-duha" to day.getLong("duha") + 120 * mn, "3-asr" to asrEnd - 20 * mn,
             "4-maghrib" to day.getLong("maghrib") + 12 * mn, "5-night" to day.getLong("isha") + 180 * mn)
         val types = WidgetArt.TYPES
+        org.junit.Assert.assertEquals("2026-11-19", WData.dateKey(asrEnd))
+        org.junit.Assert.assertNotNull("the day must be found with an Arabic locale", ar.day(asrEnd))
         fun dflt(t: String) = WStyle.defaultFor(t)
         fun sz(t: String) = WidgetUpdater.defaultDp(t)
 
@@ -87,6 +91,16 @@ class WidgetShots {
             Item("no data", draw("ring", dflt("ring"), null, asr, 170, 170, fonts)),
             Item("ring 2x2 big", draw("ring", dflt("ring"), ar, moments["5-night"]!!, 250, 250, fonts)),
             Item("pano wide", draw("pano", dflt("pano"), ar, mg, 520, 200, fonts))))
+
+        // what each widget shows: everything on, then only the name
+        sheet("sheet-11-show-all", types.map { t -> val all = WStyle.SHOW[t]!!.first.toSet()
+            Item("$t: all", draw(t, dflt(t).copy(rows = all), ar, asr, sz(t).first, sz(t).second, fonts)) })
+        sheet("sheet-12-show-none", types.filter { it != "table" }.map { t -> Item("$t: none", draw(t, dflt(t).copy(rows = emptySet()), ar, asr, sz(t).first, sz(t).second, fonts)) })
+        // the phone's colours (a sample palette) and the framed sky widgets
+        WidgetArt.dyn = intArrayOf(0xFFF3DDE6.toInt(), 0xFFE9D3F0.toInt(), 0xFF3B1F33.toInt(), 0xFF6E5468.toInt(), 0xFF9C3F78.toInt())
+        sheet("sheet-13-phone-colours", listOf("pano", "window", "orbit", "ring", "table", "exit", "line", "moon").map { t ->
+            Item("$t dyn", draw(t, dflt(t).copy(bg = "dyn"), ar, asr, sz(t).first, sz(t).second, fonts)) } +
+            listOf("light", "dark").flatMap { bg -> listOf("pano", "window").map { t -> Item("$t $bg", draw(t, dflt(t).copy(bg = bg), ar, mg, sz(t).first, sz(t).second, fonts)) } })
 
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
         for (t in types) {

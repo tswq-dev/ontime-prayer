@@ -55,6 +55,9 @@ class WFonts(val kufi: Typeface, val ruqaa: Typeface, val naskh: Typeface, val p
 object WidgetArt {
     val TYPES = listOf("pano", "window", "ring", "orbit", "script", "table", "clock", "moon", "ribbon", "exit", "actions", "line")
 
+    /** The phone's own colours (Android 12+): light background, deeper background, text, softer text, accent. */
+    @Volatile var dyn: IntArray? = null
+
     private class Sty(val kind: String, val fg: Int, val sub: Int, val acc: Int, val line: Int, val shadow: Boolean) {
         val clear get() = kind == "clear"
         val light get() = kind == "light"
@@ -79,10 +82,11 @@ object WidgetArt {
 
     private val GOLD = c("#E2C27A"); private val GOLD_L = c("#C99A4B"); private val INK = c("#0B3B2E"); private val AMBER = c("#E8963A")
 
-    private fun sty(kind: String) = when (kind) {
+    private fun sty(kind: String): Sty = when (kind) {
         "light" -> Sty(kind, c("#0B3B2E"), c("#5B6B5F"), c("#0B4D3B"), a(.14f, c("#0B4D3B")), false)
         "dark" -> Sty(kind, c("#F4ECDC"), a(.74f, c("#F4ECDC")), c("#E2C27A"), a(.28f, c("#E2C27A")), false)
         "clear" -> Sty(kind, Color.WHITE, a(.85f, Color.WHITE), c("#F3D58C"), a(.28f, Color.WHITE), true)
+        "dyn" -> dyn?.let { Sty(kind, it[2], it[3], it[4], a(.16f, it[2]), false) } ?: sty("dark")
         else -> Sty("sky", c("#FFF8EA"), a(.8f, c("#FFF8EA")), c("#FBE3A6"), a(.22f, Color.WHITE), true)
     }
 
@@ -139,12 +143,14 @@ object WidgetArt {
     private fun startX(x: X, pad: Float) = if (x.rtl) x.w - pad else pad
     private fun endX(x: X, pad: Float) = if (x.rtl) pad else x.w - pad
 
-    private fun card(cv: Canvas, x: X, r: Float = x.dp(22f)) {
+    private fun card(cv: Canvas, x: X, r: Float = x.dp(22f), kind: String = x.st.kind) {
         val rect = RectF(0f, 0f, x.w, x.h)
-        when (x.st.kind) {
+        when (kind) {
             "clear" -> return
             "light" -> cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, 0f, x.h, c("#F5EEE1"), c("#EBE1CE"), Shader.TileMode.CLAMP) })
             "dark" -> cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, c("#11594A"), c("#0A382C"), Shader.TileMode.CLAMP) })
+            "dyn" -> { val dy = dyn ?: intArrayOf(c("#11594A"), c("#0A382C"))
+                cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, dy[0], dy[1], Shader.TileMode.CLAMP) }) }
             else -> { val (t, b) = skyAt(x, x.now)
                 cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, 0f, x.h, t, b, Shader.TileMode.CLAMP) })
                 cv.drawRoundRect(rect, r, r, paint(a(.34f, c("#0A101E")))) }
@@ -156,6 +162,11 @@ object WidgetArt {
         center(cv, s, cx, cy + p.textSize * .36f, Paint(p).apply { clearShadowLayer() })
     }
     private fun pillW(p: Paint, s: String) = p.measureText(s) + p.textSize * 1.6f
+    /** "9 Jumada II" and "Asr until 5:01" (the end of the time we are in), for the optional lines. */
+    private fun hijriTxt(x: X) = x.d.digits(x.day.optString("hd")) + " " + x.day.optString("hm")
+    private fun exitTxt(x: X): String { val cw = x.cur ?: return ""; val b = if (x.now < cw.first) cw.first else cw.end
+        return x.d.name(cw.k) + (if (x.d.ar) " حتى " else " until ") + x.d.clock(b) }
+    private fun joinDot(vararg p: String) = p.filter { it.isNotEmpty() }.joinToString("  ·  ")
     private fun sun(cv: Canvas, x: X, px: Float, py: Float, rDp: Float) {
         val g = x.dp(rDp * 2.4f)
         cv.drawCircle(px, py, g, paint().apply { shader = RadialGradient(px, py, g, intArrayOf(a(.75f, c("#FFF0C0")), a(.3f, c("#FFE3A0")), 0), floatArrayOf(0f, .4f, 1f), Shader.TileMode.CLAMP) })
@@ -176,7 +187,7 @@ object WidgetArt {
     }
     private val STARS = floatArrayOf(.12f, .14f, .28f, .30f, .47f, .10f, .63f, .26f, .79f, .12f, .88f, .34f, .38f, .44f, .70f, .48f, .20f, .52f, .55f, .40f)
     private fun stars(cv: Canvas, x: X, l: Float, t: Float, w: Float, h: Float) {
-        val al = starAlpha(x); if (al <= 0f) return
+        val al = starAlpha(x); if (al <= 0f || !x.style.has("sky")) return
         val p = paint(a(al, Color.WHITE))
         for (i in STARS.indices step 2) cv.drawCircle(l + w * (if (x.rtl) 1 - STARS[i] else STARS[i]), t + h * STARS[i + 1], x.dp(if (i % 4 == 0) 1.4f else 1f), p)
     }
@@ -195,7 +206,7 @@ object WidgetArt {
         val cv = Canvas(bmp)
         val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }
-        val st = sty(if (type == "pano" || type == "window") "sky" else style.bg)
+        val st = sty(if (type == "pano" || type == "window") (if (type == "window" && style.bg in setOf("light", "dark", "dyn")) style.bg else "sky") else style.bg)
         val x = X(d, day, now, st, fonts, fonts.name(style.font), dpPx, d.ar, style, wPx.toFloat(), hPx.toFloat())
         when (type) {
             "pano" -> pano(cv, x); "window" -> window(cv, x); "ring" -> ring(cv, x); "orbit" -> orbit(cv, x)
@@ -224,43 +235,55 @@ object WidgetArt {
     // ---------- 1. panorama (4×2) and window (2×2): the real sky now ----------
     private fun pano(cv: Canvas, x: X) {
         val w = x.w; val h = x.h; val r = x.dp(22f)
+        // light, green or the phone's colours: the sky on top and a strip for the text under it
+        val strip = x.style.bg in setOf("light", "dark", "dyn"); val ss = sty(x.style.bg); val sh = if (strip) h * .64f else h
         cv.save(); val clip = Path().apply { addRoundRect(RectF(0f, 0f, w, h), r, r, Path.Direction.CW) }; cv.clipPath(clip)
+        if (strip) card(cv, x, r, x.style.bg)
+        cv.save(); cv.clipRect(0f, 0f, w, sh)
         val (top, bot) = skyAt(x, x.now)
-        cv.drawRect(0f, 0f, w, h, paint().apply { shader = LinearGradient(0f, 0f, 0f, h, top, bot, Shader.TileMode.CLAMP) })
-        stars(cv, x, 0f, 0f, w, h * .6f)
-        val cx = w / 2; val cy = h * .576f; val rx = w * .393f; val ry = h * .412f
+        cv.drawRect(0f, 0f, w, sh, paint().apply { shader = LinearGradient(0f, 0f, 0f, sh, top, bot, Shader.TileMode.CLAMP) })
+        stars(cv, x, 0f, 0f, w, sh * .6f)
+        val cx = w / 2; val cy = sh * (if (strip) .80f else .576f); val rx = w * .393f; val ry = sh * (if (strip) .62f else .412f)
         fun pt(q: Float) = floatArrayOf(cx + x.dir * rx * cos(PI * q).toFloat(), cy - ry * sin(PI * q).toFloat())
         val arc = Path(); for (i in 0..60) { val q = pt(i / 60f); if (i == 0) arc.moveTo(q[0], q[1]) else arc.lineTo(q[0], q[1]) }
         cv.drawPath(arc, paint(a(.45f, c("#FFFAEB"))).apply { style = Paint.Style.STROKE; strokeWidth = x.dp(1.4f); pathEffect = DashPathEffect(floatArrayOf(x.dp(2f), x.dp(5f)), 0f) })
         val span = max(1L, x.t("maghrib") - x.t("sunrise"))
         val day = isDay(x)
-        val body = if (day) pt(dayFrac(x)) else { val m = .15f + .7f * nightFrac(x); floatArrayOf(cx + x.dir * w * .337f * cos(PI * m).toFloat(), cy - h * .33f * sin(PI * m).toFloat()) }
+        val body = if (day) pt(dayFrac(x)) else { val m = .15f + .7f * nightFrac(x); floatArrayOf(cx + x.dir * w * .337f * cos(PI * m).toFloat(), cy - ry * .8f * sin(PI * m).toFloat()) }
         val lp = tp(x, x.f.plex, 10f, c("#FFF8EA"), true)
         for (k in listOf("sunrise", "dhuhr", "asr", "maghrib")) {
             val q = pt(((x.t(k) - x.t("sunrise")).toFloat() / span).coerceIn(0f, 1f)); val on = k == x.next?.k
             cv.drawCircle(q[0], q[1], x.dp(if (on) 5f else 3f), paint(if (on) c("#F3D58C") else a(.7f, c("#FFFAEB"))))
+            if (!x.style.has("labels")) continue
             lp.typeface = if (on) x.f.plexB else x.f.plex; lp.alpha = if (on) 255 else 190
             val near = kotlin.math.hypot(q[0] - body[0], q[1] - x.dp(12f) - body[1]) < x.dp(22f)
             center(cv, x.d.name(k), q[0], if (near) q[1] + x.dp(17f) else q[1] - x.dp(9f), lp)
         }
-        if (day) sun(cv, x, body[0], body[1], 9f) else moon(cv, x, body[0], body[1], x.dp(8f))
-        hills(cv, x, 0f, h * .7f, w, h * .3f)
-        cv.drawRect(0f, h * .54f, w, h, paint().apply { shader = LinearGradient(0f, h, 0f, h * .54f, a(.42f, Color.BLACK), 0, Shader.TileMode.CLAMP) })
-        val nx = x.next ?: return
-        val pad = x.dp(14f); val base = h - x.dp(16f)
-        val np = tp(x, x.nameTf, 30f, c("#FFF8EA")); val tpp = tp(x, x.f.plex, 19f, c("#FFF8EA"))
-        val inS = x.d.inTxt(nx.at - x.now); val ip = tp(x, x.f.plexB, 12.5f, c("#FFF8EA"), false)
+        if (day) sun(cv, x, body[0], body[1], 9f) else if (x.style.has("sky")) moon(cv, x, body[0], body[1], x.dp(8f))
+        hills(cv, x, 0f, sh * .7f, w, sh * .3f)
+        if (!strip) cv.drawRect(0f, sh * .54f, w, sh, paint().apply { shader = LinearGradient(0f, sh, 0f, sh * .54f, a(.42f, Color.BLACK), 0, Shader.TileMode.CLAMP) })
+        cv.restore()
+        // small lines in the top corners: the Hijri date and when the time we are in ends
+        val cp = tp(x, x.f.plex, 10.5f, c("#FFF8EA"), true); val pad = x.dp(14f)
+        if (x.style.has("hijri")) text(cv, x, hijriTxt(x), startX(x, pad), x.dp(20f), cp)
+        if (x.style.has("exit")) text(cv, x, exitTxt(x), endX(x, pad), x.dp(20f), cp, false)
+        val nx = x.next; if (nx == null) { cv.restore(); return }
+        val fg = if (strip) ss.fg else c("#FFF8EA"); val sw = !strip
+        val base = if (strip) sh + (h - sh) / 2 + x.dp(9f) else h - x.dp(16f)
+        val np = tp(x, x.nameTf, if (strip) 24f else 30f, fg, sw); val tpp = tp(x, x.f.plex, if (strip) 16f else 19f, fg, sw)
+        val inS = x.d.inTxt(nx.at - x.now); val ip = tp(x, x.f.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
         val name = x.d.name(nx.k); val tm = x.d.clock(nx.at) + " " + x.d.ampm(nx.at)
         fit(np, name, w * .45f)
         text(cv, x, name, startX(x, pad), base, np)
-        val nw = np.measureText(name) + x.dp(8f)
-        text(cv, x, tm, startX(x, pad) - x.dir * nw, base, tpp)
-        val pw = pillW(ip, inS); pill(cv, x, inS, endX(x, pad) + x.dir * pw / 2, base - ip.textSize * .45f, ip, a(.3f, Color.BLACK))
+        if (x.style.has("time")) text(cv, x, tm, startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), base, tpp)
+        if (x.style.has("count")) { val pw = pillW(ip, inS); pill(cv, x, inS, endX(x, pad) + x.dir * pw / 2, base - ip.textSize * .45f, ip, if (strip) ss.line else a(.3f, Color.BLACK)) }
         cv.restore()
     }
-
     private fun window(cv: Canvas, x: X) {
-        val s = min(x.w, x.h); val ox = (x.w - s) / 2; val oy = (x.h - s) / 2; val k = s / 170f
+        // light, green or the phone's colours: a card behind the arch
+        val framed = x.style.bg in setOf("light", "dark", "dyn")
+        if (framed) card(cv, x, x.dp(22f), x.style.bg)
+        val s = min(x.w, x.h) * (if (framed) .86f else 1f); val ox = (x.w - s) / 2; val oy = (x.h - s) / 2 + (if (framed) s * .04f else 0f); val k = s / 170f
         fun X0(v: Float) = ox + v * k
         fun Y0(v: Float) = oy + v * k
         val arch = Path().apply { moveTo(X0(8f), Y0(170f)); lineTo(X0(8f), Y0(78f)); cubicTo(X0(8f), Y0(40f), X0(46f), Y0(14f), X0(85f), Y0(4f))
@@ -269,19 +292,21 @@ object WidgetArt {
         val (top, bot) = skyAt(x, x.now)
         cv.drawRect(X0(0f), Y0(0f), X0(170f), Y0(170f), paint().apply { shader = LinearGradient(0f, Y0(0f), 0f, Y0(170f), top, bot, Shader.TileMode.CLAMP) })
         stars(cv, x, X0(10f), Y0(20f), 150 * k, 90 * k)
-        if (isDay(x)) { val q = dayFrac(x); sun(cv, x, X0(85f + x.dir * 62f * cos(PI * q).toFloat()), Y0(150f - 110f * sin(PI * q).toFloat()), 6f) }
-        else { val m = .15f + .7f * nightFrac(x); moon(cv, x, X0(85f + x.dir * 50f * cos(PI * m).toFloat()), Y0(150f - 90f * sin(PI * m).toFloat()), 7 * k) }
+        if (isDay(x)) { val q = dayFrac(x); sun(cv, x, X0(85f + x.dir * 62f * cos(PI * q).toFloat()), Y0(150f - 110f * sin(PI * q).toFloat()), 6f * k / x.u) }
+        else if (x.style.has("sky")) { val m = .15f + .7f * nightFrac(x); moon(cv, x, X0(85f + x.dir * 50f * cos(PI * m).toFloat()), Y0(150f - 90f * sin(PI * m).toFloat()), 7 * k) }
         hills(cv, x, X0(0f), Y0(118f), 170 * k, 52 * k)
         cv.drawRect(X0(0f), Y0(95f), X0(170f), Y0(170f), paint().apply { shader = LinearGradient(0f, Y0(170f), 0f, Y0(95f), a(.4f, Color.BLACK), 0, Shader.TileMode.CLAMP) })
         cv.restore()
         val edge = Path().apply { moveTo(X0(8f), Y0(170f)); lineTo(X0(8f), Y0(78f)); cubicTo(X0(8f), Y0(40f), X0(46f), Y0(14f), X0(85f), Y0(4f)); cubicTo(X0(124f), Y0(14f), X0(162f), Y0(40f), X0(162f), Y0(78f)); lineTo(X0(162f), Y0(170f)) }
         cv.drawPath(edge, paint(GOLD_L).apply { style = Paint.Style.STROKE; strokeWidth = 2.2f * k })
         val nx = x.next ?: return
-        val np = tp(x, x.nameTf, 22f, c("#FFF8EA")); val name = x.d.name(nx.k); fit(np, name, 130 * k)
-        center(cv, name, X0(85f), Y0(140f), np)
-        center(cv, x.d.inTxt(nx.at - x.now), X0(85f), Y0(158f), tp(x, x.f.plexB, 12f, c("#FFF8EA")))
+        val lines = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx.at - x.now) else "")
+        val np = tp(x, x.nameTf, 22f, c("#FFF8EA")).apply { textSize = 22f * k }; val name = x.d.name(nx.k); fit(np, name, 130 * k)
+        val ny = if (lines.isEmpty()) Y0(150f) else Y0(140f)
+        if (x.style.has("hijri")) center(cv, hijriTxt(x), X0(85f), ny - np.textSize * 1.05f, tp(x, x.f.plex, 10f, c("#FFF8EA")).apply { textSize = 10f * k })
+        center(cv, name, X0(85f), ny, np)
+        if (lines.isNotEmpty()) { val lp = tp(x, x.f.plexB, 12f, c("#FFF8EA")).apply { textSize = 12f * k }; fit(lp, lines, 140 * k); center(cv, lines, X0(85f), Y0(158f), lp) }
     }
-
     // ---------- 2. ring (2×2) ----------
     private val RC = mapOf("fajr" to "#8FB3EA", "dhuhr" to "#E8C15A", "asr" to "#E89A4A", "maghrib" to "#EC7F62", "isha" to "#9FA2EE")
     private fun ring(cv: Canvas, x: X) {
@@ -290,21 +315,21 @@ object WidgetArt {
         val ov = RectF(cx - r, cy - r, cx + r, cy + r)
         cv.drawCircle(cx, cy, r, paint(x.st.line).apply { style = Paint.Style.STROKE; strokeWidth = sw })
         val prog = if (pv == null) 0f else ((x.now - pv.at).toFloat() / max(1L, nx.at - pv.at)).coerceIn(0f, 1f)
-        val col = c(RC[nx.k] ?: "#E8C15A")
+        val col = if (x.st.kind == "dyn") x.st.acc else c(RC[nx.k] ?: "#E8C15A")
         cv.drawArc(ov, -90f, -360f * prog * x.dir, false, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = sw; strokeCap = Paint.Cap.ROUND })
         val k = s / 170f
-        if (pv != null) center(cv, x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k), cx, cy - 18 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
-        center(cv, x.d.name(nx.k), cx, cy + 9 * k, tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k })
-        center(cv, x.d.dur(nx.at - x.now), cx, cy + 28 * k, tp(x, x.f.plexB, 13f, col).apply { textSize = 13f * k })
+        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.at - x.now) else "")
+        if (pv != null && x.style.has("prev")) center(cv, x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k), cx, cy - 18 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
+        center(cv, x.d.name(nx.k), cx, cy + (if (sub.isEmpty()) 16 else 9) * k, tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k })
+        if (sub.isNotEmpty()) { val p = tp(x, x.f.plexB, 13f, col).apply { textSize = 13f * k }; fit(p, sub, r * 1.5f); center(cv, sub, cx, cy + 28 * k, p) }
     }
-
     // ---------- 3. the day's orbit (4×2) ----------
     private fun orbit(cv: Canvas, x: X) {
         card(cv, x); val w = x.w; val h = x.h
         val cx = w / 2; val cy = h / 2; val rx = w * .421f; val ry = h * .365f
         val nx0 = x.next
         val np = tp(x, x.nameTf, 26f, x.st.fg); val tmP = tp(x, x.f.plex, 18f, x.st.fg)
-        val name = nx0?.let { x.d.name(it.k) } ?: ""; val tm = nx0?.let { x.d.clock(it.at) } ?: ""
+        val name = nx0?.let { x.d.name(it.k) } ?: ""; val tm = if (x.style.has("time")) nx0?.let { x.d.clock(it.at) } ?: "" else ""
         val gap = x.dp(8f); val tw = np.measureText(name) + gap + tmP.measureText(tm)
         val hp = paint(x.st.line).apply { strokeWidth = x.dp(1f) }
         if (nx0 == null) cv.drawLine(w * .03f, cy, w * .97f, cy, hp)
@@ -336,30 +361,41 @@ object WidgetArt {
         val nx = nx0 ?: return
         val y = cy + x.dp(2f); val xs = cx + x.dir * tw / 2
         text(cv, x, name, xs, y, np); text(cv, x, tm, xs - x.dir * (np.measureText(name) + gap), y, tmP)
-        val ip = tp(x, x.f.plexB, 12f, if (x.st.light) c("#0B4D3B") else x.st.fg, false)
-        pill(cv, x, x.d.inTxt(nx.at - x.now), cx, y + x.dp(20f), ip, if (x.st.light) a(.09f, c("#0B4D3B")) else a(.14f, Color.WHITE))
+        var yy = y + x.dp(20f)
+        if (x.style.has("count")) { val ip = tp(x, x.f.plexB, 12f, if (x.st.light) c("#0B4D3B") else x.st.fg, false)
+            pill(cv, x, x.d.inTxt(nx.at - x.now), cx, yy, ip, if (x.st.light) a(.09f, c("#0B4D3B")) else a(.14f, Color.WHITE)); yy += x.dp(20f) }
+        val extra = joinDot(if (x.style.has("hijri")) hijriTxt(x) else "", if (x.style.has("exit")) exitTxt(x) else "")
+        if (extra.isNotEmpty()) { val ep = tp(x, x.f.plex, 10.5f, x.st.sub); fit(ep, extra, x.w * .6f); center(cv, extra, cx, yy + x.dp(2f), ep) }
     }
 
     // ---------- 4. script (4×1, 2×2) and one line (4×1) ----------
     private fun script(cv: Canvas, x: X) {
         card(cv, x); val nx = x.next ?: return; val w = x.w; val h = x.h; val pad = x.dp(16f)
         val name = x.d.name(nx.k)
-        val np = tp(x, x.nameTf, min(54f, h / x.u * .62f), x.st.fg); fit(np, name, w * .6f)
+        // the end side: a stack of the lines the user picked, centred on the name
+        val lines = ArrayList<Pair<String, Paint>>()
+        if (x.style.has("time")) lines += x.d.clock(nx.at) to tp(x, x.f.plex, min(26f, h / x.u * .3f), x.st.fg)
+        if (x.style.has("count")) lines += x.d.inTxt(nx.at - x.now) to tp(x, x.f.plex, 12f, x.st.sub)
+        if (x.style.has("hijri")) lines += hijriTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
+        if (x.style.has("exit") && x.cur != null) lines += exitTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
+        val np = tp(x, x.nameTf, min(54f, h / x.u * .62f), x.st.fg); fit(np, name, if (lines.isEmpty()) w - 2 * pad else w * .6f)
+        if (lines.isEmpty()) { center(cv, name, w / 2, h / 2 + np.textSize * .32f, np); return }
         text(cv, x, name, startX(x, pad), h / 2 + np.textSize * .32f, np)
-        val tm = tp(x, x.f.plex, min(26f, h / x.u * .3f), x.st.fg); val sp = tp(x, x.f.plex, 12f, x.st.sub)
-        text(cv, x, x.d.clock(nx.at), endX(x, pad), h / 2, tm, false)
-        text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), h / 2 + sp.textSize * 1.5f, sp, false)
+        val total = lines.sumOf { (it.second.textSize * 1.25f).toDouble() }.toFloat()
+        var y = h / 2 - total / 2
+        for ((t, p) in lines) { y += p.textSize * 1.25f; fit(p, t, w * .34f); text(cv, x, t, endX(x, pad), y - p.textSize * .25f, p, false) }
     }
     private fun line(cv: Canvas, x: X) {
         card(cv, x, x.dp(20f)); val nx = x.next ?: return
         val np = tp(x, x.nameTf, 19f, x.st.fg); val rp = tp(x, x.f.plex, 16f, x.st.fg)
-        val parts = listOf(x.d.name(nx.k) to np, x.d.clock(nx.at) to rp, "·" to rp, x.d.inTxt(nx.at - x.now) to rp)
+        val parts = ArrayList<Pair<String, Paint>>(); parts += x.d.name(nx.k) to np
+        val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx.at - x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
+        rest.forEachIndexed { i, t -> if (i > 0) parts += "·" to rp; parts += t to rp }
         val gap = x.dp(8f); val total = parts.sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * (parts.size - 1)
         val scale = min(1f, (x.w - x.dp(24f)) / total); np.textSize *= scale; rp.textSize *= scale
         var xs = x.w / 2 + x.dir * total * scale / 2; val y = x.h / 2 + rp.textSize * .35f
         for ((s, p) in parts) { text(cv, x, s, xs, y, p); xs -= x.dir * (p.measureText(s) + gap * scale) }
     }
-
     // ---------- 5. table (4×1 up to 4×4): rows the user picks ----------
     private fun table(cv: Canvas, x: X) {
         card(cv, x); val nx = x.next ?: return
@@ -436,9 +472,12 @@ object WidgetArt {
         val q = onDial(x.now)
         if (isDay(x)) sun(cv, x, q[0], q[1], 7f) else moon(cv, x, q[0], q[1], x.dp(6.5f))
         val nx = x.next ?: return; val k = s / 150f
-        center(cv, x.d.name(nx.k), cx, cy + 2 * k, tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k })
-        center(cv, x.d.clock(nx.at), cx, cy + 17 * k, tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k })
-        center(cv, x.d.dur(nx.at - x.now), cx, cy + 30 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
+        val l2 = ArrayList<Pair<String, Paint>>()
+        if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k }
+        if (x.style.has("count")) l2 += x.d.dur(nx.at - x.now) to tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
+        var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
+        center(cv, x.d.name(nx.k), cx, y, tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k })
+        for ((t, p) in l2) { y += 14 * k; center(cv, t, cx, y, p) }
     }
 
     private fun moonW(cv: Canvas, x: X) {
@@ -447,9 +486,10 @@ object WidgetArt {
         text(cv, x, x.d.digits(dd.optString("hd")), startX(x, pad), pad + 24 * k, big)
         text(cv, x, dd.optString("hm"), startX(x, pad), pad + 40 * k, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * k })
         moon(cv, x, endX(x, pad) + x.dir * 23 * k, pad + 23 * k, 21 * k)
-        text(cv, x, dd.optString("wd") + " · " + x.d.digits(dd.optString("hy")), startX(x, pad), pad + 72 * k, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * k })
-        cv.drawLine(pad, x.h - pad - 30 * k, x.w - pad, x.h - pad - 30 * k, paint(x.st.line).apply { strokeWidth = x.dp(1f) })
+        text(cv, x, (if (x.style.has("wd")) dd.optString("wd") + " · " else "") + x.d.digits(dd.optString("hy")), startX(x, pad), pad + 72 * k, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * k })
         val nx = x.next ?: return
+        if (!x.style.has("next")) return
+        cv.drawLine(pad, x.h - pad - 30 * k, x.w - pad, x.h - pad - 30 * k, paint(x.st.line).apply { strokeWidth = x.dp(1f) })
         text(cv, x, x.d.name(nx.k), startX(x, pad), x.h - pad - 8 * k, tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * k })
         text(cv, x, x.d.clock(nx.at), endX(x, pad), x.h - pad - 8 * k, tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k }, false)
     }
@@ -460,8 +500,8 @@ object WidgetArt {
         val k = min(1.2f, x.h / x.u / 96f); val u = x.u * k
         val np = tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * u }
         text(cv, x, x.d.name(nx.k) + " " + x.d.clock(nx.at), startX(x, pad), 24 * u, np)
-        text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), 24 * u, tp(x, x.f.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
-        val top = 34 * u; val bh = 18 * u; val l = pad; val r = w - pad; val bw = r - l
+        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), 24 * u, tp(x, x.f.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
+        val top = if (x.style.has("labels")) 34 * u else 40 * u; val bh = 18 * u; val l = pad; val r = w - pad; val bw = r - l
         val midnight = x.now - WData.minuteOfDay(x.now) * 60_000L
         fun xAt(t: Long): Float { val f = ((t - midnight) / 60_000f / 1440f).coerceIn(0f, 1f); return if (x.rtl) r - bw * f else l + bw * f }
         val keys = skyKeys(x).map { ((it.first - midnight) / 60_000f / 1440f) to mix(it.second, it.third, .55f) }.filter { it.first in 0f..1f }
@@ -472,6 +512,7 @@ object WidgetArt {
         val lp = tp(x, x.f.plex, 9.5f, x.st.sub).apply { textSize = 9.5f * u }
         for ((i, key) in WData.PRAY.withIndex()) {
             val xx = xAt(x.t(key)); cv.drawRect(xx - u, top - 3 * u, xx + u, top + bh + 3 * u, paint(a(.75f, Color.WHITE)))
+            if (!x.style.has("labels")) continue
             val on = key == nx.k; lp.typeface = if (on) x.f.plexB else x.f.plex; lp.color = if (on) x.st.fg else x.st.sub
             center(cv, x.d.name(key) + " " + x.d.clock(if (on) nx.at else x.t(key)), xx, top + bh + (if (i % 2 == 0) 14f else 27f) * u, lp)
         }
@@ -505,12 +546,12 @@ object WidgetArt {
         val ip = tp(x, x.f.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u }
         val pw = pillW(ip, left); pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, 25 * u, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
         val bt = 44 * u; val bh = 8 * u; val l = pad; val r = w - pad
-        cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
-        if (frac > 0f) { val bw = (r - l) * frac
+        if (x.style.has("bar")) cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
+        if (frac > 0f && x.style.has("bar")) { val bw = (r - l) * frac
             // what is left stays on the starting side and empties towards it (Arabic: from the left to the right)
             val rect = if (x.rtl) RectF(r - bw, bt, r, bt + bh) else RectF(l, bt, l + bw, bt + bh)
             cv.drawRoundRect(rect, bh / 2, bh / 2, paint(if (urgent) AMBER else if (x.st.light) c("#0B4D3B") else x.st.acc)) }
-        text(cv, x, until, startX(x, pad), 72 * u, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * u })
+        if (x.style.has("time")) text(cv, x, until, startX(x, pad), (if (x.style.has("bar")) 72 else 58) * u, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * u })
     }
 
     // ---------- 9. with buttons (4×2): the three buttons sit in the bottom 45% ----------
@@ -520,8 +561,8 @@ object WidgetArt {
         val np = tp(x, x.nameTf, 26f, x.st.fg); val tm = tp(x, x.f.plex, 18f, x.st.fg)
         val name = x.d.name(nx.k); val yy = h * .3f
         text(cv, x, name, startX(x, pad), yy, np)
-        text(cv, x, x.d.clock(nx.at), startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), yy, tm)
-        text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), yy, tp(x, x.f.plexB, 13f, if (x.st.light) c("#0B4D3B") else x.st.acc), false)
+        if (x.style.has("time")) text(cv, x, x.d.clock(nx.at), startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), yy, tm)
+        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), yy, tp(x, x.f.plexB, 13f, if (x.st.light) c("#0B4D3B") else x.st.acc), false)
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),

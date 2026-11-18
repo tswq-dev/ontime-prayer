@@ -98,8 +98,12 @@ class MainActivity : ComponentActivity() {
 
     // "Customize" on a home screen widget: the page opens that widget's look.
     private var pendingWidget = ""
+    // a tap on a widget set to open the month table or the next prayer's settings
+    private var pendingOpen = ""
     private fun takeWidget(i: Intent?): Boolean {
         if (i == null) return false
+        i.getStringExtra("open")?.let { o -> i.removeExtra("open"); pendingOpen = o
+            if (::web.isInitialized) web.evaluateJavascript("if(window.__openFrom){__openFrom(Android.pendingOpen())}", null) }
         val id = i.getIntExtra("widgetId", 0); val type = i.getStringExtra("widgetType")
         if (id == 0 || type == null || type !in WidgetUpdater.CLASSES) return false
         i.removeExtra("widgetId"); pendingWidget = "$id,$type"; return true
@@ -159,6 +163,7 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun widgetStyle(type: String, id: Int, json: String) { runCatching { WidgetUpdater.setStyle(applicationContext, type, id, json) } }
         @JavascriptInterface fun pinWidget(type: String) { main.post { WidgetUpdater.pin(applicationContext, type) } }
         @JavascriptInterface fun pendingWidget(): String { val p = pendingWidget; pendingWidget = ""; return p }
+        @JavascriptInterface fun pendingOpen(): String { val p = pendingOpen; pendingOpen = ""; return p }
         @JavascriptInterface fun reminder(pk: String): String = Reminders.find(applicationContext, pk)?.optLong("at")?.toString() ?: ""
         @JavascriptInterface fun cancelRemind(pk: String) { main.post { runCatching { Alerts.unremind(applicationContext, pk) } } }
         @JavascriptInterface fun remind(json: String) {

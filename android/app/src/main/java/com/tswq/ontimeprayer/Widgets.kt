@@ -114,13 +114,27 @@ object WidgetUpdater {
                 listOf(R.id.b0, R.id.b1, R.id.b2).forEachIndexed { i, v -> rv.setOnClickPendingIntent(v, button(ctx, order[i])) }
             } else rv = RemoteViews(ctx.packageName, R.layout.widget_image)
             rv.setImageViewBitmap(R.id.img, bmp)
-            rv.setOnClickPendingIntent(R.id.root, Alerts.openApp(ctx))
+            rv.setOnClickPendingIntent(R.id.root, tapIntent(ctx, style(ctx, id, type, d).tap))
             mgr.updateAppWidget(id, rv)
         }
     }
 
+    /** What a tap opens: the app, the month table, or the next prayer's settings. */
+    private fun tapIntent(ctx: Context, tap: String): PendingIntent =
+        if (tap != "month" && tap != "prayer") Alerts.openApp(ctx)
+        else PendingIntent.getActivity(ctx, if (tap == "month") 11 else 12,
+            Intent(ctx, MainActivity::class.java).putExtra("open", tap).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    /** The phone's own colours (Android 12 and later), for the "phone's colours" background. */
+    private fun palette(ctx: Context): IntArray? = if (Build.VERSION.SDK_INT < 31) null else runCatching {
+        intArrayOf(ctx.getColor(android.R.color.system_accent1_100), ctx.getColor(android.R.color.system_accent2_200),
+            ctx.getColor(android.R.color.system_accent1_900), ctx.getColor(android.R.color.system_accent2_700), ctx.getColor(android.R.color.system_accent1_600))
+    }.getOrNull()
+
     /** Draws at most ~0.9 MP so the picture stays light to send to the home screen. */
     fun draw(ctx: Context, type: String, st: WStyle, d: WData?, now: Long, wDp: Int, hDp: Int, density: Float): Bitmap {
+        if (st.bg == "dyn") WidgetArt.dyn = palette(ctx)
         var s = min(density, 2.5f); val px = wDp * hDp * s * s
         if (px > 900_000f) s *= sqrt(900_000f / px)
         val fonts = WFonts.get(ctx.assets)
@@ -210,7 +224,8 @@ object WidgetUpdater {
         val pl = JSONArray(); placed(ctx).forEach { (id, t) -> pl.put(JSONObject().put("id", id).put("type", t).put("style", style(ctx, id, t, d).toJson())) }
         val st = JSONObject(); CLASSES.keys.forEach { st.put(it, style(ctx, 0, it, d).toJson()) }
         val pin = Build.VERSION.SDK_INT >= 26 && AppWidgetManager.getInstance(ctx).isRequestPinAppWidgetSupported
-        return JSONObject().put("placed", pl).put("styles", st).put("pin", pin).toString()
+        val show = JSONObject(); WStyle.SHOW.forEach { (t, v) -> show.put(t, JSONArray(v.first)) }
+        return JSONObject().put("placed", pl).put("styles", st).put("pin", pin).put("show", show).put("dyn", Build.VERSION.SDK_INT >= 31).toString()
     }
 
     fun pin(ctx: Context, type: String): Boolean {

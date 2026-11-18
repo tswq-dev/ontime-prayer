@@ -14,5 +14,5 @@
     android:previewImage="@drawable/wp_clock"
     android:description="@string/wd_clock"
     android:configure="com.tswq.ontimeprayer.WidgetConfigActivity"
-    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />

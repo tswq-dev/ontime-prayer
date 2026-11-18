@@ -14,5 +14,5 @@
     android:previewImage="@drawable/wp_moon"
     android:description="@string/wd_moon"
     android:configure="com.tswq.ontimeprayer.WidgetConfigActivity"
-    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />
