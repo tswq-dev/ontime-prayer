@@ -25,6 +25,7 @@ object Alerts {
     const val CH_REMIND = "remind"
     const val CH_EXIT = "exit"
     const val CH_AFTER = "after"
+    const val CH_SILENT = "quiet"
     private const val RESTORE_CODE = 900
 
     fun channels(ctx: Context) {
@@ -41,6 +42,10 @@ object Alerts {
         })
         nm.createNotificationChannel(NotificationChannel(CH_REMIND, t("التذكير والإقامة", "Reminders and iqama"), NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel(CH_EXIT, t("خروج وقت الصلاة", "End of prayer time"), NotificationManager.IMPORTANCE_HIGH))
+        // "Notification only", and reminders whose sound is spoken or off: no sound, no vibration.
+        nm.createNotificationChannel(NotificationChannel(CH_SILENT, t("إشعار بدون صوت", "Silent notification"), NotificationManager.IMPORTANCE_DEFAULT).apply {
+            setSound(null, null); enableVibration(false)
+        })
         // What stays in the shade after the adhan (with "remind me" and "I prayed"): no sound of its own.
         nm.createNotificationChannel(NotificationChannel(CH_AFTER, t("بعد الأذان", "After the adhan"), NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null); enableVibration(false)
@@ -55,16 +60,22 @@ object Alerts {
         }
     }
 
-    fun fire(ctx: Context, ev: JSONObject) {
+    /** [done] is called when nothing more is playing (the receiver keeps the process alive until then). */
+    fun fire(ctx: Context, ev: JSONObject, done: () -> Unit = {}) {
         channels(ctx)
         val title = ev.optString("title"); val text = ev.optString("text"); val id = ev.optString("id").hashCode()
         val pk = ev.optString("pk")
+        val spoken = ev.optString("rs", "ding") == "speak"
+        val remCh = when { ev.optString("voice") == "vibrate" -> CH_VIBRATE; ev.optString("rs", "ding") == "ding" -> CH_REMIND; else -> CH_SILENT }
+        var speaking = false
+        fun say(name: String, then: () -> Unit = {}) { speaking = true; Speaker.play(ctx, name) { then(); done() } }
+        fun quietNote() = post(ctx, if (Exits.hasEx(ev)) prayerBuilder(ctx, ev, CH_SILENT, null) else builder(ctx, CH_SILENT, title, text), noteId(ev))
         when (ev.optString("kind")) {
-            "adhan" -> when (soundOf(ev)) {
+            "adhan" -> when (val s = soundOf(ev)) {
                 "none" -> {}
                 "vibrate" -> post(ctx, prayerBuilder(ctx, ev, CH_VIBRATE, null), noteId(ev))
-                "notify" -> if (Exits.hasEx(ev)) post(ctx, prayerBuilder(ctx, ev, CH_REMIND, null), noteId(ev)) else notify(ctx, CH_REMIND, title, text, id)
-                else -> {
+                "notify" -> quietNote()
+                else -> if (s.startsWith("spk_")) { quietNote(); say(s) } else {
                     val i = Intent(ctx, AdhanService::class.java).putExtra("ev", ev.toString())
                     try {
                         if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
@@ -73,11 +84,19 @@ object Alerts {
                     }
                 }
             }
-            "pre", "iqama" -> notify(ctx, if (ev.optString("voice") == "vibrate") CH_VIBRATE else CH_REMIND, title, text, id)
-            "silence" -> silence(ctx, ev.optInt("min", 20), title, text)
-            "exit" -> if (!Prayed.has(ctx, pk)) exitNote(ctx, ev)
+            "pre", "iqama" -> {
+                notify(ctx, remCh, title, text, id)
+                if (spoken && remCh != CH_VIBRATE) say(ev.optString("spk"))
+            }
+            // the spoken line first, then vibrate mode (vibrate mode would cut it off)
+            "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), title, text) }
+                else silence(ctx, ev.optInt("min", 20), title, text)
+            "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); if (spoken) say(ev.optString("xspk")) }
         }
+        if (!speaking) done()
     }
+
+    private fun ringerNormal(ctx: Context) = ctx.getSystemService(AudioManager::class.java)?.ringerMode == AudioManager.RINGER_MODE_NORMAL
 
     fun noteId(ev: JSONObject) = ev.optString("pk").ifEmpty { ev.optString("id") }.let { (it.hashCode() and 0x0FFFFFFF) or 0x10000000 }
     fun noteIdOf(pk: String) = (pk.hashCode() and 0x0FFFFFFF) or 0x10000000
@@ -125,7 +144,7 @@ object Alerts {
         val pk = r.optString("pk"); val ar = Exits.ar(r)
         val left = maxOf(1L, Math.round((ex.at - now) / 60_000.0))
         val title = if (ar) "باقي ${Exits.digits(left.toString(), r)} د على خروج ${ex.name}" else "$left min until ${ex.name} ends"
-        val b = builder(ctx, CH_EXIT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
+        val b = builder(ctx, if (r.optString("rs", "ding") == "ding") CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
         b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
         if (ex.at - now > 11 * 60_000L)
             b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.digits("10", r)} د" else "In 10 min", "rem", r.toString()))
@@ -213,6 +232,10 @@ object Alerts {
         cancel(ctx, RESTORE_CODE)
     }
 
+    /** A bundled recording by name: the adhan voices, or the spoken lines (spk_…). 0 if there is none. */
+    fun rawId(ctx: Context, name: String): Int = raw(name).takeIf { it != 0 }
+        ?: if (name.startsWith("spk_")) ctx.resources.getIdentifier(name, "raw", ctx.packageName) else 0
+
     /** Bundled recordings (sources in android/SOUNDS.md). */
     private fun raw(name: String): Int = when (name) {
         "afasy" -> R.raw.adhan_afasy
@@ -227,7 +250,7 @@ object Alerts {
     fun soundUri(ctx: Context, sound: String, userFile: Boolean = true): Pair<Uri?, Boolean> {
         if (sound == "file" && userFile) Scheduler.prefs(ctx).getString("soundUri_file", null)?.let { return Uri.parse(it) to true }
         if (sound == "notify") return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) to false
-        val id = raw(sound).takeIf { it != 0 } ?: R.raw.adhan_afasy
+        val id = rawId(ctx, sound).takeIf { it != 0 } ?: R.raw.adhan_afasy
         return Uri.parse("android.resource://${ctx.packageName}/$id") to true
     }
 

@@ -12,20 +12,22 @@ class AlarmReceiver : BroadcastReceiver() {
             Scheduler.ACTION_RESTORE -> Alerts.restoreRinger(ctx)
             Scheduler.ACTION_FIRE -> {
                 val ev = json("ev")
-                if (ev != null) {
-                    Scheduler.markFired(ctx, ev.optString("id"), ev.optLong("at"))
-                    // Skip alerts delivered very late (phone was off): they would only confuse.
-                    if (System.currentTimeMillis() - ev.optLong("at") < 10 * 60_000) Alerts.fire(ctx, ev)
-                }
+                if (ev != null) Scheduler.markFired(ctx, ev.optString("id"), ev.optLong("at"))
                 Scheduler.reschedule(ctx)
+                // Skip alerts delivered very late (phone was off): they would only confuse.
+                if (ev != null && System.currentTimeMillis() - ev.optLong("at") < 10 * 60_000) {
+                    val pr = goAsync()   // keeps the process alive while a spoken line plays
+                    Alerts.fire(ctx, ev) { pr.finish() }
+                }
             }
             Scheduler.ACTION_REMINDER -> {
                 val r = json("rem")
-                if (r != null) {
-                    Reminders.remove(ctx, r.optString("pk"))
-                    if (!Prayed.has(ctx, r.optString("pk"))) { Alerts.channels(ctx); Alerts.exitNote(ctx, r) }
-                }
+                if (r != null) Reminders.remove(ctx, r.optString("pk"))
                 Scheduler.reschedule(ctx)
+                if (r != null && !Prayed.has(ctx, r.optString("pk"))) {
+                    Alerts.channels(ctx); Alerts.exitNote(ctx, r)
+                    if (r.optString("rs", "ding") == "speak") { val pr = goAsync(); Speaker.play(ctx, r.optString("xspk")) { pr.finish() } }
+                }
             }
             ACTION_REMIND -> json("ev")?.let { Alerts.channels(ctx); Alerts.remind(ctx, it) }
             ACTION_SNOOZE -> json("rem")?.let { Alerts.snooze(ctx, it) }

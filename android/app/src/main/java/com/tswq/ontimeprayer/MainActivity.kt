@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.provider.Settings
+import android.app.NotificationManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -30,7 +32,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private val main = Handler(Looper.getMainLooper())
 
-    private val askNotify = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val notifyPerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) { tellNotify() }
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         if (res.values.any { it }) locateNow() else jsError("denied")
     }
@@ -70,9 +72,7 @@ class MainActivity : ComponentActivity() {
         else web.restoreState(savedInstanceState)
 
         Alerts.channels(this)
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        // Notification permission is asked from the page, after a card that explains it (first run, or when an alert is turned on).
         Scheduler.reschedule(this)
     }
 
@@ -82,6 +82,19 @@ class MainActivity : ComponentActivity() {
     }
 
     // The opening plays when the page loads, so only after the app was fully closed (not when it comes back from the background).
+    private fun tellNotify() { web.evaluateJavascript("window.__onNotify&&__onNotify()", null) }
+
+    private fun notifyOn(): Boolean {
+        val perm = Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return perm && getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() != false
+    }
+
+    // Back from the phone's settings: the page re-checks whether notifications are allowed.
+    override fun onResume() {
+        super.onResume()
+        if (::web.isInitialized) tellNotify()
+    }
+
     override fun onStop() {
         super.onStop()
         Alerts.stopPreview()
@@ -104,6 +117,22 @@ class MainActivity : ComponentActivity() {
     inner class Bridge {
         @JavascriptInterface fun schedule(json: String) {
             runCatching { Scheduler.save(applicationContext, json) }
+        }
+        @JavascriptInterface fun notifyState(): String = if (notifyOn()) "on" else "off"
+        @JavascriptInterface fun askNotify() {
+            main.post {
+                val p = Scheduler.prefs(this@MainActivity)
+                val asked = p.getBoolean("askedNotify", false)
+                val canAsk = Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                    (!asked || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))
+                if (canAsk) {
+                    p.edit().putBoolean("askedNotify", true).apply()
+                    notifyPerm.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else if (!notifyOn()) {
+                    // refused before, or switched off in the phone's settings: open this app's notification settings
+                    runCatching { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) }
+                } else tellNotify()
+            }
         }
         @JavascriptInterface fun sheet(open: Boolean) { main.post { closeSheet.isEnabled = open } }
         @JavascriptInterface fun reminder(pk: String): String = Reminders.find(applicationContext, pk)?.optLong("at")?.toString() ?: ""
