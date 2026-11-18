@@ -231,6 +231,8 @@ object WidgetUpdater {
     fun pin(ctx: Context, type: String): Boolean {
         val mgr = AppWidgetManager.getInstance(ctx); val cls = CLASSES[type] ?: return false
         if (Build.VERSION.SDK_INT < 26 || !mgr.isRequestPinAppWidgetSupported) return false
+        // its look was just chosen in the app: the launcher's customise step need not open the app again
+        Scheduler.prefs(ctx).edit().putLong("pinAt", System.currentTimeMillis()).apply()
         return runCatching { mgr.requestPinAppWidget(ComponentName(ctx, cls), null, null) }.getOrDefault(false)
     }
 }
@@ -259,6 +261,8 @@ class WidgetConfigActivity : Activity() {
         if (type != null) {
             WidgetUpdater.update(this, AppWidgetManager.getInstance(this), id, type)
             WidgetUpdater.tick(this)
+            val p = Scheduler.prefs(this); val justPinned = System.currentTimeMillis() - p.getLong("pinAt", 0) < 120_000
+            if (justPinned) { p.edit().remove("pinAt").apply(); finish(); return }
             startActivity(Intent(this, MainActivity::class.java).putExtra("widgetId", id).putExtra("widgetType", type)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
         }
