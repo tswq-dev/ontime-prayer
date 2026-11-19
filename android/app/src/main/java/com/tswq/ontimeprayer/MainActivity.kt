@@ -164,6 +164,12 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun pinWidget(type: String) { main.post { WidgetUpdater.pin(applicationContext, type) } }
         @JavascriptInterface fun pendingWidget(): String { val p = pendingWidget; pendingWidget = ""; return p }
         @JavascriptInterface fun pendingOpen(): String { val p = pendingOpen; pendingOpen = ""; return p }
+        // the adhan screen (full screen when locked): from Android 14 the phone may ask for a permission
+        @JavascriptInterface fun fsiState(): String = if (Build.VERSION.SDK_INT < 34) "na"
+            else if (getSystemService(android.app.NotificationManager::class.java)?.canUseFullScreenIntent() == true) "on" else "off"
+        @JavascriptInterface fun askFsi() {
+            if (Build.VERSION.SDK_INT >= 34) main.post { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, android.net.Uri.parse("package:$packageName"))) } }
+        }
         @JavascriptInterface fun reminder(pk: String): String = Reminders.find(applicationContext, pk)?.optLong("at")?.toString() ?: ""
         @JavascriptInterface fun cancelRemind(pk: String) { main.post { runCatching { Alerts.unremind(applicationContext, pk) } } }
         @JavascriptInterface fun remind(json: String) {

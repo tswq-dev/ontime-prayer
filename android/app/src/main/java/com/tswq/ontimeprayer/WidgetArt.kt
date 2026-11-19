@@ -65,7 +65,7 @@ object WidgetArt {
 
     private class X(val d: WData, val day: JSONObject, val now: Long, val st: Sty, val f: WFonts, val nameTf: Typeface,
                     val u: Float, val rtl: Boolean, val style: WStyle, val w: Float, val h: Float) {
-        val next = d.next(now)
+        val next = d.hero(now)
         val prev = d.prev(now)
         val cur = d.current(now)
         fun t(k: String) = day.optLong(k)
@@ -272,7 +272,7 @@ object WidgetArt {
         val fg = if (strip) ss.fg else c("#FFF8EA"); val sw = !strip
         val base = if (strip) sh + (h - sh) / 2 + x.dp(9f) else h - x.dp(16f)
         val np = tp(x, x.nameTf, if (strip) 24f else 30f, fg, sw); val tpp = tp(x, x.f.plex, if (strip) 16f else 19f, fg, sw)
-        val inS = x.d.inTxt(nx.at - x.now); val ip = tp(x, x.f.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
+        val inS = x.d.inTxt(nx, x.now); val ip = tp(x, x.f.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
         val name = x.d.name(nx.k); val tm = x.d.clock(nx.at) + " " + x.d.ampm(nx.at)
         fit(np, name, w * .45f)
         text(cv, x, name, startX(x, pad), base, np)
@@ -301,7 +301,7 @@ object WidgetArt {
         val edge = Path().apply { moveTo(X0(8f), Y0(170f)); lineTo(X0(8f), Y0(78f)); cubicTo(X0(8f), Y0(40f), X0(46f), Y0(14f), X0(85f), Y0(4f)); cubicTo(X0(124f), Y0(14f), X0(162f), Y0(40f), X0(162f), Y0(78f)); lineTo(X0(162f), Y0(170f)) }
         cv.drawPath(edge, paint(GOLD_L).apply { style = Paint.Style.STROKE; strokeWidth = 2.2f * k })
         val nx = x.next ?: return
-        val lines = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx.at - x.now) else "")
+        val lines = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "")
         val np = tp(x, x.nameTf, 22f, c("#FFF8EA")).apply { textSize = 22f * k }; val name = x.d.name(nx.k); fit(np, name, 130 * k)
         val ny = if (lines.isEmpty()) Y0(150f) else Y0(140f)
         if (x.style.has("hijri")) center(cv, hijriTxt(x), X0(85f), ny - np.textSize * 1.05f, tp(x, x.f.plex, 10f, c("#FFF8EA")).apply { textSize = 10f * k })
@@ -315,12 +315,14 @@ object WidgetArt {
         val s = min(x.w, x.h); val cx = x.w / 2; val cy = x.h / 2; val r = s * .353f; val sw = s * .059f
         val ov = RectF(cx - r, cy - r, cx + r, cy + r)
         cv.drawCircle(cx, cy, r, paint(x.st.line).apply { style = Paint.Style.STROKE; strokeWidth = sw })
-        val prog = if (pv == null) 0f else ((x.now - pv.at).toFloat() / max(1L, nx.at - pv.at)).coerceIn(0f, 1f)
+        val prog = if (nx.iqAt > 0) ((x.now - nx.at).toFloat() / max(1L, nx.iqAt - nx.at)).coerceIn(0f, 1f)
+                   else if (pv == null) 0f else ((x.now - pv.at).toFloat() / max(1L, nx.at - pv.at)).coerceIn(0f, 1f)
         val col = if (x.st.kind == "dyn") x.st.acc else c(RC[nx.k] ?: "#E8C15A")
         cv.drawArc(ov, -90f, -360f * prog * x.dir, false, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = sw; strokeCap = Paint.Cap.ROUND })
         val k = s / 170f
-        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.at - x.now) else "")
-        if (pv != null && x.style.has("prev")) center(cv, x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k), cx, cy - 18 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
+        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.target - x.now) else "")
+        val top = if (nx.iqAt > 0) (if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
+        if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
         center(cv, x.d.name(nx.k), cx, cy + (if (sub.isEmpty()) 16 else 9) * k, tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k })
         if (sub.isNotEmpty()) { val p = tp(x, x.f.plexB, 13f, col).apply { textSize = 13f * k }; fit(p, sub, r * 1.5f); center(cv, sub, cx, cy + 28 * k, p) }
     }
@@ -364,7 +366,7 @@ object WidgetArt {
         text(cv, x, name, xs, y, np); text(cv, x, tm, xs - x.dir * (np.measureText(name) + gap), y, tmP)
         var yy = y + x.dp(20f)
         if (x.style.has("count")) { val ip = tp(x, x.f.plexB, 12f, if (x.st.light) c("#0B4D3B") else x.st.fg, false)
-            pill(cv, x, x.d.inTxt(nx.at - x.now), cx, yy, ip, if (x.st.light) a(.09f, c("#0B4D3B")) else a(.14f, Color.WHITE)); yy += x.dp(20f) }
+            pill(cv, x, x.d.inTxt(nx, x.now), cx, yy, ip, if (x.st.light) a(.09f, c("#0B4D3B")) else a(.14f, Color.WHITE)); yy += x.dp(20f) }
         val extra = joinDot(if (x.style.has("hijri")) hijriTxt(x) else "", if (x.style.has("exit")) exitTxt(x) else "")
         if (extra.isNotEmpty()) { val ep = tp(x, x.f.plex, 10.5f, x.st.sub); fit(ep, extra, x.w * .6f); center(cv, extra, cx, yy + x.dp(2f), ep) }
     }
@@ -376,7 +378,7 @@ object WidgetArt {
         // the end side: a stack of the lines the user picked, centred on the name
         val lines = ArrayList<Pair<String, Paint>>()
         if (x.style.has("time")) lines += x.d.clock(nx.at) to tp(x, x.f.plex, min(26f, h / x.u * .3f), x.st.fg)
-        if (x.style.has("count")) lines += x.d.inTxt(nx.at - x.now) to tp(x, x.f.plex, 12f, x.st.sub)
+        if (x.style.has("count")) lines += x.d.inTxt(nx, x.now) to tp(x, x.f.plex, 12f, x.st.sub)
         if (x.style.has("hijri")) lines += hijriTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
         if (x.style.has("exit") && x.cur != null) lines += exitTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
         val np = tp(x, x.nameTf, min(54f, h / x.u * .62f), x.st.fg); fit(np, name, if (lines.isEmpty()) w - 2 * pad else w * .6f)
@@ -390,7 +392,7 @@ object WidgetArt {
         card(cv, x, x.dp(20f)); val nx = x.next ?: return
         val np = tp(x, x.nameTf, 19f, x.st.fg); val rp = tp(x, x.f.plex, 16f, x.st.fg)
         val parts = ArrayList<Pair<String, Paint>>(); parts += x.d.name(nx.k) to np
-        val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx.at - x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
+        val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
         rest.forEachIndexed { i, t -> if (i > 0) parts += "·" to rp; parts += t to rp }
         val gap = x.dp(8f); val total = parts.sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * (parts.size - 1)
         val scale = min(1f, (x.w - x.dp(24f)) / total); np.textSize *= scale; rp.textSize *= scale
@@ -419,7 +421,7 @@ object WidgetArt {
         if ("count" in rows) {
             val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 22f * u }
             val cp = tp(x, x.f.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = 21f * u }
-            val name = x.d.name(nx.k); val inS = x.d.inTxt(nx.at - x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
+            val name = x.d.name(nx.k); val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
             val gap = 12 * u; val tw = np.measureText(name) + gap + cp.measureText(inS); val xs = w / 2 + x.dir * tw / 2
             text(cv, x, name, xs, y + 25 * u, np); text(cv, x, inS, xs - x.dir * (np.measureText(name) + gap), y + 25 * u, cp)
             y += 34 * u
@@ -438,7 +440,7 @@ object WidgetArt {
                 center(cv, x.d.name(key), ccx, y + 15 * u, p1)
                 center(cv, x.d.clock(tt(key)), ccx, y + 33 * u, p2)
                 if ("exit" in rows || (on && "count" !in rows)) {
-                    val sub = if (on && "count" !in rows) x.d.inTxt(nx.at - x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
+                    val sub = if (on && "count" !in rows) x.d.inTxt(nx, x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
                     val p3 = tp(x, if (on) x.f.plexB else x.f.plex, 9.5f, fg, !on && x.st.shadow).apply { textSize = 9.5f * u; this.alpha = if (on) 255 else if (past) 90 else 180 }
                     fit(p3, sub, cw - 2 * u); center(cv, sub, ccx, y + 47 * u, p3)
                 }
@@ -475,7 +477,7 @@ object WidgetArt {
         val nx = x.next ?: return; val k = s / 150f
         val l2 = ArrayList<Pair<String, Paint>>()
         if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k }
-        if (x.style.has("count")) l2 += x.d.dur(nx.at - x.now) to tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
+        if (x.style.has("count")) l2 += x.d.dur(nx.target - x.now) to tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
         var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
         center(cv, x.d.name(nx.k), cx, y, tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k })
         for ((t, p) in l2) { y += 14 * k; center(cv, t, cx, y, p) }
@@ -501,7 +503,7 @@ object WidgetArt {
         val k = min(1.2f, x.h / x.u / 96f); val u = x.u * k
         val np = tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * u }
         text(cv, x, x.d.name(nx.k) + " " + x.d.clock(nx.at), startX(x, pad), 24 * u, np)
-        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), 24 * u, tp(x, x.f.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
+        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx, x.now), endX(x, pad), 24 * u, tp(x, x.f.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
         val top = if (x.style.has("labels")) 34 * u else 40 * u; val bh = 18 * u; val l = pad; val r = w - pad; val bw = r - l
         val midnight = x.now - WData.minuteOfDay(x.now) * 60_000L
         fun xAt(t: Long): Float { val f = ((t - midnight) / 60_000f / 1440f).coerceIn(0f, 1f); return if (x.rtl) r - bw * f else l + bw * f }
@@ -563,7 +565,7 @@ object WidgetArt {
         val name = x.d.name(nx.k); val yy = h * .3f
         text(cv, x, name, startX(x, pad), yy, np)
         if (x.style.has("time")) text(cv, x, x.d.clock(nx.at), startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), yy, tm)
-        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx.at - x.now), endX(x, pad), yy, tp(x, x.f.plexB, 13f, if (x.st.light) c("#0B4D3B") else x.st.acc), false)
+        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx, x.now), endX(x, pad), yy, tp(x, x.f.plexB, 13f, if (x.st.light) c("#0B4D3B") else x.st.acc), false)
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),

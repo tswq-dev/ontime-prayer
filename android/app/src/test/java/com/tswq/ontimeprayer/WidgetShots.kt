@@ -102,6 +102,10 @@ class WidgetShots {
             Item("$t dyn", draw(t, dflt(t).copy(bg = "dyn"), ar, asr, sz(t).first, sz(t).second, fonts)) } +
             listOf("light", "dark").flatMap { bg -> listOf("pano", "window").map { t -> Item("$t $bg", draw(t, dflt(t).copy(bg = bg), ar, mg, sz(t).first, sz(t).second, fonts)) } })
 
+        // after the Dhuhr adhan, before its iqama: the widgets stay on Dhuhr with "Iqama in …"
+        val iqNow = day.getLong("dhuhr") + 6 * mn
+        sheet("sheet-14-iqama", types.map { t -> Item(t, draw(t, dflt(t).let { if (t == "table") it.copy(rows = setOf("count", "times", "iqama")) else it }, ar, iqNow, sz(t).first, if (t == "table") 200 else sz(t).second, fonts)) })
+
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
         for (t in types) {
             val st = dflt(t).let { if (it.bg == "clear") it.copy(bg = "dark") else it }

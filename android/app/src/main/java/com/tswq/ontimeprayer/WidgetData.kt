@@ -30,7 +30,13 @@ class WData(val o: JSONObject) {
 
     val valid get() = days.isNotEmpty()
 
-    data class Ev(val k: String, val at: Long)
+    /** A prayer time; [iqAt] is set while we wait for its iqama (the countdown then runs to it). */
+    data class Ev(val k: String, val at: Long, val iqAt: Long = 0L) { val target get() = if (iqAt > 0) iqAt else at }
+    /** What the widgets are about: after the adhan, until the iqama (if that countdown is on), the same prayer; else the next one. */
+    fun hero(now: Long): Ev? {
+        if (o.optInt("iqc", 1) == 1) prev(now)?.let { p -> val iq = p.at + iqMin(p.k) * 60_000L; if (now < iq) return Ev(p.k, p.at, iq) }
+        return next(now)
+    }
 
     /** The next of the five prayers after [now], and the one before it. */
     fun next(now: Long): Ev? {
@@ -77,6 +83,7 @@ class WData(val o: JSONObject) {
         return digits(if (ar) (if (h > 0) "$h س $mi د" else "$mi د") else (if (h > 0) "$h h $mi min" else "$mi min"))
     }
     fun inTxt(ms: Long) = (if (ar) "بعد " else "in ") + dur(ms)
+    fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now) else inTxt(e.at - now)
     fun leftTxt(ms: Long) = (if (ar) "باقي " else "") + dur(ms) + (if (ar) "" else " left")
 
     companion object {
