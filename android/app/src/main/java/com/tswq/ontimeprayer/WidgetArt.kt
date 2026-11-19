@@ -257,8 +257,8 @@ object WidgetArt {
             if (!x.style.has("labels")) continue
             lp.typeface = if (on) x.f.plexB else x.f.plex; lp.alpha = if (on) 255 else 190
             val near = kotlin.math.hypot(q[0] - body[0], q[1] - x.dp(12f) - body[1]) < x.dp(22f)
-            if (near && strip) continue   // under the dot is the text strip; the name is there anyway
-            center(cv, x.d.name(k), q[0], if (near) q[1] + x.dp(17f) else q[1] - x.dp(9f), lp)
+            if (near) continue   // the sun is on it (it marks the time itself), as in the app
+            center(cv, x.d.name(k), q[0], q[1] - x.dp(9f), lp)
         }
         if (day) sun(cv, x, body[0], body[1], 9f) else if (x.style.has("sky")) moon(cv, x, body[0], body[1], x.dp(8f))
         hills(cv, x, 0f, sh * .7f, w, sh * .3f)
