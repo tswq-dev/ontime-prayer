@@ -23,27 +23,37 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** The widget typefaces: the three name fonts and IBM Plex for everything else. */
-class WFonts(val kufi: Typeface, val ruqaa: Typeface, val naskh: Typeface, val plex: Typeface, val plexB: Typeface) {
-    fun name(f: String) = when (f) { "ruqaa" -> ruqaa; "naskh" -> naskh; else -> kufi }
+/** The widget typefaces: the three name fonts and IBM Plex for everything else, each in the weights the user can pick. */
+class WFonts(private val kufiW: Map<Int, Typeface>, private val ruqaaW: Map<Int, Typeface>, private val naskhW: Map<Int, Typeface>, private val plexW: Map<Int, Typeface>) {
+    val plex: Typeface get() = plexW[400]!!
+    val plexB: Typeface get() = plexW[600]!!
+    /** "l" light, "m" medium (the default look), "b" bold. */
+    fun name(f: String, w: String = "m"): Typeface = when (f) {
+        "ruqaa" -> ruqaaW[if (w == "l") 400 else 700]!!
+        "naskh" -> naskhW[if (w == "l") 400 else 700]!!
+        else -> kufiW[when (w) { "l" -> 400; "b" -> 700; else -> 600 }]!!
+    }
+    /** Ruqaa and Naskh have nothing past Bold: "bold" thickens their strokes when drawn. */
+    fun heavy(f: String, w: String) = w == "b" && f != "kufi"
+    fun text(w: String, bold: Boolean): Typeface = plexW[when (w) { "l" -> if (bold) 500 else 300; "b" -> if (bold) 700 else 600; else -> if (bold) 600 else 400 }]!!
+
     companion object {
         @Volatile private var cached: WFonts? = null
+        private fun build(file: (String) -> Typeface?, kufi: (Int) -> Typeface?): WFonts {
+            fun f(n: String, d: Typeface) = runCatching { file(n) }.getOrNull() ?: d
+            return WFonts(listOf(400, 600, 700).associateWith { runCatching { kufi(it) }.getOrNull() ?: Typeface.DEFAULT_BOLD },
+                mapOf(400 to f("ruqaa400", Typeface.DEFAULT), 700 to f("ruqaa", Typeface.DEFAULT_BOLD)),
+                mapOf(400 to f("naskh400", Typeface.DEFAULT), 700 to f("naskh", Typeface.DEFAULT_BOLD)),
+                mapOf(300 to f("plex300", Typeface.DEFAULT), 400 to f("plex400", Typeface.DEFAULT), 500 to f("plex500", Typeface.DEFAULT),
+                    600 to f("plex600", Typeface.DEFAULT_BOLD), 700 to f("plex700", Typeface.DEFAULT_BOLD)))
+        }
         fun get(assets: AssetManager): WFonts = cached ?: synchronized(this) {
-            cached ?: WFonts(
-                runCatching { Typeface.Builder(assets, "wfonts/kufi.ttf").setFontVariationSettings("'wght' 600").build() }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-                runCatching { Typeface.createFromAsset(assets, "wfonts/ruqaa.ttf") }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-                runCatching { Typeface.createFromAsset(assets, "wfonts/naskh.ttf") }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-                runCatching { Typeface.createFromAsset(assets, "wfonts/plex400.ttf") }.getOrNull() ?: Typeface.DEFAULT,
-                runCatching { Typeface.createFromAsset(assets, "wfonts/plex600.ttf") }.getOrNull() ?: Typeface.DEFAULT_BOLD
-            ).also { cached = it }
+            cached ?: build({ Typeface.createFromAsset(assets, "wfonts/$it.ttf") },
+                { Typeface.Builder(assets, "wfonts/kufi.ttf").setFontVariationSettings("'wght' $it").build() }).also { cached = it }
         }
         /** For tests on the JVM. */
-        fun fromDir(dir: File) = WFonts(
-            runCatching { Typeface.Builder(File(dir, "kufi.ttf")).setFontVariationSettings("'wght' 600").build() }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-            runCatching { Typeface.createFromFile(File(dir, "ruqaa.ttf")) }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-            runCatching { Typeface.createFromFile(File(dir, "naskh.ttf")) }.getOrNull() ?: Typeface.DEFAULT_BOLD,
-            runCatching { Typeface.createFromFile(File(dir, "plex400.ttf")) }.getOrNull() ?: Typeface.DEFAULT,
-            runCatching { Typeface.createFromFile(File(dir, "plex600.ttf")) }.getOrNull() ?: Typeface.DEFAULT_BOLD)
+        fun fromDir(dir: File) = build({ Typeface.createFromFile(File(dir, "$it.ttf")) },
+            { Typeface.Builder(File(dir, "kufi.ttf")).setFontVariationSettings("'wght' $it").build() })
     }
 }
 
@@ -63,8 +73,12 @@ object WidgetArt {
         val light get() = kind == "light"
     }
 
-    private class X(val d: WData, val day: JSONObject, val now: Long, val st: Sty, val f: WFonts, val nameTf: Typeface,
+    private class X(val d: WData, val day: JSONObject, val now: Long, val st: Sty, val f: WFonts,
                     val u: Float, val rtl: Boolean, val style: WStyle, val w: Float, val h: Float) {
+        val nameTf = f.name(style.font, style.nw)
+        val heavy = f.heavy(style.font, style.nw)
+        val plex = f.text(style.dw, false)
+        val plexB = f.text(style.dw, true)
         val next = d.hero(now)
         val prev = d.prev(now)
         val cur = d.current(now)
@@ -129,7 +143,9 @@ object WidgetArt {
 
     // ---------- small drawing helpers ----------
     private fun paint(color: Int = Color.WHITE) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-    private fun tp(x: X, tf: Typeface, sizeDp: Float, color: Int, shadow: Boolean = x.st.shadow) = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+    private class NPaint(val heavy: Boolean) : Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
+    private fun thicken(p: Paint) { if (p is NPaint && p.heavy) { p.style = Paint.Style.FILL_AND_STROKE; p.strokeWidth = p.textSize * .035f; p.strokeJoin = Paint.Join.ROUND } }
+    private fun tp(x: X, tf: Typeface, sizeDp: Float, color: Int, shadow: Boolean = x.st.shadow) = NPaint(tf === x.nameTf && x.heavy).apply {
         typeface = tf; textSize = x.dp(sizeDp); this.color = color
         if (shadow) setShadowLayer(x.dp(4f), 0f, x.dp(1f), 0x8C000000.toInt())
     }
@@ -137,9 +153,24 @@ object WidgetArt {
     /** Draws text so it starts at [x0] in reading order (right edge in Arabic). */
     private fun text(cv: Canvas, x: X, s: String, x0: Float, y: Float, p: Paint, start: Boolean = true) {
         p.textAlign = if (start == x.rtl) Paint.Align.RIGHT else Paint.Align.LEFT
-        cv.drawText(s, x0, y, p)
+        thicken(p); cv.drawText(s, x0, y, p)
     }
-    private fun center(cv: Canvas, s: String, cx: Float, y: Float, p: Paint) { p.textAlign = Paint.Align.CENTER; cv.drawText(s, cx, y, p) }
+    private fun center(cv: Canvas, s: String, cx: Float, y: Float, p: Paint) { p.textAlign = Paint.Align.CENTER; thicken(p); cv.drawText(s, cx, y, p) }
+
+    /**
+     * The prayer's name stretched with kashida (ـ) to fill [target] px, as a calligrapher would:
+     * the elongation goes before the last joining letter («الفجـــر»), never inside lam-alef.
+     */
+    private const val TATWEEL = '\u0640'
+    private val NONJOIN = "اأإآدذرزوؤةءى"
+    fun stretch(p: Paint, s: String, target: Float): String {
+        val spots = (0 until s.length - 1).filter { i -> val a = s[i]; val b = s[i + 1]
+            a in '\u0620'..'\u064A' && b in '\u0620'..'\u064A' && a !in NONJOIN && !(a == 'ل' && b in "اأإآ") }
+        if (spots.isEmpty() || p.measureText(s) >= target) return s
+        val at = spots.last() + 1; var out = s
+        for (n in 1..14) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > target) break; out = t }
+        return out
+    }
     private fun startX(x: X, pad: Float) = if (x.rtl) x.w - pad else pad
     private fun endX(x: X, pad: Float) = if (x.rtl) pad else x.w - pad
 
@@ -207,7 +238,7 @@ object WidgetArt {
         val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }
         val st = sty(if (type == "pano" || type == "window") (if (type == "window" && style.bg in setOf("light", "dark", "dyn")) style.bg else "sky") else style.bg)
-        val x = X(d, day, now, st, fonts, fonts.name(style.font), dpPx, d.ar, style, wPx.toFloat(), hPx.toFloat())
+        val x = X(d, day, now, st, fonts, dpPx * fitScale(type, wPx / dpPx, hPx / dpPx), d.ar, style, wPx.toFloat(), hPx.toFloat())
         when (type) {
             "pano" -> pano(cv, x); "window" -> window(cv, x); "ring" -> ring(cv, x); "orbit" -> orbit(cv, x)
             "script" -> script(cv, x); "table" -> table(cv, x); "clock" -> clock(cv, x); "moon" -> moonW(cv, x)
@@ -222,8 +253,13 @@ object WidgetArt {
         val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp); val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }
-        actions(cv, X(d, day, now, sty(style.bg), fonts, fonts.name(style.font), dpPx, d.ar, style, wPx.toFloat(), hPx.toFloat()), b)
+        actions(cv, X(d, day, now, sty(style.bg), fonts, dpPx * fitScale("actions", wPx / dpPx, hPx / dpPx), d.ar, style, wPx.toFloat(), hPx.toFloat()), b)
         return bmp
+    }
+    /** Widgets laid out in dp grow with the space they get (a 4×2 made taller, a big phone), keeping their balance. */
+    private fun fitScale(type: String, wDp: Float, hDp: Float): Float {
+        val (dw, dh) = when (type) { "pano", "orbit", "actions" -> 340f to 170f; "exit", "line", "script" -> 340f to 90f; "ribbon" -> 340f to 96f; else -> return 1f }
+        return min(wDp / dw, hDp / dh).coerceIn(.8f, 2.2f)
     }
     private fun empty(cv: Canvas, w: Float, h: Float, u: Float, f: WFonts, ar: Boolean) {
         cv.drawRoundRect(RectF(0f, 0f, w, h), 22 * u, 22 * u, paint().apply { shader = LinearGradient(0f, 0f, w * .35f, h, c("#11594A"), c("#0A382C"), Shader.TileMode.CLAMP) })
@@ -250,12 +286,12 @@ object WidgetArt {
         val span = max(1L, x.t("maghrib") - x.t("sunrise"))
         val day = isDay(x)
         val body = if (day) pt(dayFrac(x)) else { val m = .15f + .7f * nightFrac(x); floatArrayOf(cx + x.dir * w * .337f * cos(PI * m).toFloat(), cy - ry * .8f * sin(PI * m).toFloat()) }
-        val lp = tp(x, x.f.plex, 10f, c("#FFF8EA"), true)
+        val lp = tp(x, x.plex, 10f, c("#FFF8EA"), true)
         for (k in listOf("sunrise", "dhuhr", "asr", "maghrib")) {
             val q = pt(((x.t(k) - x.t("sunrise")).toFloat() / span).coerceIn(0f, 1f)); val on = k == x.next?.k
             cv.drawCircle(q[0], q[1], x.dp(if (on) 5f else 3f), paint(if (on) c("#F3D58C") else a(.7f, c("#FFFAEB"))))
             if (!x.style.has("labels")) continue
-            lp.typeface = if (on) x.f.plexB else x.f.plex; lp.alpha = if (on) 255 else 190
+            lp.typeface = if (on) x.plexB else x.plex; lp.alpha = if (on) 255 else 190
             val near = kotlin.math.hypot(q[0] - body[0], q[1] - x.dp(12f) - body[1]) < x.dp(22f)
             if (near) continue   // the sun is on it (it marks the time itself), as in the app
             center(cv, x.d.name(k), q[0], q[1] - x.dp(9f), lp)
@@ -265,14 +301,14 @@ object WidgetArt {
         if (!strip) cv.drawRect(0f, sh * .54f, w, sh, paint().apply { shader = LinearGradient(0f, sh, 0f, sh * .54f, a(.42f, Color.BLACK), 0, Shader.TileMode.CLAMP) })
         cv.restore()
         // small lines in the top corners: the Hijri date and when the time we are in ends
-        val cp = tp(x, x.f.plex, 10.5f, c("#FFF8EA"), true); val pad = x.dp(14f)
+        val cp = tp(x, x.plex, 10.5f, c("#FFF8EA"), true); val pad = x.dp(14f)
         if (x.style.has("hijri")) text(cv, x, hijriTxt(x), startX(x, pad), x.dp(20f), cp)
         if (x.style.has("exit")) text(cv, x, exitTxt(x), endX(x, pad), x.dp(20f), cp, false)
         val nx = x.next; if (nx == null) { cv.restore(); return }
         val fg = if (strip) ss.fg else c("#FFF8EA"); val sw = !strip
         val base = if (strip) sh + (h - sh) / 2 + x.dp(9f) else h - x.dp(16f)
-        val np = tp(x, x.nameTf, if (strip) 24f else 30f, fg, sw); val tpp = tp(x, x.f.plex, if (strip) 16f else 19f, fg, sw)
-        val inS = x.d.inTxt(nx, x.now); val ip = tp(x, x.f.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
+        val np = tp(x, x.nameTf, if (strip) 24f else 30f, fg, sw); val tpp = tp(x, x.plex, if (strip) 16f else 19f, fg, sw)
+        val inS = x.d.inTxt(nx, x.now); val ip = tp(x, x.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
         val name = x.d.name(nx.k); val tm = x.d.clock(nx.at) + " " + x.d.ampm(nx.at)
         fit(np, name, w * .45f)
         text(cv, x, name, startX(x, pad), base, np)
@@ -304,9 +340,9 @@ object WidgetArt {
         val lines = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "")
         val np = tp(x, x.nameTf, 22f, c("#FFF8EA")).apply { textSize = 22f * k }; val name = x.d.name(nx.k); fit(np, name, 130 * k)
         val ny = if (lines.isEmpty()) Y0(150f) else Y0(140f)
-        if (x.style.has("hijri")) center(cv, hijriTxt(x), X0(85f), ny - np.textSize * 1.05f, tp(x, x.f.plex, 10f, c("#FFF8EA")).apply { textSize = 10f * k })
+        if (x.style.has("hijri")) center(cv, hijriTxt(x), X0(85f), ny - np.textSize * 1.05f, tp(x, x.plex, 10f, c("#FFF8EA")).apply { textSize = 10f * k })
         center(cv, name, X0(85f), ny, np)
-        if (lines.isNotEmpty()) { val lp = tp(x, x.f.plexB, 12f, c("#FFF8EA")).apply { textSize = 12f * k }; fit(lp, lines, 140 * k); center(cv, lines, X0(85f), Y0(158f), lp) }
+        if (lines.isNotEmpty()) { val lp = tp(x, x.plexB, 12f, c("#FFF8EA")).apply { textSize = 12f * k }; fit(lp, lines, 140 * k); center(cv, lines, X0(85f), Y0(158f), lp) }
     }
     // ---------- 2. ring (2×2) ----------
     private val RC = mapOf("fajr" to "#8FB3EA", "dhuhr" to "#E8C15A", "asr" to "#E89A4A", "maghrib" to "#EC7F62", "isha" to "#9FA2EE")
@@ -322,16 +358,16 @@ object WidgetArt {
         val k = s / 170f
         val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.target - x.now) else "")
         val top = if (nx.iqAt > 0) (if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
-        if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
+        if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
         center(cv, x.d.name(nx.k), cx, cy + (if (sub.isEmpty()) 16 else 9) * k, tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k })
-        if (sub.isNotEmpty()) { val p = tp(x, x.f.plexB, 13f, col).apply { textSize = 13f * k }; fit(p, sub, r * 1.5f); center(cv, sub, cx, cy + 28 * k, p) }
+        if (sub.isNotEmpty()) { val p = tp(x, x.plexB, 13f, col).apply { textSize = 13f * k }; fit(p, sub, r * 1.5f); center(cv, sub, cx, cy + 28 * k, p) }
     }
     // ---------- 3. the day's orbit (4×2) ----------
     private fun orbit(cv: Canvas, x: X) {
         card(cv, x); val w = x.w; val h = x.h
         val cx = w / 2; val cy = h / 2; val rx = w * .421f; val ry = h * .365f
         val nx0 = x.next
-        val np = tp(x, x.nameTf, 26f, x.st.fg); val tmP = tp(x, x.f.plex, 18f, x.st.fg)
+        val np = tp(x, x.nameTf, 26f, x.st.fg); val tmP = tp(x, x.plex, 18f, x.st.fg)
         val name = nx0?.let { x.d.name(it.k) } ?: ""; val tm = if (x.style.has("time")) nx0?.let { x.d.clock(it.at) } ?: "" else ""
         val gap = x.dp(8f); val tw = np.measureText(name) + gap + tmP.measureText(tm)
         val hp = paint(x.st.line).apply { strokeWidth = x.dp(1f) }
@@ -365,37 +401,42 @@ object WidgetArt {
         val y = cy + x.dp(2f); val xs = cx + x.dir * tw / 2
         text(cv, x, name, xs, y, np); text(cv, x, tm, xs - x.dir * (np.measureText(name) + gap), y, tmP)
         var yy = y + x.dp(20f)
-        if (x.style.has("count")) { val ip = tp(x, x.f.plexB, 12f, if (x.st.light) c("#0B4D3B") else x.st.fg, false)
+        if (x.style.has("count")) { val ip = tp(x, x.plexB, 12f, if (x.st.light) c("#0B4D3B") else x.st.fg, false)
             pill(cv, x, x.d.inTxt(nx, x.now), cx, yy, ip, if (x.st.light) a(.09f, c("#0B4D3B")) else a(.14f, Color.WHITE)); yy += x.dp(20f) }
         val extra = joinDot(if (x.style.has("hijri")) hijriTxt(x) else "", if (x.style.has("exit")) exitTxt(x) else "")
-        if (extra.isNotEmpty()) { val ep = tp(x, x.f.plex, 10.5f, x.st.sub); fit(ep, extra, x.w * .6f); center(cv, extra, cx, yy + x.dp(2f), ep) }
+        if (extra.isNotEmpty()) { val ep = tp(x, x.plex, 10.5f, x.st.sub); fit(ep, extra, x.w * .6f); center(cv, extra, cx, yy + x.dp(2f), ep) }
     }
 
     // ---------- 4. script (4×1, 2×2) and one line (4×1) ----------
     private fun script(cv: Canvas, x: X) {
         card(cv, x); val nx = x.next ?: return; val w = x.w; val h = x.h; val pad = x.dp(16f)
-        val name = x.d.name(nx.k)
-        // the end side: a stack of the lines the user picked, centred on the name
+        // the other side: a stack of the lines the user picked, sized from the widget's height
         val lines = ArrayList<Pair<String, Paint>>()
-        if (x.style.has("time")) lines += x.d.clock(nx.at) to tp(x, x.f.plex, min(26f, h / x.u * .3f), x.st.fg)
-        if (x.style.has("count")) lines += x.d.inTxt(nx, x.now) to tp(x, x.f.plex, 12f, x.st.sub)
-        if (x.style.has("hijri")) lines += hijriTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
-        if (x.style.has("exit") && x.cur != null) lines += exitTxt(x) to tp(x, x.f.plex, 11f, x.st.sub)
-        val np = tp(x, x.nameTf, min(54f, h / x.u * .62f), x.st.fg); fit(np, name, if (lines.isEmpty()) w - 2 * pad else w * .6f)
-        if (lines.isEmpty()) { center(cv, name, w / 2, h / 2 + np.textSize * .32f, np); return }
-        text(cv, x, name, startX(x, pad), h / 2 + np.textSize * .32f, np)
-        val total = lines.sumOf { (it.second.textSize * 1.25f).toDouble() }.toFloat()
+        if (x.style.has("time")) lines += x.d.clock(nx.at) to tp(x, x.plex, 1f, x.st.fg).apply { textSize = h * .30f }
+        if (x.style.has("count")) lines += x.d.inTxt(nx, x.now) to tp(x, x.plex, 1f, x.st.sub).apply { textSize = h * .15f }
+        if (x.style.has("hijri")) lines += hijriTxt(x) to tp(x, x.plex, 1f, x.st.sub).apply { textSize = h * .13f }
+        if (x.style.has("exit") && x.cur != null) lines += exitTxt(x) to tp(x, x.plex, 1f, x.st.sub).apply { textSize = h * .13f }
+        val colW = if (lines.isEmpty()) 0f else lines.maxOf { (t, p) -> p.measureText(t) }.coerceAtMost(w * .38f)
+        val room = w - 2 * pad - (if (lines.isEmpty()) 0f else colW + x.dp(18f))
+        val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = h * .62f }
+        var name = x.d.name(nx.k); fit(np, name, room)
+        if (x.style.kash) name = stretch(np, name, room * (if (lines.isEmpty()) .8f else .96f))
+        val ny = h / 2 + np.textSize * .3f
+        if (lines.isEmpty()) { center(cv, name, w / 2, ny, np); return }
+        text(cv, x, name, startX(x, pad), ny, np)
+        lines.forEach { (t, p) -> fit(p, t, w * .38f) }
+        val total = lines.sumOf { (it.second.textSize * 1.2f).toDouble() }.toFloat()
         var y = h / 2 - total / 2
-        for ((t, p) in lines) { y += p.textSize * 1.25f; fit(p, t, w * .34f); text(cv, x, t, endX(x, pad), y - p.textSize * .25f, p, false) }
+        for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad), y - p.textSize * .22f, p, false) }
     }
     private fun line(cv: Canvas, x: X) {
         card(cv, x, x.dp(20f)); val nx = x.next ?: return
-        val np = tp(x, x.nameTf, 19f, x.st.fg); val rp = tp(x, x.f.plex, 16f, x.st.fg)
+        val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = x.h * .36f }; val rp = tp(x, x.plex, 1f, x.st.fg).apply { textSize = x.h * .27f }
         val parts = ArrayList<Pair<String, Paint>>(); parts += x.d.name(nx.k) to np
         val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
         rest.forEachIndexed { i, t -> if (i > 0) parts += "·" to rp; parts += t to rp }
         val gap = x.dp(8f); val total = parts.sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * (parts.size - 1)
-        val scale = min(1f, (x.w - x.dp(24f)) / total); np.textSize *= scale; rp.textSize *= scale
+        val scale = min(1f, (x.w - x.dp(32f)) / total); np.textSize *= scale; rp.textSize *= scale
         var xs = x.w / 2 + x.dir * total * scale / 2; val y = x.h / 2 + rp.textSize * .35f
         for ((s, p) in parts) { text(cv, x, s, xs, y, p); xs -= x.dir * (p.measureText(s) + gap * scale) }
     }
@@ -412,7 +453,7 @@ object WidgetArt {
         val tday = if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day
         fun tt(k: String) = tday.optLong(k)
         if (hasHead) {
-            val p = tp(x, x.f.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
+            val p = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
             val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
             if ("city" in rows) text(cv, x, x.d.city, startX(x, pad), y + 14 * u, p)
             if ("date" in rows) { fit(p, x.d.digits(date), w * .62f); text(cv, x, x.d.digits(date), if ("city" in rows) endX(x, pad) else startX(x, pad), y + 14 * u, p, "city" !in rows) }
@@ -420,7 +461,7 @@ object WidgetArt {
         }
         if ("count" in rows) {
             val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 22f * u }
-            val cp = tp(x, x.f.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = 21f * u }
+            val cp = tp(x, x.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = 21f * u }
             val name = x.d.name(nx.k); val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
             val gap = 12 * u; val tw = np.measureText(name) + gap + cp.measureText(inS); val xs = w / 2 + x.dir * tw / 2
             text(cv, x, name, xs, y + 25 * u, np); text(cv, x, inS, xs - x.dir * (np.measureText(name) + gap), y + 25 * u, cp)
@@ -434,14 +475,14 @@ object WidgetArt {
                 val on = key == nx.k; val past = !on && tt(key) <= x.now
                 if (on) cv.drawRoundRect(RectF(left + 1 * u, y, left + cw - 1 * u, y + rowH), 14 * u, 14 * u, paint(if (x.st.light) GOLD_L else GOLD))
                 val fg = if (on) INK else x.st.fg; val alpha = if (past) 115 else 255
-                val p1 = tp(x, x.f.plex, 11f, fg, !on && x.st.shadow).apply { textSize = 11f * u; this.alpha = alpha }
-                val p2 = tp(x, x.f.plexB, if (on) 16f else 14f, fg, !on && x.st.shadow).apply { textSize = (if (on) 16f else 14f) * u; this.alpha = alpha }
+                val p1 = tp(x, x.plex, 11f, fg, !on && x.st.shadow).apply { textSize = 11f * u; this.alpha = alpha }
+                val p2 = tp(x, x.plexB, if (on) 16f else 14f, fg, !on && x.st.shadow).apply { textSize = (if (on) 16f else 14f) * u; this.alpha = alpha }
                 fit(p2, x.d.clock(tt(key)), cw - 4 * u); fit(p1, x.d.name(key), cw - 4 * u)
                 center(cv, x.d.name(key), ccx, y + 15 * u, p1)
                 center(cv, x.d.clock(tt(key)), ccx, y + 33 * u, p2)
                 if ("exit" in rows || (on && "count" !in rows)) {
                     val sub = if (on && "count" !in rows) x.d.inTxt(nx, x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
-                    val p3 = tp(x, if (on) x.f.plexB else x.f.plex, 9.5f, fg, !on && x.st.shadow).apply { textSize = 9.5f * u; this.alpha = if (on) 255 else if (past) 90 else 180 }
+                    val p3 = tp(x, if (on) x.plexB else x.plex, 9.5f, fg, !on && x.st.shadow).apply { textSize = 9.5f * u; this.alpha = if (on) 255 else if (past) 90 else 180 }
                     fit(p3, sub, cw - 2 * u); center(cv, sub, ccx, y + 47 * u, p3)
                 }
             }
@@ -450,7 +491,7 @@ object WidgetArt {
         if ("iqama" in rows) {
             val iq = nx.at + x.d.iqMin(nx.k) * 60_000L
             cv.drawRoundRect(RectF(8 * u, y, w - 8 * u, y + 28 * u), 12 * u, 12 * u, paint(x.st.line))
-            val p = tp(x, x.f.plex, 12.5f, x.st.fg).apply { textSize = 12.5f * u }; val pb = tp(x, x.f.plexB, 12.5f, x.st.fg).apply { textSize = 12.5f * u }
+            val p = tp(x, x.plex, 12.5f, x.st.fg).apply { textSize = 12.5f * u }; val pb = tp(x, x.plexB, 12.5f, x.st.fg).apply { textSize = 12.5f * u }
             text(cv, x, (if (x.d.ar) "إقامة " else "Iqama ") + x.d.name(nx.k) + " " + x.d.clock(iq), startX(x, 18 * u), y + 19 * u, p)
             text(cv, x, x.d.inTxt(iq - x.now), endX(x, 18 * u), y + 19 * u, pb, false)
         }
@@ -476,8 +517,8 @@ object WidgetArt {
         if (isDay(x)) sun(cv, x, q[0], q[1], 7f) else moon(cv, x, q[0], q[1], x.dp(6.5f))
         val nx = x.next ?: return; val k = s / 150f
         val l2 = ArrayList<Pair<String, Paint>>()
-        if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k }
-        if (x.style.has("count")) l2 += x.d.dur(nx.target - x.now) to tp(x, x.f.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
+        if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }
+        if (x.style.has("count")) l2 += x.d.dur(nx.target - x.now) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
         var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
         center(cv, x.d.name(nx.k), cx, y, tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k })
         for ((t, p) in l2) { y += 14 * k; center(cv, t, cx, y, p) }
@@ -485,16 +526,16 @@ object WidgetArt {
 
     private fun moonW(cv: Canvas, x: X) {
         card(cv, x); val s = min(x.w, x.h); val k = s / 150f; val pad = 14 * k; val dd = x.day
-        val big = tp(x, x.f.plexB, 26f, x.st.fg).apply { textSize = 26f * k }
+        val big = tp(x, x.plexB, 26f, x.st.fg).apply { textSize = 26f * k }
         text(cv, x, x.d.digits(dd.optString("hd")), startX(x, pad), pad + 24 * k, big)
-        text(cv, x, dd.optString("hm"), startX(x, pad), pad + 40 * k, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * k })
+        text(cv, x, dd.optString("hm"), startX(x, pad), pad + 40 * k, tp(x, x.plex, 11f, x.st.sub).apply { textSize = 11f * k })
         moon(cv, x, endX(x, pad) + x.dir * 23 * k, pad + 23 * k, 21 * k)
-        text(cv, x, (if (x.style.has("wd")) dd.optString("wd") + " · " else "") + x.d.digits(dd.optString("hy")), startX(x, pad), pad + 72 * k, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * k })
+        text(cv, x, (if (x.style.has("wd")) dd.optString("wd") + " · " else "") + x.d.digits(dd.optString("hy")), startX(x, pad), pad + 72 * k, tp(x, x.plex, 11f, x.st.sub).apply { textSize = 11f * k })
         val nx = x.next ?: return
         if (!x.style.has("next")) return
         cv.drawLine(pad, x.h - pad - 30 * k, x.w - pad, x.h - pad - 30 * k, paint(x.st.line).apply { strokeWidth = x.dp(1f) })
         text(cv, x, x.d.name(nx.k), startX(x, pad), x.h - pad - 8 * k, tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * k })
-        text(cv, x, x.d.clock(nx.at), endX(x, pad), x.h - pad - 8 * k, tp(x, x.f.plex, 12f, x.st.fg).apply { textSize = 12f * k }, false)
+        text(cv, x, x.d.clock(nx.at), endX(x, pad), x.h - pad - 8 * k, tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }, false)
     }
 
     // ---------- 7. the day ribbon (4×1) ----------
@@ -503,7 +544,7 @@ object WidgetArt {
         val k = min(1.2f, x.h / x.u / 96f); val u = x.u * k
         val np = tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * u }
         text(cv, x, x.d.name(nx.k) + " " + x.d.clock(nx.at), startX(x, pad), 24 * u, np)
-        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx, x.now), endX(x, pad), 24 * u, tp(x, x.f.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
+        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx, x.now), endX(x, pad), 24 * u, tp(x, x.plex, 12f, x.st.sub).apply { textSize = 12f * u }, false)
         val top = if (x.style.has("labels")) 34 * u else 40 * u; val bh = 18 * u; val l = pad; val r = w - pad; val bw = r - l
         val midnight = x.now - WData.minuteOfDay(x.now) * 60_000L
         fun xAt(t: Long): Float { val f = ((t - midnight) / 60_000f / 1440f).coerceIn(0f, 1f); return if (x.rtl) r - bw * f else l + bw * f }
@@ -512,11 +553,11 @@ object WidgetArt {
         val cols = (listOf(night) + keys.map { it.second } + listOf(night)).toIntArray()
         val grad = if (x.rtl) LinearGradient(r, 0f, l, 0f, cols, pos, Shader.TileMode.CLAMP) else LinearGradient(l, 0f, r, 0f, cols, pos, Shader.TileMode.CLAMP)
         cv.drawRoundRect(RectF(l, top, r, top + bh), bh / 2, bh / 2, paint().apply { shader = grad })
-        val lp = tp(x, x.f.plex, 9.5f, x.st.sub).apply { textSize = 9.5f * u }
+        val lp = tp(x, x.plex, 9.5f, x.st.sub).apply { textSize = 9.5f * u }
         for ((i, key) in WData.PRAY.withIndex()) {
             val xx = xAt(x.t(key)); cv.drawRect(xx - u, top - 3 * u, xx + u, top + bh + 3 * u, paint(a(.75f, Color.WHITE)))
             if (!x.style.has("labels")) continue
-            val on = key == nx.k; lp.typeface = if (on) x.f.plexB else x.f.plex; lp.color = if (on) x.st.fg else x.st.sub
+            val on = key == nx.k; lp.typeface = if (on) x.plexB else x.plex; lp.color = if (on) x.st.fg else x.st.sub
             center(cv, x.d.name(key) + " " + x.d.clock(if (on) nx.at else x.t(key)), xx, top + bh + (if (i % 2 == 0) 14f else 27f) * u, lp)
         }
         val nxp = xAt(x.now)
@@ -544,28 +585,38 @@ object WidgetArt {
             left = if (nt == 0L) "" else x.d.inTxt(nt - x.now); frac = 0f; urgent = false
             until = if (nt == 0L) "" else if (x.d.ar) "يدخل وقت $nm " + x.d.clock(nt) + " " + x.d.ampm(nt) else "$nm begins " + x.d.clock(nt) + " " + x.d.ampm(nt)
         }
-        val tp1 = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * u }; fit(tp1, title, w * .55f)
-        text(cv, x, title, startX(x, pad), 30 * u, tp1)
-        val ip = tp(x, x.f.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u }
-        val pw = pillW(ip, left); pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, 25 * u, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
+        val bar = x.style.has("bar") && cw != null
+        // without the bar the lines sit in the middle of the widget
+        val off = if (bar) 0f else (x.h / u - (if (x.style.has("time")) 66f else 44f)) / 2f * u - 6 * u
+        val tp1 = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = (if (bar) 17f else 21f) * u }; fit(tp1, title, w * .55f)
+        text(cv, x, title, startX(x, pad), off + 30 * u, tp1)
+        val ip = tp(x, x.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u }
+        val pw = pillW(ip, left); pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, off + 25 * u, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
         val bt = 44 * u; val bh = 8 * u; val l = pad; val r = w - pad
-        if (x.style.has("bar")) cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
-        if (frac > 0f && x.style.has("bar")) { val bw = (r - l) * frac
+        if (bar) cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
+        if (frac > 0f && bar) { val bw = (r - l) * frac
             // what is left stays on the starting side and empties towards it (Arabic: from the left to the right)
             val rect = if (x.rtl) RectF(r - bw, bt, r, bt + bh) else RectF(l, bt, l + bw, bt + bh)
             cv.drawRoundRect(rect, bh / 2, bh / 2, paint(if (urgent) AMBER else if (x.st.light) c("#0B4D3B") else x.st.acc)) }
-        if (x.style.has("time")) text(cv, x, until, startX(x, pad), (if (x.style.has("bar")) 72 else 58) * u, tp(x, x.f.plex, 11f, x.st.sub).apply { textSize = 11f * u })
+        if (x.style.has("time")) text(cv, x, until, startX(x, pad), off + (if (bar) 72 else 58) * u, tp(x, x.plex, 11f, x.st.sub).apply { textSize = (if (bar) 11f else 12.5f) * u })
     }
 
     // ---------- 9. with buttons (4×2): the three buttons sit in the bottom 45% ----------
     const val BTN_TOP = .55f
     private fun actions(cv: Canvas, x: X, b: Btns) {
         card(cv, x, x.dp(24f)); val nx = x.next ?: return; val w = x.w; val h = x.h; val pad = x.dp(14f)
-        val np = tp(x, x.nameTf, 26f, x.st.fg); val tm = tp(x, x.f.plex, 18f, x.st.fg)
-        val name = x.d.name(nx.k); val yy = h * .3f
+        val topH = h * BTN_TOP - pad * .6f
+        val ns = topH * .5f
+        val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = ns }; val tm = tp(x, x.plex, 1f, x.st.fg).apply { textSize = ns * .6f }
+        val cp = tp(x, x.plexB, 1f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = ns * .4f }
+        val cnt = if (x.style.has("count")) x.d.inTxt(nx, x.now) else ""; val tms = if (x.style.has("time")) x.d.clock(nx.at) else ""
+        val side = (if (cnt.isEmpty()) 0f else cp.measureText(cnt) + x.dp(12f)) + (if (tms.isEmpty()) 0f else tm.measureText(tms) + x.dp(10f))
+        var name = x.d.name(nx.k); fit(np, name, w - 2 * pad - side)
+        if (x.style.kash) name = stretch(np, name, (w - 2 * pad - side) * .8f)
+        val yy = pad * .6f + topH / 2 + np.textSize * .3f
         text(cv, x, name, startX(x, pad), yy, np)
-        if (x.style.has("time")) text(cv, x, x.d.clock(nx.at), startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), yy, tm)
-        if (x.style.has("count")) text(cv, x, x.d.inTxt(nx, x.now), endX(x, pad), yy, tp(x, x.f.plexB, 13f, if (x.st.light) c("#0B4D3B") else x.st.acc), false)
+        if (tms.isNotEmpty()) text(cv, x, tms, startX(x, pad) - x.dir * (np.measureText(name) + x.dp(10f)), yy, tm)
+        if (cnt.isNotEmpty()) text(cv, x, cnt, endX(x, pad), yy, cp, false)
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),
@@ -586,7 +637,7 @@ object WidgetArt {
                        cv.drawLine(icx + s * .75f, icy - s * .25f, icx + s * .75f, icy + s * .55f, ic); cv.drawLine(icx - s, icy + s * .55f, icx + s, icy + s * .55f, ic); cv.drawLine(icx - s, icy - s, icx + s, icy + s, ic) }
                 else -> { cv.drawCircle(icx, icy + s * .1f, s * .8f, ic); cv.drawLine(icx, icy - s * .3f, icx, icy + s * .15f, ic); cv.drawLine(icx, icy + s * .15f, icx + s * .35f, icy + s * .35f, ic) }
             }
-            val lp = tp(x, x.f.plexB, 11.5f, x.st.fg, false); fit(lp, labels[i], bw - x.dp(6f))
+            val lp = tp(x, x.plexB, 11.5f, x.st.fg, false); fit(lp, labels[i], bw - x.dp(6f))
             center(cv, labels[i], icx, top + bh * .8f, lp)
             cv.restoreToCount(sc)
         }

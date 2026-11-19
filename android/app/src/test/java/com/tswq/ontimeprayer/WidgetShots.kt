@@ -106,6 +106,17 @@ class WidgetShots {
         val iqNow = day.getLong("dhuhr") + 6 * mn
         sheet("sheet-14-iqama", types.map { t -> Item(t, draw(t, dflt(t).let { if (t == "table") it.copy(rows = setOf("count", "times", "iqama")) else it }, ar, iqNow, sz(t).first, if (t == "table") 200 else sz(t).second, fonts)) })
 
+        // sizes like the owner's phone, the stretched name, and the three weights
+        val fajrEve = day.getLong("isha") + 6 * 60 * mn
+        sheet("sheet-15-balance", listOf(
+            Item("script 360x100 clear", draw("script", dflt("script"), ar, fajrEve, 360, 100, fonts)),
+            Item("script dark, not stretched", draw("script", dflt("script").copy(bg = "dark", kash = false), ar, fajrEve, 360, 100, fonts)),
+            Item("actions 360x196", draw("actions", WStyle("dark", "kufi", setOf("count", "time")), ar, fajrEve, 360, 196, fonts)),
+            Item("exit just before 360x110", draw("exit", dflt("exit").copy(bg = "dark"), ar, fajrEve, 360, 110, fonts)),
+            Item("line 360x130", draw("line", dflt("line").copy(bg = "dark", rows = setOf("time", "hijri")), ar, fajrEve, 360, 130, fonts))) +
+            listOf("kufi", "ruqaa", "naskh").flatMap { f -> listOf("l", "m", "b").map { w ->
+                Item("$f name $w / times $w", draw("script", WStyle("dark", f, setOf("time", "count"), nw = w, dw = w), ar, asr, 340, 90, fonts)) } })
+
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
         for (t in types) {
             val st = dflt(t).let { if (it.bg == "clear") it.copy(bg = "dark") else it }
