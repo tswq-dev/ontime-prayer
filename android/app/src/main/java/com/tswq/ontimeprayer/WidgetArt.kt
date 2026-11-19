@@ -857,7 +857,8 @@ object WidgetArt {
             if (state in setOf("fast", "suhoor", "imsak")) {
                 val rp = tp(x, x.plex, 11.5f, x.st.sub); var ry = base - 2 * u
                 if (x.style.has("fajr")) { text(cv, x, d.name("fajr") + " " + clk(x, nextFajr), endX(x, pad), ry, rp, false); ry -= 19 * u }
-                if (x.style.has("imsak")) text(cv, x, (if (ar) "الإمساك " else "Imsak ") + clk(x, nextIms), endX(x, pad), ry, rp, false)
+                // while counting down to imsak its time is already under the count
+                if (x.style.has("imsak") && state != "suhoor") text(cv, x, (if (ar) "الإمساك " else "Imsak ") + clk(x, nextIms), endX(x, pad), ry, rp, false)
             }
             if (prog) { val gap = 2 * u; val sh = 5 * u; val sw0 = (x.w - 2 * pad - (len - 1) * gap) / len; val y0 = x.h - pad - sh
                 for (i in 0 until len) { val l0 = if (x.rtl) x.w - pad - (i + 1) * sw0 - i * gap else pad + i * (sw0 + gap)
@@ -874,8 +875,9 @@ object WidgetArt {
                 if (fw > 0) cv.drawRoundRect(rr, bh / 2, bh / 2, paint(gold)); y -= bh + 7 * k }
             val l3 = if (dayNo > 0) (if (ar) "اليوم " + d.digits("$dayNo") + " من رمضان" else "Day " + d.digits("$dayNo") + " of Ramadan") else if (state == "wait") "$nm $yr".trim() else ""
             if (l3.isNotEmpty()) { text(cv, x, l3, startX(x, pad), y, tp(x, x.plexB, 11f, gold).apply { textSize = 11f * k }); y -= 18 * k }
-            val bp = tp(x, if (state == "eid") x.nameTf else x.plexB, 26f, x.st.fg).apply { textSize = 26f * k }; fit(bp, bigTxt, x.w - 2 * pad)
-            text(cv, x, if (state in setOf("fast", "suhoor", "imsak")) (if (ar) "بعد " else "in ") + bigTxt else bigTxt, startX(x, pad), y, bp)
+            val bigLine = if (state in setOf("fast", "suhoor", "imsak")) (if (ar) "بعد " else "in ") + bigTxt else bigTxt
+            val bp = tp(x, if (state == "eid") x.nameTf else x.plexB, 26f, x.st.fg).apply { textSize = 26f * k }; fit(bp, bigLine, x.w - 2 * pad)
+            text(cv, x, bigLine, startX(x, pad), y, bp)
             y -= bp.textSize + 4 * k
             val l1 = if (state == "suhoor") (if (ar) "السحور · " else "Suhoor · ") + atTxt.substringAfter(if (ar) "الإمساك " else "Imsak ").let { (if (ar) "الإمساك " else "imsak ") + it } else atTxt
             val p1 = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * k }; fit(p1, l1, x.w - 2 * pad)
