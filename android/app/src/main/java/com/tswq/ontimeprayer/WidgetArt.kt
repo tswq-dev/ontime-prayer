@@ -166,9 +166,12 @@ object WidgetArt {
     fun stretch(p: Paint, s: String, target: Float): String {
         val spots = (0 until s.length - 1).filter { i -> val a = s[i]; val b = s[i + 1]
             a in '\u0620'..'\u064A' && b in '\u0620'..'\u064A' && a !in NONJOIN && !(a == 'ل' && b in "اأإآ") }
-        if (spots.isEmpty() || p.measureText(s) >= target) return s
+        val w0 = p.measureText(s)
+        if (spots.isEmpty() || w0 >= target) return s
+        // a calligrapher's stretch, not a line: at most half as long again as the word itself
+        val goal = min(target, w0 * 1.5f)
         val at = spots.last() + 1; var out = s
-        for (n in 1..14) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > target) break; out = t }
+        for (n in 1..14) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > goal) break; out = t }
         return out
     }
     private fun startX(x: X, pad: Float) = if (x.rtl) x.w - pad else pad
