@@ -117,6 +117,40 @@ class WidgetShots {
             listOf("kufi", "ruqaa", "naskh").flatMap { f -> listOf("l", "m", "b").map { w ->
                 Item("$f name $w / times $w", draw("script", WStyle("dark", f, setOf("time", "count"), nw = w, dw = w), ar, asr, 340, 90, fonts)) } })
 
+        // the four extra widgets (0.14): each in its two sizes, through the day; Ramadan from a copy of the days set in Ramadan
+        WidgetArt.dyn = null
+        val rj = JSONObject(all.getJSONObject("ar").toString()); val rd = rj.getJSONArray("days")
+        for (i in 0 until rd.length()) rd.getJSONObject(i).put("hmn", if (i <= 16) 9 else 10).put("hd", (if (i <= 16) 13 + i else i - 16).toString()).put("hm", if (i <= 16) "رمضان" else "شوال")
+        val ram = WData(rj)
+        fun ex(t: String, st: WStyle, d: WData, now: Long, w: Int, h: Int) = draw(t, st, d, now, w, h, fonts)
+        WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
+        val pr = listOf(Item("prayed 4x1 asr, 2 done", ex("prayed", dflt("prayed"), ar, asr, 340, 90)),
+            Item("prayed 2x2", ex("prayed", dflt("prayed"), ar, asr, 170, 170)),
+            Item("prayed light 2x2", ex("prayed", dflt("prayed").copy(bg = "light"), ar, asr, 170, 170)))
+        WidgetArt.marks = WidgetArt.Marks(0b11111, 7)
+        val pr2 = listOf(Item("prayed all done, night", ex("prayed", dflt("prayed").copy(bg = "sky"), ar, moments["5-night"]!!, 340, 90)),
+            Item("prayed en", ex("prayed", dflt("prayed"), en, asr, 340, 90)))
+        WidgetArt.marks = WidgetArt.Marks(0, 0)
+        val pr3 = listOf(Item("prayed none, no names", ex("prayed", dflt("prayed").copy(rows = setOf("now")), ar, day.getLong("fajr") + 20 * mn, 340, 90)))
+        sheet("sheet-16-extra", pr + pr2 + pr3 + listOf(
+            Item("night 2x2 evening", ex("night", dflt("night"), ar, mg, 170, 170)),
+            Item("night 2x2 in the third", ex("night", dflt("night"), ar, day.getLong("fajr") + WData.DAY - 50 * mn, 170, 170)),
+            Item("night 4x1 at night", ex("night", dflt("night"), ar, moments["5-night"]!!, 340, 90)),
+            Item("night 4x1 light, day", ex("night", dflt("night").copy(bg = "light"), ar, asr, 340, 90)),
+            Item("night en", ex("night", dflt("night"), en, moments["5-night"]!!, 340, 90)),
+            Item("ramadan 4x2 fasting", ex("ramadan", dflt("ramadan"), ram, asr, 340, 170)),
+            Item("ramadan 4x2 suhoor", ex("ramadan", dflt("ramadan"), ram, moments["5-night"]!!, 340, 170)),
+            Item("ramadan 2x2 fasting", ex("ramadan", dflt("ramadan"), ram, asr, 170, 170)),
+            Item("ramadan 2x2 suhoor sky", ex("ramadan", dflt("ramadan").copy(bg = "sky"), ram, moments["5-night"]!!, 170, 170)),
+            Item("ramadan 4x2 outside", ex("ramadan", dflt("ramadan"), ar, asr, 340, 170)),
+            Item("ramadan 2x2 outside light", ex("ramadan", dflt("ramadan").copy(bg = "light"), ar, asr, 170, 170)),
+            Item("white 4x2", ex("white", dflt("white"), ar, asr, 340, 170)),
+            Item("white 4x2 dark", ex("white", dflt("white").copy(bg = "dark"), ar, asr, 340, 170)),
+            Item("white 2x2", ex("white", dflt("white"), ar, asr, 170, 170)),
+            Item("white 4x2 on the 14th", ex("white", dflt("white"), ar, asr + 5 * WData.DAY, 340, 170)),
+            Item("white en", ex("white", dflt("white"), en, asr, 340, 170))))
+        WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
+
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
         for (t in types) {
             val st = dflt(t).let { if (it.bg == "clear") it.copy(bg = "dark") else it }

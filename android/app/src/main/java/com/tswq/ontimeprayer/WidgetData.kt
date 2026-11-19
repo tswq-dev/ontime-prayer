@@ -67,6 +67,36 @@ class WData(val o: JSONObject) {
         return best
     }
 
+    // ---------- for the four extra widgets (0.14) ----------
+    /** Weekday of a pushed day, 0 = Sunday … 6 = Saturday. */
+    fun wdi(d: JSONObject): Int = if (d.has("wdi")) d.optInt("wdi") else runCatching {
+        val p = d.optString("d").split("-").map { it.toInt() }
+        Calendar.getInstance(KSA).apply { clear(); set(p[0], p[1] - 1, p[2], 12, 0) }.get(Calendar.DAY_OF_WEEK) - 1 }.getOrDefault(0)
+    /** The Hijri day and month number (0 when the page did not send it). */
+    fun hd(d: JSONObject): Int = d.optString("hd").toIntOrNull() ?: 0
+    fun hmn(d: JSONObject): Int = d.optInt("hmn", 0)
+    /** Minutes of imsak before Fajr (Ramadan widget). */
+    val imsak get() = o.optInt("ims", 10)
+    /** Tonight, from the maghrib that begins it to the fajr that ends it (before fajr: the night we are in). */
+    fun night(now: Long): Pair<Long, Long>? {
+        val d0 = day(now) ?: return null
+        return if (now < d0.optLong("fajr")) (day(now, -1)?.optLong("maghrib") ?: return null) to d0.optLong("fajr")
+        else d0.optLong("maghrib") to (day(now, 1)?.optLong("fajr") ?: return null)
+    }
+    /** The day whose five prayers count now: from its fajr to the next fajr (Isha after midnight is still yesterday's). */
+    fun prayerDay(now: Long): JSONObject? { val d0 = day(now) ?: return null; return if (now < d0.optLong("fajr")) day(now, -1) else d0 }
+    /** The length of the Hijri month that contains [now] (29 or 30), from where the next month begins in the pushed days. */
+    fun monthLen(now: Long): Int {
+        val h = day(now)?.let { hd(it) } ?: return 30
+        for (o in 1..31) { val dd = day(now, o) ?: break; if (hd(dd) == 1) return day(now, o - 1)?.let { hd(it) } ?: 30 }
+        return if (h >= 29) h else 30
+    }
+    /** Days from today to the next day with this Hijri month and day, within the pushed days; -1 if not there. */
+    fun daysTo(now: Long, month: Int, dayN: Int, max: Int = 34): Int {
+        for (o in 0..max) { val dd = day(now, o) ?: break; if (hmn(dd) == month && hd(dd) == dayN) return o }
+        return -1
+    }
+
     fun digits(s: String) = if (arabDigits) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
 
     /** "5:39" (12 or 24 hours), and its AM/PM mark separately. */
@@ -129,19 +159,23 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "ribbon" to (listOf("count", "labels") to setOf("count", "labels")),
             "exit" to (listOf("time", "bar") to setOf("time", "bar")),
             "actions" to (listOf("count", "time") to setOf("count", "time")),
-            "line" to (listOf("count", "time", "hijri") to setOf("count", "time")))
+            "line" to (listOf("count", "time", "hijri") to setOf("count", "time")),
+            "prayed" to (listOf("streak", "names", "now") to setOf("streak", "names", "now")),
+            "night" to (listOf("mid", "count", "sky") to setOf("mid", "count", "sky")),
+            "ramadan" to (listOf("imsak", "fajr", "prog") to setOf("imsak", "fajr", "prog")),
+            "white" to (listOf("monthu", "days") to setOf("monthu", "days")))
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
 
         /** Until the user picks, a widget uses the name font chosen for the app's own screen. */
-        fun defaultFor(type: String, font: String? = null) = WStyle(if (type == "script" || type == "line") "clear" else "sky",
-            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", SHOW[type]?.second ?: emptySet())
+        fun defaultFor(type: String, font: String? = null) = WStyle(when (type) { "script", "line" -> "clear"; "prayed", "ramadan" -> "dark"; "white" -> "light"; else -> "sky" },
+            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", SHOW[type]?.second ?: emptySet(), if (type == "prayed") "pray" else "app")
         fun from(type: String, j: JSONObject?, font: String? = null): WStyle {
             val d = defaultFor(type, font); if (j == null) return d
             val r = j.optJSONArray("rows")
             // looks saved before "what it shows" existed keep the defaults (only the table had rows then)
             val rows = if (r == null || (j.optInt("v") < 2 && type != "table")) d.rows else (0 until r.length()).map { r.optString(it) }.toSet()
             val wt = { k: String -> j.optString(k, "m").takeIf { it in setOf("l", "m", "b") } ?: "m" }
-            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", "app"), wt("nw"), wt("dw"), j.optBoolean("kash", true))
+            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), j.optBoolean("kash", true))
         }
     }
 }

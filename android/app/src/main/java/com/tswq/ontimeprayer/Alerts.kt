@@ -97,6 +97,8 @@ object Alerts {
             "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), title, text) }
                 else silence(ctx, ev.optInt("min", 20), title, text)
             "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); if (spoken) say(ev.optString("xspk")) }
+            // a plain reminder from the page (the last third of the night, fasting tomorrow)
+            "note" -> post(ctx, builder(ctx, CH_REMIND, title, text).also { untilNow(it, ev.optLong("until")) }, id)
         }
         if (!speaking) done()
     }
@@ -274,7 +276,7 @@ object Alerts {
         if (AdhanService.playingPk() == pk) AdhanService.dismiss(ctx)
         cancel(ctx, noteIdOf(pk)); cancel(ctx, exitId(pk))
         Scheduler.reschedule(ctx)
-        WidgetUpdater.refresh(ctx, "actions")
+        WidgetUpdater.refresh(ctx, "actions"); WidgetUpdater.refresh(ctx, "prayed")
     }
 
     private fun activeNote(ctx: Context, id: Int): Boolean =
@@ -321,7 +323,12 @@ object Alerts {
 
     /** A bundled recording by name: the adhan voices, or the spoken lines (spk_…). 0 if there is none. */
     fun rawId(ctx: Context, name: String): Int = raw(name).takeIf { it != 0 }
-        ?: if (name.startsWith("spk_")) ctx.resources.getIdentifier(name, "raw", ctx.packageName) else 0
+        ?: when {
+            name.startsWith("spk_") -> ctx.resources.getIdentifier(name, "raw", ctx.packageName)
+            // the other voices (0.14): adhan_<voice>, adhan_<voice>_fajr, adhan_tk1_<voice> (one takbir), adhan_takbir_<voice> (four)
+            name.matches(Regex("[a-z0-9_]+")) -> ctx.resources.getIdentifier("adhan_$name", "raw", ctx.packageName)
+            else -> 0
+        }
 
     /** Bundled recordings (sources in android/SOUNDS.md). */
     private fun raw(name: String): Int = when (name) {

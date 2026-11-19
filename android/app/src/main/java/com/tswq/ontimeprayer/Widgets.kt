@@ -45,6 +45,10 @@ class WRibbon : BaseWidget("ribbon")
 class WExit : BaseWidget("exit")
 class WActions : BaseWidget("actions")
 class WLine : BaseWidget("line")
+class WPrayed : BaseWidget("prayed")
+class WNight : BaseWidget("night")
+class WRamadan : BaseWidget("ramadan")
+class WWhite : BaseWidget("white")
 
 object WidgetUpdater {
     const val ACTION_TICK = "com.tswq.ontimeprayer.WTICK"
@@ -53,12 +57,13 @@ object WidgetUpdater {
     val CLASSES: Map<String, Class<out BaseWidget>> = linkedMapOf(
         "pano" to WPano::class.java, "window" to WWindow::class.java, "ring" to WRing::class.java, "orbit" to WOrbit::class.java,
         "script" to WScript::class.java, "table" to WTable::class.java, "clock" to WClock::class.java, "moon" to WMoon::class.java,
-        "ribbon" to WRibbon::class.java, "exit" to WExit::class.java, "actions" to WActions::class.java, "line" to WLine::class.java)
+        "ribbon" to WRibbon::class.java, "exit" to WExit::class.java, "actions" to WActions::class.java, "line" to WLine::class.java,
+        "prayed" to WPrayed::class.java, "night" to WNight::class.java, "ramadan" to WRamadan::class.java, "white" to WWhite::class.java)
 
     /** The size each widget starts at (dp): 4×2, 2×2 or 4×1 cells. */
     fun defaultDp(type: String): Pair<Int, Int> = when (type) {
-        "window", "ring", "clock", "moon" -> 170 to 170
-        "script", "ribbon", "exit", "line" -> 340 to 90
+        "window", "ring", "clock", "moon", "night" -> 170 to 170
+        "script", "ribbon", "exit", "line", "prayed" -> 340 to 90
         else -> 340 to 170
     }
 
@@ -106,15 +111,24 @@ object WidgetUpdater {
             val now = System.currentTimeMillis()
             val d = WData.load(Scheduler.prefs(ctx))
             val bmp = draw(ctx, type, style(ctx, id, type, d), d, now, w, h, ctx.resources.displayMetrics.density)
-            val rv: RemoteViews
-            if (type == "actions") {
+            val rv: RemoteViews; val st = style(ctx, id, type, d)
+            if (type == "prayed" && st.tap == "pray" && w.toFloat() / h > 1.8f) {
+                // «صلّيت» by tapping a circle: five areas over the five circles, the title side opens the app
+                rv = RemoteViews(ctx.packageName, R.layout.widget_prayed)
+                val ar = d?.ar != false
+                rv.setViewVisibility(R.id.sL1, if (ar) android.view.View.GONE else android.view.View.VISIBLE)
+                rv.setViewVisibility(R.id.sR2, if (ar) android.view.View.GONE else android.view.View.VISIBLE)
+                rv.setViewVisibility(R.id.sL2, if (ar) android.view.View.VISIBLE else android.view.View.GONE)
+                rv.setViewVisibility(R.id.sR1, if (ar) android.view.View.VISIBLE else android.view.View.GONE)
+                listOf(R.id.c0, R.id.c1, R.id.c2, R.id.c3, R.id.c4).forEachIndexed { i, v -> rv.setOnClickPendingIntent(v, button(ctx, "p" + (if (ar) 4 - i else i))) }
+            } else if (type == "actions") {
                 rv = RemoteViews(ctx.packageName, R.layout.widget_actions)
                 // the buttons are drawn right to left in Arabic: b0 is the left third
                 val order = if (d?.ar != false) listOf("remind", "mute", "pray") else listOf("pray", "mute", "remind")
                 listOf(R.id.b0, R.id.b1, R.id.b2).forEachIndexed { i, v -> rv.setOnClickPendingIntent(v, button(ctx, order[i])) }
             } else rv = RemoteViews(ctx.packageName, R.layout.widget_image)
             rv.setImageViewBitmap(R.id.img, bmp)
-            rv.setOnClickPendingIntent(R.id.root, tapIntent(ctx, style(ctx, id, type, d).tap))
+            rv.setOnClickPendingIntent(R.id.root, if (type == "prayed" && st.tap == "pray" && w.toFloat() / h <= 1.8f) button(ctx, "pray") else tapIntent(ctx, st.tap))
             mgr.updateAppWidget(id, rv)
         }
     }
@@ -135,6 +149,7 @@ object WidgetUpdater {
     /** Draws at most ~0.9 MP so the picture stays light to send to the home screen. */
     fun draw(ctx: Context, type: String, st: WStyle, d: WData?, now: Long, wDp: Int, hDp: Int, density: Float): Bitmap {
         if (st.bg == "dyn") WidgetArt.dyn = palette(ctx)
+        if (type == "prayed") WidgetArt.marks = marks(ctx, d, now)
         var s = min(density, 2.5f); val px = wDp * hDp * s * s
         if (px > 900_000f) s *= sqrt(900_000f / px)
         val fonts = WFonts.get(ctx.assets)
@@ -151,6 +166,12 @@ object WidgetUpdater {
         val bmp = draw(ctx, type, st, d, System.currentTimeMillis(), w, h, 2f)
         val out = ByteArrayOutputStream(); bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         return "data:image/png;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+    }
+
+    /** «صلواتي اليوم»: what is marked for the day whose prayers count now, and the days in a row. */
+    fun marks(ctx: Context, d: WData?, now: Long): WidgetArt.Marks {
+        val pd = d?.prayerDay(now) ?: return WidgetArt.Marks()
+        return WidgetArt.Marks(Prayed.mask(ctx, pd.optString("d")), Prayed.streak(ctx, pd.optLong("fajr")))
     }
 
     // ---------- the buttons widget ----------
@@ -186,7 +207,10 @@ object WidgetUpdater {
         val d = WData.load(Scheduler.prefs(ctx)) ?: return
         val now = System.currentTimeMillis()
         when (which) {
-            "pray" -> d.current(now)?.let { Alerts.prayed(ctx, pkOf(it.k, it.start)) }
+            "pray" -> d.current(now)?.let { if (it.k in WData.PRAY) Alerts.prayed(ctx, pkOf(it.k, it.start)) }
+            // a circle of «صلواتي اليوم»: mark that prayer (once its time has come), or undo the mark
+            "p0", "p1", "p2", "p3", "p4" -> d.prayerDay(now)?.let { pd -> val k = WData.PRAY[which[1] - '0']; val t = pd.optLong(k)
+                if (t in 1..now) { val pk = pkOf(k, t); if (Prayed.has(ctx, pk) || Prayed.mask(ctx, pd.optString("d")) and (1 shl (which[1] - '0')) != 0) Prayed.remove(ctx, pk) else Alerts.prayed(ctx, pk) } }
             "mute" -> d.next(now)?.let { nx ->
                 val p = Scheduler.prefs(ctx)
                 if (p.getLong("muteNext", 0) == nx.at) p.edit().remove("muteNext").apply() else p.edit().putLong("muteNext", nx.at).apply()
@@ -196,7 +220,7 @@ object WidgetUpdater {
                 if (Reminders.find(ctx, ev.optString("pk")) != null) Alerts.unremind(ctx, ev.optString("pk")) else Alerts.remind(ctx, ev)
             }
         }
-        refresh(ctx, "actions")
+        refresh(ctx, "actions"); refresh(ctx, "prayed")
     }
 
     /** "Mute the next adhan" from the widget: this adhan comes as a silent notification. */

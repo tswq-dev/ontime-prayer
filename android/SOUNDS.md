@@ -10,7 +10,34 @@
 | `adhan_takbir_afasy.mp3` | Alafasy, opening takbirs (first 20 s) | from `adhan_afasy` |
 | `adhan_takbir_qatami.mp3` | Al-Qatami, opening takbirs (first 27.6 s) | from `adhan_qatami` |
 
-The library has no Fajr recording by Al-Qatami, so Fajr uses Alafasy's Fajr adhan for every bundled voice.
+The library has no Fajr recording by Al-Qatami, so Fajr uses Alafasy's Fajr adhan for him.
+
+### The owner's 13 voices (0.14), Ogg Opus, mono, −16 LUFS
+
+Per voice: `adhan_<id>.ogg` (full), `adhan_tk1_<id>.ogg` (the first «الله أكبر الله أكبر», phrase 1),
+`adhan_takbir_<id>.ogg` (the four opening takbirs, phrases 1–2), and `adhan_<id>_fajr.ogg` where there is a Fajr adhan.
+Cut by silence (`seg.py`: 50 ms frames, quiet gaps between sung phrases) with a short tail and fade; script `make_voices.py`
+(kept outside the repo, with the sources). Opus 24–32 kbps by the source's quality.
+
+| id | Voice | Source (Kiwifu/adhan-mp3) | Fajr |
+|---|---|---|---|
+| mulla | Ali Ahmad Mulla (studio) | `Ali_Ibn_Ahmad_Mala_-_HQ` | this file is a Fajr adhan: the plain one drops phrases 11–12 («الصلاة خير من النوم») |
+| raml | Muhammad Khalil Raml (Makkah) | `Muhammad_Khaleel_Raml_-_Al_Haram_Al_Maki` | Alafasy |
+| bukhari | Assem Bukhari (Makkah) | `Assem_Bukhrare_-_Al_Haram_Al_Maki` | Alafasy |
+| surayhi | Abdulmajeed Al-Surayhi | `Abdul_Majid_Al_Surehi_1` | Alafasy |
+| dosari | Yasser Al-Dosari | `Yasser_Al-Dosari_-_Saudi_Arabia` | Alafasy |
+| zahrani | Mansour Al-Zahrani | `Mansur_Al_Zahrane_-_HQ` | a Fajr adhan, as Mulla |
+| daghriri | Hamad Al-Daghriri | `Hamad_Al_Daghriri_-_HQ` | Alafasy |
+| zamel | Majed Al-Zamel | `Majid_Al_Zamel` | a Fajr adhan, as Mulla |
+| bishi | Gharm Al-Bishi | `Gharm_Al_Bishi` | Alafasy |
+| omayr | Omar Al-Omair | `Omar_Al_Omayr` | Alafasy |
+| nafees | Ahmad Al-Nafees | `Ahmad_Al_Nafees` | Alafasy |
+| trablsy | Ahmad Al-Trabulsi | `Ahmd_At-Trablsy_1` | `Ahmd_At-Trablsy_-_Fajr_Kuwait` |
+| abdulbasit | Abdul Basit Abdus Samad | `Abdulbasit_Abdusamad_1_-_Egypt` | `Abdulbasit_Abdusamad_6_-_Fajr_Egypt` |
+
+How the three Fajr adhans were found (names don't say): a normal adhan has 12 sung phrases, a Fajr one 14; and phrases 11–12
+carry the hiss of «الصلاة» (energy at 3.5–8 kHz) like the 3rd–6th («أشهد»), where a normal adhan's 11–12 have none.
+Also `adhan_tk1_afasy.ogg` and `adhan_tk1_qatami.ogg` (their first «الله أكبر الله أكبر»).
 The library states no licence; the recordings belong to their owners. Remove a voice if its owner asks.
 
 ## Spoken lines (`spk_*.mp3`)

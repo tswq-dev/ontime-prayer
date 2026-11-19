@@ -61,6 +61,43 @@ object Prayed {
         o.put(pk, now)
         for (k in o.keys().asSequence().toList()) if (o.optLong(k) < now - 3 * 86_400_000L) o.remove(k)
         p.edit().putString("prayed", o.toString()).apply()
+        mark(ctx, pk, true)
+    }
+
+    /** Undo a mark (a second tap on a done circle in «صلواتي اليوم»). */
+    fun remove(ctx: Context, pk: String) {
+        val p = Scheduler.prefs(ctx); val o = JSONObject(p.getString("prayed", "{}") ?: "{}")
+        o.remove(pk); p.edit().putString("prayed", o.toString()).apply()
+        mark(ctx, pk, false)
+    }
+
+    // Each day's five prayers as bits (Fajr = 1 … Isha = 16), kept for a year: the widget's circles and the days in a row.
+    private fun bit(pk: String): Pair<String, Int>? {
+        val i = pk.indexOf(':'); if (i < 0) return null
+        val b = WData.PRAY.indexOf(pk.substring(0, i)); return if (b < 0) null else pk.substring(i + 1) to (1 shl b)
+    }
+    private fun days(ctx: Context) = runCatching { JSONObject(Scheduler.prefs(ctx).getString("pdays", "{}") ?: "{}") }.getOrDefault(JSONObject())
+    private fun mark(ctx: Context, pk: String, on: Boolean) {
+        val (date, b) = bit(pk) ?: return
+        val o = days(ctx); val m = o.optInt(date)
+        o.put(date, if (on) m or b else m and b.inv())
+        val oldest = WData.dateKey(System.currentTimeMillis() - 400 * WData.DAY)
+        for (k in o.keys().asSequence().toList()) if (k < oldest || o.optInt(k) == 0) o.remove(k)
+        Scheduler.prefs(ctx).edit().putString("pdays", o.toString()).apply()
+    }
+    /** The prayers marked on a day (marks from before 0.14 are read from the short list too). */
+    fun mask(ctx: Context, date: String): Int {
+        var m = days(ctx).optInt(date)
+        val o = runCatching { JSONObject(Scheduler.prefs(ctx).getString("prayed", "{}") ?: "{}") }.getOrDefault(JSONObject())
+        for (k in o.keys()) bit(k)?.let { (d, b) -> if (d == date) m = m or b }
+        return m
+    }
+    /** Days in a row with all five marked, ending on [date] (counted once all five are in) or the day before. */
+    fun streak(ctx: Context, dayMs: Long): Int {
+        var t = dayMs; var n = 0
+        if (mask(ctx, WData.dateKey(t)) != 31) t -= WData.DAY
+        while (n < 400 && mask(ctx, WData.dateKey(t)) == 31) { n++; t -= WData.DAY }
+        return n
     }
 }
 

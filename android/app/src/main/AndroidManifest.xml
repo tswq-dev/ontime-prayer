@@ -78,6 +78,22 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_clock" />
         </receiver>
+        <receiver android:name=".WPrayed" android:exported="true" android:label="@string/w_prayed">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_prayed" />
+        </receiver>
+        <receiver android:name=".WNight" android:exported="true" android:label="@string/w_night">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_night" />
+        </receiver>
+        <receiver android:name=".WRamadan" android:exported="true" android:label="@string/w_ramadan">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_ramadan" />
+        </receiver>
+        <receiver android:name=".WWhite" android:exported="true" android:label="@string/w_white">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_white" />
+        </receiver>
         <receiver android:name=".WMoon" android:exported="true" android:label="@string/w_moon">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_moon" />

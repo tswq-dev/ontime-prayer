@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- «صلواتي اليوم» wide: the picture puts the title in 32% of the width on the reading side, a 3% margin on the other,
+     and the five circles in 13% each between them; the five tap areas below sit on the circles (left to right). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView
+        android:id="@+id/img"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layoutDirection="ltr"
+        android:orientation="horizontal">
+        <FrameLayout android:id="@+id/sL1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="32" />
+        <FrameLayout android:id="@+id/sL2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3" />
+        <FrameLayout android:id="@+id/c0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="13" />
+        <FrameLayout android:id="@+id/c1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="13" />
+        <FrameLayout android:id="@+id/c2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="13" />
+        <FrameLayout android:id="@+id/c3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="13" />
+        <FrameLayout android:id="@+id/c4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="13" />
+        <FrameLayout android:id="@+id/sR2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="3" />
+        <FrameLayout android:id="@+id/sR1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="32" />
+    </LinearLayout>
+</FrameLayout>

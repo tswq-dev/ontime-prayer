@@ -24,4 +24,12 @@
     <string name="wd_actions">I prayed, mute the next adhan, remind me before it ends</string>
     <string name="w_line">One line</string>
     <string name="wd_line">The next prayer in one line</string>
+    <string name="w_prayed">My prayers today</string>
+    <string name="wd_prayed">A circle per prayer, filled by “I prayed”, and the days in a row</string>
+    <string name="w_night">Last third of the night</string>
+    <string name="wd_night">When the last third of tonight begins and how long until it</string>
+    <string name="w_ramadan">Ramadan</string>
+    <string name="wd_ramadan">Iftar and imsak in Ramadan, and how long until Ramadan</string>
+    <string name="w_white">White days</string>
+    <string name="wd_white">The Hijri month, the white days, Mondays and Thursdays</string>
 </resources>
