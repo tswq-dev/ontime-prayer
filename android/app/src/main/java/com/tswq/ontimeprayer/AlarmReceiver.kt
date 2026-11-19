@@ -22,15 +22,21 @@ class AlarmReceiver : BroadcastReceiver() {
             }
             Scheduler.ACTION_REMINDER -> {
                 val r = json("rem")
-                if (r != null) Reminders.remove(ctx, r.optString("pk"))
+                if (r != null) Reminders.remove(ctx, r.optString("pk"), Reminders.kindOf(r))
                 Scheduler.reschedule(ctx)
                 if (r != null && !Prayed.has(ctx, r.optString("pk"))) {
-                    Alerts.channels(ctx); Alerts.exitNote(ctx, r)
-                    if (r.optString("rs", "ding") == "speak") { val pr = goAsync(); Speaker.play(ctx, r.optString("xspk")) { pr.finish() } }
+                    Alerts.channels(ctx)
+                    if (Reminders.kindOf(r) == "later") Alerts.laterNote(ctx, r)
+                    else {
+                        Alerts.exitNote(ctx, r)
+                        if (r.optString("rs", "ding") == "speak") { val pr = goAsync(); Speaker.play(ctx, r.optString("xspk")) { pr.finish() } }
+                    }
                 }
             }
             ACTION_REMIND -> json("ev")?.let { Alerts.channels(ctx); Alerts.remind(ctx, it) }
             ACTION_SNOOZE -> json("rem")?.let { Alerts.snooze(ctx, it) }
+            ACTION_LATER_MENU -> json("ev")?.let { Alerts.channels(ctx); Alerts.showLater(ctx, it) }
+            ACTION_LATER -> json("ev")?.let { Alerts.later(ctx, it, intent.getLongExtra("mins", 15)) }
             ACTION_PRAYED -> intent.getStringExtra("pk")?.let { Alerts.prayed(ctx, it) }
         }
     }
@@ -39,6 +45,8 @@ class AlarmReceiver : BroadcastReceiver() {
         const val ACTION_REMIND = "com.tswq.ontimeprayer.REMIND"
         const val ACTION_SNOOZE = "com.tswq.ontimeprayer.SNOOZE"
         const val ACTION_PRAYED = "com.tswq.ontimeprayer.PRAYED"
+        const val ACTION_LATER_MENU = "com.tswq.ontimeprayer.LATER_MENU"
+        const val ACTION_LATER = "com.tswq.ontimeprayer.LATER"
     }
 }
 

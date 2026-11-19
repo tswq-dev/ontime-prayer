@@ -569,7 +569,7 @@ object WidgetArt {
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),
-            if (b.reminded) "✓ " + (if (x.d.ar) "بنذكّرك" else "Reminder set") else (if (x.d.ar) "ذكّرني قبل الخروج" else "Remind before end"))
+            if (b.reminded) "✓ " + (if (x.d.ar) "بنذكّرك" else "Reminder set") else (if (x.d.ar) "ذكّرني قبل خروج الوقت" else "Remind before it ends"))
         val on = listOf(b.canPray || b.prayed, true, b.canRemind || b.reminded)
         val top = h * BTN_TOP; val bh = h - top - pad; val gap = x.dp(8f); val bw = (w - 2 * pad - 2 * gap) / 3
         for (i in 0..2) {

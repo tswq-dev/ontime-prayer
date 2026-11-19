@@ -64,31 +64,44 @@ class AdhanActivity : Activity() {
         col.addView(tv(Exits.clock(e.optLong("at"), e), 26f, f.plex, gold))
         col.addView(View(this), LinearLayout.LayoutParams(1, 0, 1f))
         fun btn(s: String, primary: Boolean, click: (Button) -> Unit) = Button(this).apply {
-            text = s; isAllCaps = false; textSize = 17f; typeface = f.plexB; stateListAnimator = null
+            text = s; isAllCaps = false; textSize = if (primary) 17f else 14f; typeface = f.plexB; stateListAnimator = null; setPadding(dp(6f).toInt(), 0, dp(6f).toInt(), 0)
             setTextColor(if (primary) Color.parseColor("#0A2E24") else cream)
             background = GradientDrawable().apply { cornerRadius = dp(20f); if (primary) setColor(gold) else { setColor(Color.argb(30, 255, 255, 255)); setStroke(dp(1f).toInt(), Color.argb(70, 226, 194, 122)) } }
             setOnClickListener { click(this) }
         }
         val lp = { h: Float -> LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(h).toInt()).apply { setMargins(dp(28f).toInt(), dp(6f).toInt(), dp(28f).toInt(), dp(6f).toInt()) } }
         col.addView(btn(if (ar) "إيقاف الأذان" else "Stop the adhan", true) { stopAdhan() }, lp(64f))
+        // the user's buttons, in their order (as in the notification); "Remind me in…" opens its durations in place
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val half = { LinearLayout.LayoutParams(0, dp(56f).toInt(), 1f).apply { setMargins(dp(6f).toInt(), 0, dp(6f).toInt(), 0) } }
-        if (Exits.hasEx(e)) {
-            row.addView(btn(if (ar) "صلّيت" else "I prayed", false) { Alerts.prayed(this, pk); finish() }, half())
-            if (Exits.next(e) != null) {
-                val done = Reminders.find(this, pk) != null
-                row.addView(btn(if (done) "✓ " + (if (ar) "بنذكّرك" else "Reminder set") else (if (ar) "ذكّرني قبل الخروج" else "Remind me before it ends"), false) { b ->
-                    if (Reminders.find(this, pk) == null) { Alerts.remind(this, e); b.text = "✓ " + (if (ar) "بنذكّرك" else "Reminder set") }
+        val half = { LinearLayout.LayoutParams(0, dp(56f).toInt(), 1f).apply { setMargins(dp(5f).toInt(), 0, dp(5f).toInt(), 0) } }
+        fun fill() {
+            row.removeAllViews()
+            if (!Exits.hasEx(e)) return
+            for (bt in Alerts.buttonsOf(e)) when (bt) {
+                "pray" -> row.addView(btn(if (ar) "صلّيت" else "I prayed", false) { Alerts.prayed(this, pk); finish() }, half())
+                "exit" -> if (Exits.next(e) != null) {
+                    val done = Reminders.find(this, pk) != null
+                    row.addView(btn(if (done) "✓ " + (if (ar) "بنذكّرك" else "Reminder set") else (if (ar) "ذكّرني قبل خروج الوقت" else "Remind me before the time ends"), false) { b ->
+                        if (Reminders.find(this, pk) == null) { Alerts.remind(this, e); b.text = "✓ " + (if (ar) "بنذكّرك" else "Reminder set") }
+                    }, half())
+                }
+                "later" -> if (Alerts.laterChoices(e, System.currentTimeMillis()).isNotEmpty()) row.addView(btn(if (ar) "ذكّرني بعد…" else "Remind me in…", false) {
+                    row.removeAllViews()
+                    for (m in Alerts.laterChoices(e, System.currentTimeMillis())) row.addView(btn(Exits.mins(m, e), false) { Alerts.later(this, e, m); stopAdhan() }, half())
                 }, half())
             }
-            col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(22f).toInt(), dp(4f).toInt(), dp(22f).toInt(), 0) })
         }
+        fill()
+        col.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(22f).toInt(), dp(4f).toInt(), dp(22f).toInt(), 0) })
+        // when the time ends, under the buttons
+        Exits.next(e)?.let { x -> col.addView(tv((if (ar) "يخرج ${x.name} ${x.clock}" else "${x.name} ends at ${x.clock}"), 13f, f.plex, Color.argb(170, 244, 236, 220)),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(24f).toInt(), dp(12f).toInt(), dp(24f).toInt(), 0) }) }
         val ways = e.optString("stop", "pvf"); val hints = ArrayList<String>()
         if ('p' in ways) hints += if (ar) "زر القفل" else "the power button"
         if ('v' in ways) hints += if (ar) "زر الصوت" else "a volume button"
         if ('f' in ways) hints += if (ar) "قلب الجوال" else "turning the phone over"
         if (hints.isNotEmpty()) col.addView(tv((if (ar) "يوقفه أيضاً: " else "Also stops it: ") + hints.joinToString(if (ar) "، " else ", "), 13f, f.plex, Color.argb(150, 244, 236, 220)),
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(24f).toInt(), dp(18f).toInt(), dp(24f).toInt(), dp(36f).toInt()) })
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(24f).toInt(), dp(10f).toInt(), dp(24f).toInt(), dp(30f).toInt()) })
         // the screen runs under the system bars: keep the text and buttons clear of them
         @Suppress("DEPRECATION") col.setOnApplyWindowInsetsListener { v, ins -> v.setPadding(0, ins.systemWindowInsetTop, 0, ins.systemWindowInsetBottom); ins }
         root.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))

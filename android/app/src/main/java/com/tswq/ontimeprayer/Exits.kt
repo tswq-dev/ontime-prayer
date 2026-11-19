@@ -28,6 +28,10 @@ object Exits {
 
     fun ar(r: JSONObject) = r.optString("lang", "ar") != "en"
 
+    /** Minutes in words: «دقيقة»، «دقيقتين»، «5 دقائق»، «15 دقيقة» / "1 min", "15 min". */
+    fun mins(n: Long, r: JSONObject): String = if (!ar(r)) "$n min" else when {
+        n == 1L -> "دقيقة"; n == 2L -> "دقيقتين"; n in 3..10 -> digits("$n", r) + " دقائق"; else -> digits("$n", r) + " دقيقة" }
+
     fun digits(s: String, r: JSONObject): String =
         if (r.optInt("dg") == 1) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
 
@@ -73,9 +77,15 @@ object Reminders {
         Scheduler.prefs(ctx).edit().putString("reminders", a.toString()).apply()
     }
 
-    fun find(ctx: Context, pk: String) = all(ctx).firstOrNull { it.optString("pk") == pk }
+    /** "x": before the time ends (the default); "later": "remind me in 15 min". */
+    fun kindOf(r: JSONObject): String = r.optString("kind", "x")
 
-    fun put(ctx: Context, r: JSONObject) = save(ctx, all(ctx).filter { it.optString("pk") != r.optString("pk") } + r)
+    fun find(ctx: Context, pk: String, kind: String = "x") = all(ctx).firstOrNull { it.optString("pk") == pk && kindOf(it) == kind }
 
+    fun put(ctx: Context, r: JSONObject) = save(ctx, all(ctx).filter { !(it.optString("pk") == r.optString("pk") && kindOf(it) == kindOf(r)) } + r)
+
+    /** Every reminder of this prayer ("I prayed"). */
     fun remove(ctx: Context, pk: String) = save(ctx, all(ctx).filter { it.optString("pk") != pk })
+
+    fun remove(ctx: Context, pk: String, kind: String) = save(ctx, all(ctx).filter { !(it.optString("pk") == pk && kindOf(it) == kind) })
 }

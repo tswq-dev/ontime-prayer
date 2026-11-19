@@ -26,6 +26,10 @@ object Alerts {
     const val CH_EXIT = "exit"
     const val CH_AFTER = "after"
     const val CH_SILENT = "quiet"
+    const val CH_LATER = "later"
+
+    /** The prayer whose notification is showing the "remind me in" choices. */
+    @Volatile var menuPk: String? = null
     private const val RESTORE_CODE = 900
 
     fun channels(ctx: Context) {
@@ -46,6 +50,7 @@ object Alerts {
         nm.createNotificationChannel(NotificationChannel(CH_SILENT, t("إشعار بدون صوت", "Silent notification"), NotificationManager.IMPORTANCE_DEFAULT).apply {
             setSound(null, null); enableVibration(false)
         })
+        nm.createNotificationChannel(NotificationChannel(CH_LATER, t("ذكّرني بعد", "Remind me in"), NotificationManager.IMPORTANCE_HIGH))
         // What stays in the shade after the adhan (with "remind me" and "I prayed"): no sound of its own.
         nm.createNotificationChannel(NotificationChannel(CH_AFTER, t("بعد الأذان", "After the adhan"), NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null); enableVibration(false)
@@ -85,7 +90,7 @@ object Alerts {
                 }
             }
             "pre", "iqama" -> {
-                notify(ctx, remCh, title, text, id)
+                post(ctx, builder(ctx, remCh, title, text).also { untilNow(it, ev.optLong("until")) }, id)
                 if (spoken && remCh != CH_VIBRATE) say(ev.optString("spk"))
             }
             // the spoken line first, then vibrate mode (vibrate mode would cut it off)
@@ -121,15 +126,92 @@ object Alerts {
 
     /** The adhan notification: the prayer, then the buttons "Stop" (while it plays), "Remind me before it ends", "I prayed". */
     fun prayerBuilder(ctx: Context, ev: JSONObject, channel: String, stop: PendingIntent?): Notification.Builder {
-        val pk = ev.optString("pk"); val ar = Exits.ar(ev)
+        val pk = ev.optString("pk"); val ar = Exits.ar(ev); val now = System.currentTimeMillis()
         val withEx = pk.isNotEmpty() && Exits.hasEx(ev)
+        if (withEx && menuPk == pk) return laterMenu(ctx, ev, channel)
         val rem = if (withEx) Reminders.find(ctx, pk) else null
-        val b = builder(ctx, channel, ev.optString("title"), if (rem != null) confirmText(rem) else ev.optString("text"))
-        if (stop != null) b.addAction(Notification.Action.Builder(null, if (ar) "إيقاف" else "Stop", stop).build())
-        if (withEx && rem == null && Exits.next(ev) != null)
-            b.addAction(action(ctx, AlarmReceiver.ACTION_REMIND, pk, if (ar) "ذكّرني قبل الخروج" else "Remind me before it ends", "ev", ev.toString()))
-        if (withEx) b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
+        val lat = if (withEx) Reminders.find(ctx, pk, "later") else null
+        val text = when { lat != null && (rem == null || lat.optLong("at") < rem.optLong("at")) -> laterText(lat); rem != null -> confirmText(rem); else -> ev.optString("text") }
+        val b = builder(ctx, channel, ev.optString("title"), text)
+        // the buttons the user picked, in their order; Android shows three at most, and "Stop" takes one while the adhan plays
+        val acts = ArrayList<Notification.Action>()
+        if (stop != null) acts += Notification.Action.Builder(null, if (ar) "إيقاف" else "Stop", stop).build()
+        for (bt in buttonsOf(ev)) when (bt) {
+            "exit" -> if (withEx && rem == null && Exits.next(ev) != null)
+                acts += action(ctx, AlarmReceiver.ACTION_REMIND, pk, if (ar) "ذكّرني قبل خروج الوقت" else "Remind me before the time ends", "ev", ev.toString())
+            "pray" -> if (withEx) acts += action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk)
+            "later" -> if (withEx && laterChoices(ev, now).isNotEmpty())
+                acts += action(ctx, AlarmReceiver.ACTION_LATER_MENU, pk, if (ar) "ذكّرني بعد…" else "Remind me in…", "ev", ev.toString())
+        }
+        acts.take(3).forEach { b.addAction(it) }
+        untilNow(b, untilOf(ev))
         return b
+    }
+
+    /** The user's buttons, in order: "exit" (before the time ends), "pray", "later" (remind me in…). */
+    fun buttonsOf(ev: JSONObject): List<String> = ev.optString("btns", "exit,pray,later").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+    /** The user's "remind me in" durations that still fall before the time ends. */
+    fun laterChoices(ev: JSONObject, now: Long): List<Long> {
+        val a = ev.optJSONArray("later"); val l = if (a == null) listOf(15L, 25L, 35L) else (0 until a.length()).map { a.optLong(it) }.filter { it > 0 }
+        val end = Exits.next(ev, now)?.at ?: Long.MAX_VALUE
+        return l.distinct().sorted().filter { now + it * 60_000L <= end }.take(3)
+    }
+
+    /** The notification goes away by itself once its time is over. */
+    private fun untilNow(b: Notification.Builder, until: Long) { val left = until - System.currentTimeMillis(); if (until > 0 && left > 0) b.setTimeoutAfter(left) }
+    private fun untilOf(ev: JSONObject): Long = ev.optLong("until").takeIf { it > 0 }
+        ?: ev.optJSONArray("ex")?.let { a -> if (a.length() > 0) a.optJSONObject(a.length() - 1)?.optLong("at") ?: 0L else 0L } ?: 0L
+
+    /** "Remind me in…": the same notification, its buttons now the durations, with when the time ends. */
+    private fun laterMenu(ctx: Context, ev: JSONObject, channel: String): Notification.Builder {
+        val pk = ev.optString("pk"); val ar = Exits.ar(ev); val now = System.currentTimeMillis()
+        val ex = Exits.next(ev, now)
+        val text = (if (ar) "متى أذكّرك؟" else "When should I remind you?") + (if (ex != null) (if (ar) " يخرج ${ex.name} ${ex.clock}" else " ${ex.name} ends at ${ex.clock}") else "")
+        val b = builder(ctx, channel, ev.optString("title"), text)
+        for (m in laterChoices(ev, now)) {
+            val i = Intent(ctx, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_LATER).setData(Uri.parse("ontime://later/${Uri.encode(pk)}/$m"))
+                .putExtra("ev", ev.toString()).putExtra("mins", m)
+            b.addAction(Notification.Action.Builder(null, Exits.mins(m, ev), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
+        }
+        untilNow(b, untilOf(ev))
+        return b
+    }
+
+    private fun laterText(r: JSONObject): String { val at = Exits.clock(r.optLong("at"), r); return if (Exits.ar(r)) "بنذكّرك $at" else "Reminder at $at" }
+
+    /** "Remind me in…" pressed: the adhan stops (if it plays) and the notification shows the durations. */
+    fun showLater(ctx: Context, ev: JSONObject) {
+        val pk = ev.optString("pk"); menuPk = pk
+        if (AdhanService.playingPk() == pk) AdhanService.stop(ctx)   // what it leaves behind is the notification with the choices
+        else post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+    }
+
+    /** A duration picked: a reminder then, unless it would ring within 10 min of "before the time ends" (the earlier one stays). */
+    fun later(ctx: Context, ev: JSONObject, mins: Long) {
+        val pk = ev.optString("pk"); menuPk = null
+        val now = System.currentTimeMillis(); val at = now + mins * 60_000L
+        val ex = Exits.next(ev, now)
+        if (ex == null || at <= ex.at) {
+            val rem = Reminders.find(ctx, pk)
+            val clash = rem != null && kotlin.math.abs(at - rem.optLong("at")) < 10 * 60_000L
+            if (!clash || at < rem!!.optLong("at")) {
+                if (clash) Reminders.remove(ctx, pk, "x")
+                Reminders.put(ctx, JSONObject(ev.toString()).put("at", at).put("kind", "later"))
+                Scheduler.reschedule(ctx)
+            }
+        }
+        if (AdhanService.playingPk() == pk) AdhanService.refresh()
+        else post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+        WidgetUpdater.refresh(ctx, "actions")
+    }
+
+    /** The "remind me in" reminder itself: the prayer, when its time ends, and the user's buttons again. */
+    fun laterNote(ctx: Context, r: JSONObject) {
+        val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
+        val e = JSONObject(r.toString()).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
+            .put("text", if (ex != null) (if (ar) "يخرج ${ex.name} ${ex.clock}" else "${ex.name} ends at ${ex.clock}") else r.optString("text"))
+        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet") CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
     }
 
     private fun confirmText(rem: JSONObject): String {
@@ -143,11 +225,12 @@ object Alerts {
         val ex = Exits.next(r, now) ?: return
         val pk = r.optString("pk"); val ar = Exits.ar(r)
         val left = maxOf(1L, Math.round((ex.at - now) / 60_000.0))
-        val title = if (ar) "باقي ${Exits.digits(left.toString(), r)} د على خروج ${ex.name}" else "$left min until ${ex.name} ends"
+        val title = if (ar) "باقي ${Exits.mins(left, r)} على خروج ${ex.name}" else "$left min until ${ex.name} ends"
         val b = builder(ctx, if (r.optString("rs", "ding") == "ding") CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
         b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
         if (ex.at - now > 11 * 60_000L)
-            b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.digits("10", r)} د" else "In 10 min", "rem", r.toString()))
+            b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.mins(10, r)}" else "In 10 min", "rem", r.toString()))
+        untilNow(b, ex.at)
         post(ctx, b, exitId(pk))
     }
 
@@ -185,6 +268,7 @@ object Alerts {
     }
 
     fun prayed(ctx: Context, pk: String) {
+        if (menuPk == pk) menuPk = null
         Prayed.add(ctx, pk)
         Reminders.remove(ctx, pk)
         if (AdhanService.playingPk() == pk) AdhanService.dismiss(ctx)
