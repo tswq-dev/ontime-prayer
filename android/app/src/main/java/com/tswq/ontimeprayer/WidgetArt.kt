@@ -10,6 +10,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.SweepGradient
@@ -22,6 +23,7 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /** The widget typefaces: the three name fonts and IBM Plex for everything else, each in the weights the user can pick. */
 class WFonts(private val kufiW: Map<Int, Typeface>, private val ruqaaW: Map<Int, Typeface>, private val naskhW: Map<Int, Typeface>, private val plexW: Map<Int, Typeface>) {
@@ -168,11 +170,37 @@ object WidgetArt {
             a in '\u0620'..'\u064A' && b in '\u0620'..'\u064A' && a !in NONJOIN && !(a == 'ل' && b in "اأإآ") }
         val w0 = p.measureText(s)
         if (spots.isEmpty() || w0 >= target) return s
+        // a font whose kashida has no width (Aref Ruqaa) is left as it is, not filled with invisible ones
+        if (p.measureText(TATWEEL.toString()) < 2f) return s
         // the user's level, 1 … 7: 7 fills the space up to the frame, never past it
         val goal = w0 + (target - w0) * level.coerceIn(0, 7) / 7f
         val at = spots.last() + 1; var out = s
         for (n in 1..80) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > goal) break; out = t }
         return out
+    }
+    /** Room kept clear on each side of a stretched name: at least 4 real dp, even at the smallest fit scale (.8). */
+    private fun kSafe(x: X) = x.dp(5f)
+    /** The width [s] really takes, drawn from its start or centred: its advance, twice any ink past it (a swash), and a heavy name's stroke. */
+    private fun inkW(p: Paint, s: String): Float {
+        val b = Rect(); p.getTextBounds(s, 0, s.length, b); val adv = p.measureText(s)
+        return adv + 2 * max(0f, max(-b.left.toFloat(), b.right - adv)) + (if (p is NPaint && p.heavy) p.textSize * .035f else 0f)
+    }
+    /**
+     * The name stretched in the widgets beyond script and actions (0.18.2): toward [room] px at the user's level, then measured
+     * again and a kashida taken off until it fits, so it never passes its space. Arabic only; wider than [room] already: as it is.
+     */
+    private fun kashName(x: X, p: Paint, s: String, room: Float): String {
+        if (!x.d.ar || x.style.kl <= 0 || room <= 0f) return s
+        var out = stretch(p, s, room - (inkW(p, s) - p.measureText(s)), x.style.kl)
+        while (out.length > s.length && inkW(p, out) > room) { val i = out.indices.first { it >= s.length || out[it] != s[it] }; out = out.removeRange(i, i + 1) }
+        return if (out.length > s.length && inkW(p, out) <= room) out else s
+    }
+    /** The width of an ellipse centred at [cy] (a circle when [rx] = [ry]) at the top or bottom of [s] on baseline [y], whichever is narrower. */
+    private fun chord(p: Paint, s: String, y: Float, cy: Float, rx: Float, ry: Float): Float {
+        // the kashida's own height counts too, should it reach lower than the letters
+        val b = Rect(); val t = Rect(); p.getTextBounds(s, 0, s.length, b); p.getTextBounds(TATWEEL.toString(), 0, 1, t)
+        val dy = max(abs(y + min(b.top, t.top) - cy), abs(y + max(b.bottom, t.bottom) - cy))
+        return 2 * rx * sqrt(max(0f, 1 - (dy / ry) * (dy / ry)))
     }
     private fun startX(x: X, pad: Float) = if (x.rtl) x.w - pad else pad
     private fun endX(x: X, pad: Float) = if (x.rtl) pad else x.w - pad
@@ -320,8 +348,10 @@ object WidgetArt {
         val base = if (strip) sh + (h - sh) / 2 + x.dp(9f) else h - x.dp(16f)
         val np = tp(x, x.nameTf, if (strip) 24f else 30f, fg, sw); val tpp = tp(x, x.plex, if (strip) 16f else 19f, fg, sw)
         val inS = x.d.inTxt(nx, x.now); val ip = tp(x, x.plexB, 12.5f, if (strip) ss.acc else c("#FFF8EA"), false)
-        val name = x.d.name(nx.k); val tm = x.d.clock(nx.at) + " " + x.d.ampm(nx.at)
+        var name = x.d.name(nx.k); val tm = x.d.clock(nx.at) + " " + x.d.ampm(nx.at)
         fit(np, name, w * .45f)
+        // stretched, it fills what the time and the pill leave on its line
+        name = kashName(x, np, name, w - 2 * pad - (if (x.style.has("time")) tpp.measureText(tm) + x.dp(8f) else 0f) - (if (x.style.has("count")) pillW(ip, inS) + x.dp(8f) else 0f) - 2 * kSafe(x))
         text(cv, x, name, startX(x, pad), base, np)
         if (x.style.has("time")) text(cv, x, tm, startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8f)), base, tpp)
         if (x.style.has("count")) { val pw = pillW(ip, inS); pill(cv, x, inS, endX(x, pad) + x.dir * pw / 2, base - ip.textSize * .45f, ip, if (strip) ss.line else a(.3f, Color.BLACK)) }
@@ -349,7 +379,9 @@ object WidgetArt {
         cv.drawPath(edge, paint(GOLD_L).apply { style = Paint.Style.STROKE; strokeWidth = 2.2f * k })
         val nx = x.next ?: return
         val lines = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "")
-        val np = tp(x, x.nameTf, 22f, c("#FFF8EA")).apply { textSize = 22f * k }; val name = x.d.name(nx.k); fit(np, name, 130 * k)
+        val np = tp(x, x.nameTf, 22f, c("#FFF8EA")).apply { textSize = 22f * k }; var name = x.d.name(nx.k); fit(np, name, 130 * k)
+        // stretched, it stays inside the arch: its straight sides (8 to 162 here) less the gold edge and a margin each side
+        name = kashName(x, np, name, (154f - 2.2f) * k - 2 * max(kSafe(x), 6 * k))
         val ny = if (lines.isEmpty()) Y0(150f) else Y0(140f)
         if (x.style.has("hijri")) center(cv, hijriTxt(x), X0(85f), ny - np.textSize * 1.05f, tp(x, x.plex, 10f, c("#FFF8EA")).apply { textSize = 10f * k })
         center(cv, name, X0(85f), ny, np)
@@ -370,7 +402,9 @@ object WidgetArt {
         val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.target - x.now) else "")
         val top = if (nx.iqAt > 0) (if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
         if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
-        center(cv, x.d.name(nx.k), cx, cy + (if (sub.isEmpty()) 16 else 9) * k, tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k })
+        val np = tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k }; val ny = cy + (if (sub.isEmpty()) 16 else 9) * k; val n0 = x.d.name(nx.k)
+        // stretched, it stays inside the ring's inner edge, at the height of its letters
+        center(cv, kashName(x, np, n0, chord(np, n0, ny, cy, r - sw / 2, r - sw / 2) - 2 * kSafe(x)), cx, ny, np)
         if (sub.isNotEmpty()) { val p = tp(x, x.plexB, 13f, col).apply { textSize = 13f * k }; fit(p, sub, r * 1.5f); center(cv, sub, cx, cy + 28 * k, p) }
     }
     // ---------- 3. the day's orbit (4×2) ----------
@@ -379,8 +413,12 @@ object WidgetArt {
         val cx = w / 2; val cy = h / 2; val rx = w * .421f; val ry = h * .365f
         val nx0 = x.next
         val np = tp(x, x.nameTf, 26f, x.st.fg); val tmP = tp(x, x.plex, 18f, x.st.fg)
-        val name = nx0?.let { x.d.name(it.k) } ?: ""; val tm = if (x.style.has("time")) nx0?.let { x.d.clock(it.at) } ?: "" else ""
-        val gap = x.dp(8f); val tw = np.measureText(name) + gap + tmP.measureText(tm)
+        var name = nx0?.let { x.d.name(it.k) } ?: ""; val tm = if (x.style.has("time")) nx0?.let { x.d.clock(it.at) } ?: "" else ""
+        val gap = x.dp(8f)
+        // stretched, name and time stay inside the orbit at the height of the letters, clear of the dots on the horizon
+        if (nx0 != null) { val half = min(rx - x.dp(8f), chord(np, name, cy + x.dp(2f), cy, rx, ry) / 2 - x.dp(1.3f))
+            name = kashName(x, np, name, 2 * (half - kSafe(x)) - gap - tmP.measureText(tm)) }
+        val tw = np.measureText(name) + gap + tmP.measureText(tm)
         val hp = paint(x.st.line).apply { strokeWidth = x.dp(1f) }
         if (nx0 == null) cv.drawLine(w * .03f, cy, w * .97f, cy, hp)
         else { cv.drawLine(w * .03f, cy, cx - tw / 2 - x.dp(10f), cy, hp); cv.drawLine(cx + tw / 2 + x.dp(10f), cy, w * .97f, cy, hp) }
@@ -448,7 +486,10 @@ object WidgetArt {
         rest.forEachIndexed { i, t -> if (i > 0) parts += "·" to rp; parts += t to rp }
         val gap = x.dp(8f); val total = parts.sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * (parts.size - 1)
         val scale = min((x.w - x.dp(32f)) / total, x.h * .62f / np.textSize); np.textSize *= scale; rp.textSize *= scale
-        var xs = x.w / 2 + x.dir * total * scale / 2; val y = x.h / 2 + (if (rest.isEmpty()) np.textSize * .3f else rp.textSize * .35f)
+        // stretched, the name takes what the height-bound size leaves free on the line (none when the width bounds it)
+        val n0 = parts[0].first; val others = parts.drop(1).sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * scale * (parts.size - 1)
+        parts[0] = kashName(x, np, n0, x.w - x.dp(32f) - 2 * kSafe(x) - others) to np
+        var xs = x.w / 2 + x.dir * (total * scale + np.measureText(parts[0].first) - np.measureText(n0)) / 2; val y = x.h / 2 + (if (rest.isEmpty()) np.textSize * .3f else rp.textSize * .35f)
         for ((s, p) in parts) { text(cv, x, s, xs, y, p); xs -= x.dir * (p.measureText(s) + gap * scale) }
     }
     // ---------- 5. table (4×1 up to 4×4): rows the user picks ----------
@@ -533,7 +574,9 @@ object WidgetArt {
         if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }
         if (x.style.has("count")) l2 += x.d.dur(nx.target - x.now) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
         var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
-        center(cv, x.d.name(nx.k), cx, y, tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k })
+        val np = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k }; val n0 = x.d.name(nx.k)
+        // stretched, it stays inside the dial's inner edge, at the height of its letters
+        center(cv, kashName(x, np, n0, chord(np, n0, y, cy, ri, ri) - 2 * kSafe(x)), cx, y, np)
         for ((t, p) in l2) { y += 14 * k; center(cv, t, cx, y, p) }
     }
 
@@ -607,7 +650,8 @@ object WidgetArt {
         val ip = tp(x, x.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u2 }
         val pw = pillW(ip, left); fit(ip, left, w * .4f)
         var y = (x.h - ch * u2) / 2 + ts * .8f * u2
-        text(cv, x, title, startX(x, pad), y, tp1)
+        // stretched, the title fills up to the pill
+        text(cv, x, kashName(x, tp1, title, w - 2 * pad - pw - x.dp(8f) - 2 * kSafe(x)), startX(x, pad), y, tp1)
         pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, y - ts * .3f * u2, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
         if (bar) {
             val bt = y + 14 * u2; val bh = 8 * u2; val l = pad; val r = w - pad

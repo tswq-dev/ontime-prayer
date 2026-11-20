@@ -85,8 +85,8 @@ class WidgetShots {
         sheet("sheet-9-table", rows.flatMap { (r, h) -> listOf("sky", "light").map { bg -> Item(r.joinToString("+") + " $bg", draw("table", WStyle(bg, "kufi", r), ar, duha, 340, h, fonts)) } })
         val dh = day.getLong("dhuhr")
         sheet("sheet-10-states", listOf(
-            Item("exit: no time now", draw("exit", WStyle("dark", "kufi", emptySet()), ar, dh - 10 * mn, 340, 90, fonts)),
-            Item("exit: fajr", draw("exit", WStyle("sky", "kufi", emptySet()), ar, day.getLong("fajr") + 30 * mn, 340, 90, fonts)),
+            Item("exit: no time now", draw("exit", dflt("exit").copy(bg = "dark", rows = emptySet()), ar, dh - 10 * mn, 340, 90, fonts)),
+            Item("exit: fajr", draw("exit", dflt("exit").copy(rows = emptySet()), ar, day.getLong("fajr") + 30 * mn, 340, 90, fonts)),
             Item("actions: done", draw("actions", WStyle("dark", "kufi", emptySet()), ar, asr, 340, 170, fonts, b = WidgetArt.Btns(prayed = true, muted = true, reminded = true))),
             Item("actions: nothing to pray", draw("actions", WStyle("light", "kufi", emptySet()), ar, dh - 10 * mn, 340, 170, fonts, b = WidgetArt.Btns(canPray = false))),
             Item("no data", draw("ring", dflt("ring"), null, asr, 170, 170, fonts)),
@@ -165,6 +165,16 @@ class WidgetShots {
             Item("clock $f", draw("clock", dflt("clock").copy(cf = f), ar, c84, 170, 170, fonts)),
             Item("ring $f", draw("ring", dflt("ring").copy(cf = f), ar, c84, 170, 170, fonts)),
             Item("line en $f", draw("line", dflt("line").copy(cf = f), en, c84, 340, 90, fonts))) })
+
+        // the stretched name in more widgets (0.18.2), at 7 (fills its space, never past it): before Maghrib in the default size,
+        // before Isha in a second size; the clear ones on green to show the frame; English stays as it is
+        val ish = day.getLong("isha") - 40 * mn
+        val more = linkedMapOf("pano" to (520 to 200), "window" to (250 to 250), "orbit" to (300 to 150), "line" to (360 to 130),
+            "exit" to (360 to 130), "ring" to (250 to 250), "clock" to (250 to 250))
+        fun k7(t: String, f: String = "kufi") = dflt(t).copy(font = f, kl = 7).let { if (it.bg == "clear") it.copy(bg = "dark") else it }
+        sheet("sheet-18-kashida", more.flatMap { (t, big) -> listOf("kufi", "ruqaa", "naskh").map { f -> Item("$t $f 7", draw(t, k7(t, f), ar, c84, sz(t).first, sz(t).second, fonts)) } +
+            listOf("kufi", "ruqaa", "naskh").map { f -> Item("$t ${big.first}x${big.second} $f 7", draw(t, k7(t, f), ar, ish, big.first, big.second, fonts)) } } +
+            more.keys.map { t -> Item("$t en 7", draw(t, k7(t), en, ish, sz(t).first, sz(t).second, fonts)) })
         WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
 
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker

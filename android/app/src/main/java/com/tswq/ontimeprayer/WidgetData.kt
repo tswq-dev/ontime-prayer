@@ -161,14 +161,15 @@ class WData(val o: JSONObject) {
 data class WStyle(val bg: String, val font: String, val rows: Set<String>, val tap: String = "app",
                   /** weight of the prayer's name and of the times and text: "l", "m", "b" */
                   val nw: String = "m", val dw: String = "m",
-                  /** how far the name is stretched with kashida: 0 not at all … 7 fills its space to the frame */
+                  /** how far the name is stretched with kashida: 0 not at all … 7 fills its space to the frame
+                   *  (until picked: 7 in script and actions, 0 in the others, see [klFor]) */
                   val kl: Int = 7,
                   /** the countdown's format ("" follows the app's own) */
                   val cf: String = "") {
     val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("cf", cf)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 2).put("cf", cf)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -191,16 +192,23 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
         val CFS = setOf("hm", "clock", "m", "text")
 
+        /** The stretch until the user picks one: script and actions were designed stretched; the others keep their plain look (0.18.2). */
+        fun klFor(type: String) = if (type == "script" || type == "actions") 7 else 0
+
         /** Until the user picks, a widget uses the name font chosen for the app's own screen. */
         fun defaultFor(type: String, font: String? = null) = WStyle(when (type) { "script", "line" -> "clear"; "prayed", "ramadan" -> "dark"; "white" -> "light"; else -> "sky" },
-            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", SHOW[type]?.second ?: emptySet(), if (type == "prayed") "pray" else "app")
+            font?.takeIf { it in setOf("kufi", "ruqaa", "naskh") } ?: "kufi", SHOW[type]?.second ?: emptySet(), if (type == "prayed") "pray" else "app", kl = klFor(type))
         fun from(type: String, j: JSONObject?, font: String? = null): WStyle {
             val d = defaultFor(type, font); if (j == null) return d
             val r = j.optJSONArray("rows")
             // looks saved before "what it shows" existed keep the defaults (only the table had rows then)
             val rows = if (r == null || (j.optInt("v") < 2 && type != "table")) d.rows else (0 until r.length()).map { r.optString(it) }.toSet()
             val wt = { k: String -> j.optString(k, "m").takeIf { it in setOf("l", "m", "b") } ?: "m" }
-            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0),
+            // the stretch: script and actions keep their old "kash" switch; the others count a saved "kl" only from 0.18.2 ("kv": 2),
+            // since the page saves back every key it was given and older looks carry the 7 that was everyone's default then
+            val kl = if (type == "script" || type == "actions") (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0)
+                     else if (j.optInt("kv") >= 2 && j.has("kl")) j.optInt("kl", d.kl).coerceIn(0, 7) else d.kl
+            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), kl,
                 j.optString("cf", "").takeIf { it in CFS } ?: "")
         }
     }
