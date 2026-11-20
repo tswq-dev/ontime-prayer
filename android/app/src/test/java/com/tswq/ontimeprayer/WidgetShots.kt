@@ -80,7 +80,8 @@ class WidgetShots {
             listOf("kufi", "ruqaa", "naskh").map { f -> Item("$t $f", draw(t, dflt(t).copy(font = f, bg = "dark"), ar, mg, sz(t).first, sz(t).second, fonts)) } })
         val duha = moments["2-duha"]!!
         val rows = listOf(setOf("times") to 90, setOf("times", "exit") to 120, setOf("count") to 70, setOf("count", "times", "exit") to 170,
-            setOf("city", "date", "count") to 120, setOf("city", "date", "count", "times", "exit", "iqama") to 350)
+            setOf("city", "date", "count") to 120, setOf("city", "date", "count", "times", "exit", "iqama") to 350,
+            setOf("times", "exit", "sunrise") to 120, setOf("times", "exit", "sunrise", "duha") to 120)
         sheet("sheet-9-table", rows.flatMap { (r, h) -> listOf("sky", "light").map { bg -> Item(r.joinToString("+") + " $bg", draw("table", WStyle(bg, "kufi", r), ar, duha, 340, h, fonts)) } })
         val dh = day.getLong("dhuhr")
         sheet("sheet-10-states", listOf(

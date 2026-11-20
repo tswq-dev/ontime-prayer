@@ -477,10 +477,12 @@ object WidgetArt {
             y += 34 * u
         }
         if (showT) {
-            val cw = (w - 16 * u) / 6; val rowH = if (subRow) 52 * u else 40 * u
+            // the five prayers; sunrise and Duha only if the user adds them
+            val keys = listOf("fajr") + (if ("sunrise" in rows) listOf("sunrise") else emptyList()) + (if ("duha" in rows) listOf("duha") else emptyList()) + listOf("dhuhr", "asr", "maghrib", "isha")
+            val n = keys.size; val cw = (w - 16 * u) / n; val rowH = if (subRow) 52 * u else 40 * u
             val ex = tday.optJSONObject("ex")
-            for ((i, key) in WData.SIX.withIndex()) {
-                val col = if (x.rtl) i else 5 - i; val left = w - 8 * u - (col + 1) * cw; val ccx = left + cw / 2
+            for ((i, key) in keys.withIndex()) {
+                val col = if (x.rtl) i else n - 1 - i; val left = w - 8 * u - (col + 1) * cw; val ccx = left + cw / 2
                 val on = key == nx.k; val past = !on && tt(key) <= x.now
                 if (on) cv.drawRoundRect(RectF(left + 1 * u, y, left + cw - 1 * u, y + rowH), 14 * u, 14 * u, paint(if (x.st.light) GOLD_L else GOLD))
                 val fg = if (on) INK else x.st.fg; val alpha = if (past) 115 else 255

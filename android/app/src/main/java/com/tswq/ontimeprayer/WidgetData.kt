@@ -153,7 +153,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "ring" to (listOf("count", "time", "prev") to setOf("count", "prev")),
             "orbit" to (listOf("count", "time", "hijri", "exit") to setOf("count", "time")),
             "script" to (listOf("count", "time", "hijri", "exit") to setOf("count", "time")),
-            "table" to (listOf("city", "date", "count", "times", "exit", "iqama") to setOf("times", "exit")),
+            "table" to (listOf("city", "date", "count", "times", "exit", "iqama", "sunrise", "duha") to setOf("times", "exit")),
             "clock" to (listOf("count", "time") to setOf("count", "time")),
             "moon" to (listOf("wd", "next") to setOf("wd", "next")),
             "ribbon" to (listOf("count", "labels") to setOf("count", "labels")),
