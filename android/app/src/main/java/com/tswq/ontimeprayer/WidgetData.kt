@@ -110,7 +110,7 @@ class WData(val o: JSONObject) {
     /** The countdown's look, set for each widget before it is drawn (0.18.1): "hm" 1 س 24 د, "clock" 1:24, "m" 84 دقيقة, "text" ساعة و24 دقيقة. */
     var cf = "hm"
     /** Until the user picks one for a widget, it follows the app's own countdown (seconds don't fit a picture drawn once a minute). */
-    val appCf: String = when (o.optString("count")) { "hms" -> "clock"; "m" -> "m"; "text" -> "text"; else -> "hm" }
+    val appCf: String = when (o.optString("count")) { "hms", "hmc" -> "clock"; "m" -> "m"; "text" -> "text"; else -> "hm" }
     private fun pl(n: Long, one: String, two: String, few: String, many: String) = when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> "$n $few"; else -> "$n $many" }
 
     /** The time left, rounded up to the minute, in the widget's countdown format. */
