@@ -178,10 +178,12 @@ object Alerts {
         val canBefore = withEx && beforeChoices(ev, now).isNotEmpty(); val canLater = withEx && laterChoices(ev, now).isNotEmpty()
         if (withEx && (set != null || ev.optInt("remNote") == 1)) {
             // a reminder is set (or this is the reminder itself): «صلّيت» (praying before it rings cancels it), and the other kind to change it
-            acts += prayBtn()
-            if (ev.optInt("remNote") == 1) { if (canLater) acts += laterBtn() }
-            else if (rem != null) { if ("later" in btns && canLater) acts += laterBtn() }
-            else if ("exit" in btns && canBefore) acts += beforeBtn()
+            // the reminder itself: put it off again, or be reminded before the time ends (no «صلّيت» here, the user's choice)
+            if (ev.optInt("remNote") == 1) { for (bt in listOf("later", "exit").sortedBy { btns.indexOf(it).let { i -> if (i < 0) 9 else i } })
+                if (bt == "later" && canLater) acts += laterBtn() else if (bt == "exit" && canBefore) acts += beforeBtn() }
+            else { acts += prayBtn()
+            if (rem != null) { if ("later" in btns && canLater) acts += laterBtn() }
+            else if ("exit" in btns && canBefore) acts += beforeBtn() }
         } else for (bt in btns) when (bt) {
             // the user's buttons, in their order
             "exit" -> if (canBefore) acts += beforeBtn()
@@ -291,7 +293,11 @@ object Alerts {
     /** Returns the sound the caller should play (it keeps the receiver alive while it plays). */
     fun laterNote(ctx: Context, r: JSONObject, quiet: Boolean = false): String? {
         val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
-        val e = JSONObject(r.toString()).put("remNote", 1).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
+        // the prayer's own name, kept apart: a reminder put off again from the reminder must not read «تذكير: صلاة تذكير: صلاة …»
+        var base = r.optString("pname").ifEmpty { r.optString("title") }
+        while (base.startsWith("تذكير: صلاة ")) base = base.removePrefix("تذكير: صلاة ")
+        while (base.startsWith("Reminder: ")) base = base.removePrefix("Reminder: ")
+        val e = JSONObject(r.toString()).put("remNote", 1).put("pname", base).put("title", if (ar) "تذكير: صلاة $base" else "Reminder: $base")
             .put("text", if (ex != null) (if (ar) "باقي ${leftTxt(leftMin(ex.at, now), r)} على خروج ${ex.name}، ينتهي ${ex.clock}" else "${ex.name} ends at ${ex.clock}, in ${leftTxt(leftMin(ex.at, now), r)}") else r.optString("text"))
         // there is no spoken line for "remind me in", so ringing on silent plays the phone's tone
         val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") in setOf("ding", "speak") && loud(r) -> "tone_ding"; else -> null }
