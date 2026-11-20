@@ -1,4 +1,5 @@
 import UIKit
+import WidgetKit
 import WebKit
 import UniformTypeIdentifiers
 import UserNotifications
@@ -78,7 +79,11 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         guard let b = message.body as? [String: Any], let cmd = b["cmd"] as? String else { return }
         switch cmd {
         case "schedule": Scheduler.save(b["json"] as? String ?? "[]")
-        case "widgetData": UserDefaults.standard.set(b["json"] as? String ?? "", forKey: "widgetData")
+        case "widgetData":
+            let j = b["json"] as? String ?? ""
+            UserDefaults.standard.set(j, forKey: "widgetData")
+            // the widgets read it from the App Group; reload them only when it changed
+            if SharedStore.write(j) { WidgetCenter.shared.reloadAllTimelines() }
         case "askNotify": askNotify()
         case "preview": Sounds.preview(b["sound"] as? String ?? "")
         case "pickSound": pickSound(b["id"] as? String ?? "file")

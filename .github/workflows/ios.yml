@@ -28,9 +28,14 @@ jobs:
         run: |
           cd ios
           xcodebuild -project OnTime.xcodeproj -target OnTime -sdk iphoneos -configuration Release \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build.log | grep -E "error:|warning: .*OnTime/|BUILD (SUCCEEDED|FAILED)" || true
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build.log | grep -E "error:|warning: .*(OnTime|OnTimeWidgets|Shared)/|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
-          mkdir -p Payload && cp -R build/Release-iphoneos/OnTime.app Payload/ && zip -qry ../ontime-prayer.ipa Payload
+          mkdir -p Payload && cp -R build/Release-iphoneos/OnTime.app Payload/
+          ls Payload/OnTime.app/PlugIns
+          # ad-hoc signatures that carry the App Group, so the installer that re-signs can keep it for the widgets
+          codesign -f -s - --entitlements OnTimeWidgets/OnTimeWidgets.entitlements Payload/OnTime.app/PlugIns/OnTimeWidgets.appex || true
+          codesign -f -s - --entitlements OnTime/OnTime.entitlements Payload/OnTime.app || true
+          zip -qry ../ontime-prayer.ipa Payload
 
       - name: Keep the build log
         if: always()
