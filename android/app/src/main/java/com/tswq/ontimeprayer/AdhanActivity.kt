@@ -40,6 +40,7 @@ class AdhanActivity : Activity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.statusBarColor = Color.parseColor("#11594A"); window.navigationBarColor = Color.parseColor("#0A382C")
         current = WeakReference(this)
+        Alerts.cancel(this, Alerts.SCREEN_ID)   // the helper notification did its job
         show(intent?.getStringExtra("ev"))
     }
 
@@ -138,5 +139,7 @@ class AdhanActivity : Activity() {
         private var current: WeakReference<AdhanActivity>? = null
         /** The adhan ended or was stopped elsewhere: close the screen. */
         fun close() { current?.get()?.let { a -> a.runOnUiThread { a.finish() } } }
+        /** The adhan ended by itself: keep the screen up for [ms], then close it. */
+        fun linger(ms: Long) { current?.get()?.let { a -> a.runOnUiThread { a.window.decorView.postDelayed({ if (!a.isFinishing) a.finish() }, ms) } } }
     }
 }

@@ -32,6 +32,9 @@ object Exits {
     fun mins(n: Long, r: JSONObject): String = if (!ar(r)) "$n min" else when {
         n == 1L -> "دقيقة"; n == 2L -> "دقيقتين"; n in 3..10 -> digits("$n", r) + " دقائق"; else -> digits("$n", r) + " دقيقة" }
 
+    /** "25 د" / "25 min": the durations on notification buttons, short so Android does not cut them. */
+    fun short(n: Long, r: JSONObject): String = if (!ar(r)) "$n min" else digits("$n", r) + " د"
+
     fun digits(s: String, r: JSONObject): String =
         if (r.optInt("dg") == 1) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
 

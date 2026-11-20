@@ -10,6 +10,7 @@ class AlarmReceiver : BroadcastReceiver() {
         fun json(key: String) = intent.getStringExtra(key)?.let { runCatching { JSONObject(it) }.getOrNull() }
         when (intent.action) {
             Scheduler.ACTION_RESTORE -> Alerts.restoreRinger(ctx)
+            ACTION_TICK -> json("ev")?.let { Alerts.tick(ctx, intent.getStringExtra("kind") ?: "", it, intent.getIntExtra("id", 0)) }
             Scheduler.ACTION_FIRE -> {
                 val ev = json("ev")
                 if (ev != null) Scheduler.markFired(ctx, ev.optString("id"), ev.optLong("at"))
@@ -44,6 +45,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        const val ACTION_TICK = "com.tswq.ontimeprayer.TICK"
         const val ACTION_REMIND = "com.tswq.ontimeprayer.REMIND"
         const val ACTION_SNOOZE = "com.tswq.ontimeprayer.SNOOZE"
         const val ACTION_PRAYED = "com.tswq.ontimeprayer.PRAYED"

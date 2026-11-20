@@ -1,5 +1,6 @@
 package com.tswq.ontimeprayer
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -35,6 +36,8 @@ class AdhanService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var ev: JSONObject? = null
     private var noAfter = false
+    /** the recording played to its end (not stopped): the screen lingers */
+    private var ended = false
     // stopping it with the phone's buttons: power, volume, turning the phone face down
     private var screenRx: BroadcastReceiver? = null
     private var volRx: BroadcastReceiver? = null
@@ -59,6 +62,9 @@ class AdhanService : Service() {
         val n = note()
         if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(NOTE_ID, n)
+        // some phones never open a screen from a service's own notification: with the phone locked or its screen off,
+        // a separate alarm notification opens it (and is removed once the screen shows)
+        if (fullScreenOk() && locked()) Alerts.screenNote(this, e)
 
         player?.release(); player = null
         main.removeCallbacksAndMessages(null)
@@ -81,9 +87,13 @@ class AdhanService : Service() {
     private fun fullScreenOk(): Boolean = ev?.optInt("fs", 1) == 1 &&
         (Build.VERSION.SDK_INT < 34 || getSystemService(NotificationManager::class.java)?.canUseFullScreenIntent() == true)
 
+    private fun locked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true ||
+        getSystemService(PowerManager::class.java)?.isInteractive == false
+
     private fun note(): Notification {
         val b = Alerts.prayerBuilder(this, ev!!, Alerts.CH_ADHAN, pi(ACTION_STOP, 1))
             .setCategory(Notification.CATEGORY_ALARM)
+        if (Build.VERSION.SDK_INT >= 31) b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
             .setAutoCancel(false)
             .setDeleteIntent(pi(ACTION_DISMISS, 2))
         if (ev?.optInt("fs", 1) == 1) b.setFullScreenIntent(PendingIntent.getActivity(this, 3,
@@ -159,7 +169,7 @@ class AdhanService : Service() {
             player = MediaPlayer().apply {
                 setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                 setDataSource(this@AdhanService, uri)
-                setOnCompletionListener { stopSelf() }
+                setOnCompletionListener { ended = true; stopSelf() }
                 setOnErrorListener { _, _, _ -> stopSelf(); true }
                 prepare(); start()
             }
@@ -169,7 +179,9 @@ class AdhanService : Service() {
 
     override fun onDestroy() {
         unlisten()
-        AdhanActivity.close()
+        // ended by itself: the screen stays a minute for «صلّيت» or a reminder; stopped by the user: it closes
+        if (ended) AdhanActivity.linger(60_000L) else AdhanActivity.close()
+        Alerts.cancel(this, Alerts.SCREEN_ID)
         main.removeCallbacksAndMessages(null)
         player?.let { runCatching { it.stop() }; it.release() }
         player = null

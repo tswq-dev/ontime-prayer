@@ -21,6 +21,9 @@ import org.json.JSONObject
 
 object Alerts {
     const val CH_ADHAN = "adhan"
+    /** Only opens the adhan screen when the phone is locked (some phones ignore the full-screen intent of a service's notification). */
+    const val CH_SCREEN = "adhan_screen"
+    const val SCREEN_ID = 0x0ADA5C
     const val CH_VIBRATE = "vibrate"
     const val CH_REMIND = "remind"
     const val CH_EXIT = "exit"
@@ -43,6 +46,9 @@ object Alerts {
         // The adhan itself is played by AdhanService, so its channel stays silent.
         nm.createNotificationChannel(NotificationChannel(CH_ADHAN, t("الأذان", "Adhan"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(null, null); enableVibration(false)
+        })
+        nm.createNotificationChannel(NotificationChannel(CH_SCREEN, t("شاشة الأذان", "Adhan screen"), NotificationManager.IMPORTANCE_HIGH).apply {
+            setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
         nm.createNotificationChannel(NotificationChannel(CH_VIBRATE, t("اهتزاز فقط", "Vibrate only"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(null, null); enableVibration(true); vibrationPattern = longArrayOf(0, 400, 250, 400)
@@ -100,15 +106,15 @@ object Alerts {
                 }
             }
             "pre", "iqama" -> {
-                post(ctx, builder(ctx, remCh, title, text).also { untilNow(it, ev.optLong("until")) }, id)
+                if (ev.optString("kind") == "pre") preNote(ctx, ev, false) else post(ctx, builder(ctx, remCh, title, text).also { untilNow(it, ev.optLong("until")) }, id)
                 if (remCh != CH_VIBRATE) remSound(ev, ev.optString("spk"))?.let { say(it, loud) }
             }
             // the spoken line first, then vibrate mode (vibrate mode would cut it off)
-            "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), title, text) }
-                else silence(ctx, ev.optInt("min", 20), title, text)
+            "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), ev) }
+                else silence(ctx, ev.optInt("min", 20), ev)
             "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); remSound(ev, ev.optString("xspk"))?.let { say(it, loud) } }
             // a plain reminder from the page (the last third of the night, fasting tomorrow)
-            "note" -> post(ctx, builder(ctx, CH_REMIND, title, text).also { untilNow(it, ev.optLong("until")) }, id)
+            "note" -> if (ev.optString("key") == "third") thirdNote(ctx, ev, false) else post(ctx, builder(ctx, CH_REMIND, title, text).also { untilNow(it, ev.optLong("until")) }, id)
         }
         if (!speaking) done()
     }
@@ -166,8 +172,8 @@ object Alerts {
         if (stop != null) acts += Notification.Action.Builder(null, if (ar) "إيقاف" else "Stop", stop).build()
         val btns = buttonsOf(ev)
         // with "Stop" there are three buttons: the long label is shortened so Android does not cut it
-        val beforeBtn = { action(ctx, AlarmReceiver.ACTION_BEFORE_MENU, pk, if (ar) (if (stop != null) "قبل خروج الوقت" else "ذكّرني قبل خروج الوقت") else "Before it ends…", "ev", ev.toString()) }
-        val laterBtn = { action(ctx, AlarmReceiver.ACTION_LATER_MENU, pk, if (ar) "ذكّرني بعد…" else "Remind me in…", "ev", ev.toString()) }
+        val beforeBtn = { action(ctx, AlarmReceiver.ACTION_BEFORE_MENU, pk, if (ar) "ذكّرني قبل الخروج" else "Before it ends", "ev", ev.toString()) }
+        val laterBtn = { action(ctx, AlarmReceiver.ACTION_LATER_MENU, pk, if (ar) "ذكّرني بعد" else "Remind me later", "ev", ev.toString()) }
         val prayBtn = { action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk) }
         val canBefore = withEx && beforeChoices(ev, now).isNotEmpty(); val canLater = withEx && laterChoices(ev, now).isNotEmpty()
         if (withEx && (set != null || ev.optInt("remNote") == 1)) {
@@ -218,7 +224,7 @@ object Alerts {
         for (m in laterChoices(ev, now)) {
             val i = Intent(ctx, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_LATER).setData(Uri.parse("ontime://later/${Uri.encode(pk)}/$m"))
                 .putExtra("ev", ev.toString()).putExtra("mins", m)
-            b.addAction(Notification.Action.Builder(null, Exits.mins(m, ev), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
+            b.addAction(Notification.Action.Builder(null, Exits.short(m, ev), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
         }
         untilNow(b, untilOf(ev))
         return b
@@ -240,7 +246,7 @@ object Alerts {
         for (m in beforeChoices(ev, now)) {
             val i = Intent(ctx, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_BEFORE).setData(Uri.parse("ontime://before/${Uri.encode(pk)}/$m"))
                 .putExtra("ev", ev.toString()).putExtra("mins", m)
-            b.addAction(Notification.Action.Builder(null, (if (ar) "قبل " else "") + Exits.mins(m, ev) + (if (ar) "" else " before"), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
+            b.addAction(Notification.Action.Builder(null, Exits.short(m, ev), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
         }
         untilNow(b, untilOf(ev))
         return b
@@ -283,29 +289,92 @@ object Alerts {
 
     /** The "remind me in" reminder itself: the prayer, when its time ends, and the user's buttons again. */
     /** Returns the sound the caller should play (it keeps the receiver alive while it plays). */
-    fun laterNote(ctx: Context, r: JSONObject): String? {
+    fun laterNote(ctx: Context, r: JSONObject, quiet: Boolean = false): String? {
         val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
         val e = JSONObject(r.toString()).put("remNote", 1).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
-            .put("text", if (ex != null) (if (ar) "يخرج ${ex.name} ${ex.clock}" else "${ex.name} ends at ${ex.clock}") else r.optString("text"))
+            .put("text", if (ex != null) (if (ar) "باقي ${leftTxt(leftMin(ex.at, now), r)} على خروج ${ex.name}، ينتهي ${ex.clock}" else "${ex.name} ends at ${ex.clock}, in ${leftTxt(leftMin(ex.at, now), r)}") else r.optString("text"))
         // there is no spoken line for "remind me in", so ringing on silent plays the phone's tone
         val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") in setOf("ding", "speak") && loud(r) -> "tone_ding"; else -> null }
-        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || snd != null) CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
-        return snd
+        val b = prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || snd != null) CH_SILENT else CH_LATER, null)
+        if (quiet) b.setOnlyAlertOnce(true)
+        post(ctx, b, noteIdOf(r.optString("pk")))
+        if (ex != null) tickLater(ctx, noteIdOf(r.optString("pk")), "later", r, ex.at)
+        return if (quiet) null else snd
     }
 
     /** "20 min left until the chosen time for Asr ends", with "I prayed" and "In 10 min". */
-    fun exitNote(ctx: Context, r: JSONObject) {
+    fun exitNote(ctx: Context, r: JSONObject, quiet: Boolean = false) {
         val now = System.currentTimeMillis()
         val ex = Exits.next(r, now) ?: return
         val pk = r.optString("pk"); val ar = Exits.ar(r)
-        val left = maxOf(1L, Math.round((ex.at - now) / 60_000.0))
+        val left = leftMin(ex.at, now)
         val title = if (ar) "باقي ${Exits.mins(left, r)} على خروج ${ex.name}" else "$left min until ${ex.name} ends"
         val b = builder(ctx, if (r.optString("rs", "ding") == "ding" && !loud(r)) CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
         b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
         if (ex.at - now > 11 * 60_000L)
-            b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.mins(10, r)}" else "In 10 min", "rem", r.toString()))
+            b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.short(10, r)}" else "In 10 min", "rem", r.toString()))
         untilNow(b, ex.at)
+        if (quiet) b.setOnlyAlertOnce(true)
         post(ctx, b, exitId(pk))
+        tickLater(ctx, exitId(pk), "exit", r, ex.at)
+    }
+
+    // ── notifications that say how long is left: re-posted quietly each time the minutes change, while they are showing ──
+    /** Minutes left, rounded up (what the text says). */
+    private fun leftMin(at: Long, now: Long) = maxOf(1L, (at - now + 59_999) / 60_000)
+    /** "4 س 20 د" for long waits, else "9 دقائق". */
+    private fun leftTxt(min: Long, r: JSONObject): String = if (min < 60) Exits.mins(min, r)
+        else if (Exits.ar(r)) Exits.digits("${min / 60} س ${min % 60} د", r) else "${min / 60} h ${min % 60} min"
+
+    /** Wakes at the moment the shown minutes drop by one, to show the new count. */
+    fun tickLater(ctx: Context, id: Int, kind: String, r: JSONObject, target: Long) {
+        val now = System.currentTimeMillis(); if (target - now <= 60_000L) return
+        val next = target - (leftMin(target, now) - 1) * 60_000L
+        val am = ctx.getSystemService(AlarmManager::class.java) ?: return
+        val i = Intent(ctx, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_TICK).setData(Uri.parse("ontime://tick/$id"))
+            .putExtra("kind", kind).putExtra("ev", r.toString()).putExtra("id", id)
+        Scheduler.setExact(am, maxOf(next, now + 1_000L), PendingIntent.getBroadcast(ctx, 0, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+    }
+    /** A minute passed: if the notification is still there (not dismissed, not prayed), show the new count without sound. */
+    fun tick(ctx: Context, kind: String, r: JSONObject, id: Int) {
+        if (!activeNote(ctx, id)) return
+        channels(ctx)
+        when (kind) {
+            "exit" -> if (!Prayed.has(ctx, r.optString("pk"))) exitNote(ctx, r, true)
+            "pre" -> preNote(ctx, r, true)
+            "later" -> laterNote(ctx, r, true)
+            "silence" -> silenceNote(ctx, r, true)
+            "third" -> thirdNote(ctx, r, true)
+        }
+    }
+    private fun remChOf(ev: JSONObject) = when { ev.optString("voice") == "vibrate" -> CH_VIBRATE; ev.optString("rs", "ding") == "ding" && !loud(ev) -> CH_REMIND; else -> CH_SILENT }
+    /** "In 9 min: the Asr adhan", counting down to the adhan. */
+    private fun preNote(ctx: Context, ev: JSONObject, quiet: Boolean) {
+        val until = ev.optLong("until"); val now = System.currentTimeMillis(); val ar = Exits.ar(ev); val id = ev.optString("id").hashCode()
+        val isP = ev.optString("key") in setOf("fajr", "dhuhr", "asr", "maghrib", "isha"); val nm = ev.optString("title")
+        val text = if (until <= now) ev.optString("text") else { val m = leftMin(until, now); if (ar) "بعد ${Exits.mins(m, ev)}: " + (if (isP) "أذان " else "") + nm else "In $m min: $nm" }
+        val b = builder(ctx, remChOf(ev), nm, text).also { untilNow(it, until) }
+        if (quiet) b.setOnlyAlertOnce(true)
+        post(ctx, b, id)
+        tickLater(ctx, id, "pre", ev, until)
+    }
+    /** Phone on vibrate after the iqama: when the sound comes back. */
+    private fun silenceNote(ctx: Context, r: JSONObject, quiet: Boolean) {
+        val until = r.optLong("until"); val now = System.currentTimeMillis(); val ar = Exits.ar(r); val m = leftMin(until, now)
+        val text = if (ar) "يرجع الصوت بعد ${Exits.mins(m, r)}" else "Sound back in $m min"
+        val b = builder(ctx, CH_REMIND, if (ar) "الجوال على الاهتزاز" else "Phone on vibrate", text)
+        if (quiet) b.setOnlyAlertOnce(true)
+        post(ctx, b, RESTORE_CODE)
+        tickLater(ctx, RESTORE_CODE, "silence", r, until)
+    }
+    /** The last third of the night: a silent notification (always), with how long until Fajr. */
+    private fun thirdNote(ctx: Context, ev: JSONObject, quiet: Boolean) {
+        val until = ev.optLong("until"); val now = System.currentTimeMillis(); val ar = Exits.ar(ev); val id = ev.optString("id").hashCode()
+        val text = if (until <= now) ev.optString("text") else { val m = leftMin(until, now); if (ar) "باقي ${leftTxt(m, ev)} على الفجر" else "${leftTxt(m, ev)} until Fajr" }
+        val b = builder(ctx, CH_SILENT, ev.optString("title"), text).also { untilNow(it, until) }
+        if (quiet) b.setOnlyAlertOnce(true)
+        post(ctx, b, id)
+        tickLater(ctx, id, "third", ev, until)
     }
 
     /** "Remind me before it ends": from the adhan notification or from the app. */
@@ -363,6 +432,17 @@ object Alerts {
 
     fun notify(ctx: Context, channel: String, title: String, text: String, id: Int) = post(ctx, builder(ctx, channel, title, text), id)
 
+    /** A silent alarm notification whose only job is to open the adhan screen on a locked phone. */
+    fun screenNote(ctx: Context, ev: JSONObject) {
+        channels(ctx)
+        val pi = PendingIntent.getActivity(ctx, 4, Intent(ctx, AdhanActivity::class.java).putExtra("ev", ev.toString())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val b = Notification.Builder(ctx, CH_SCREEN).setSmallIcon(R.drawable.ic_stat).setContentTitle(ev.optString("title")).setContentText(ev.optString("text"))
+            .setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setFullScreenIntent(pi, true).setContentIntent(pi)
+            .setOngoing(true).setTimeoutAfter(90_000L)
+        post(ctx, b, SCREEN_ID)
+    }
+
     /** The page sends a month of alerts and only the page renews them: when they are about to run out, ask once a day to open the app (0.18.1). */
     fun staleCheck(ctx: Context, last: Long, now: Long, ar: Boolean) {
         val p = Scheduler.prefs(ctx)
@@ -379,12 +459,12 @@ object Alerts {
     )
 
     /** Vibrate mode needs no special permission; we only undo it if we set it and it is still on. */
-    private fun silence(ctx: Context, minutes: Int, title: String, text: String) {
+    private fun silence(ctx: Context, minutes: Int, ev: JSONObject) {
         val audio = ctx.getSystemService(AudioManager::class.java) ?: return
         if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
         try { audio.ringerMode = AudioManager.RINGER_MODE_VIBRATE } catch (_: Exception) { return }
         Scheduler.prefs(ctx).edit().putBoolean("weSilenced", true).apply()
-        notify(ctx, CH_REMIND, title, text, RESTORE_CODE)
+        silenceNote(ctx, JSONObject().put("until", System.currentTimeMillis() + minutes * 60_000L).put("lang", ev.optString("lang", "ar")).put("dg", ev.optInt("dg")), false)
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
         val pi = PendingIntent.getBroadcast(
             ctx, RESTORE_CODE, Intent(ctx, AlarmReceiver::class.java).setAction(Scheduler.ACTION_RESTORE),

@@ -7,7 +7,7 @@
     android:minResizeWidth="110dp"
     android:minResizeHeight="110dp"
     android:maxResizeWidth="260dp"
-    android:maxResizeHeight="260dp"
+    android:maxResizeHeight="440dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_image"
