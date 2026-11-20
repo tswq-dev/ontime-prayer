@@ -33,6 +33,7 @@ object Alerts {
     /** Which durations the open menu shows: "later" (remind me in…) or "before" (before the time ends). */
     @Volatile var menuKind: String = "later"
     private const val RESTORE_CODE = 900
+    private const val STALE_CODE = 901
 
     fun channels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
@@ -83,7 +84,11 @@ object Alerts {
                 "vibrate" -> post(ctx, prayerBuilder(ctx, ev, CH_VIBRATE, null), noteId(ev))
                 "notify" -> quietNote()
                 // an adhan set to keep to silent mode (ring 0, 0.18): a quiet note, or only vibrate on vibrate mode
-                else -> if (s.startsWith("spk_")) { quietNote(); say(s, ev.optInt("ring", 0) == 1) } else if (ev.optInt("ring", 1) == 0 && hush(ctx) > 0) {
+                else -> if (s.startsWith("spk_")) {
+                    val loudS = ev.optInt("ring", 0) == 1
+                    if (!loudS && hush(ctx) == 1) post(ctx, if (Exits.hasEx(ev)) prayerBuilder(ctx, ev, CH_VIBRATE, null) else builder(ctx, CH_VIBRATE, title, text), noteId(ev)) else quietNote()
+                    say(s, loudS)
+                } else if (ev.optInt("ring", 1) == 0 && hush(ctx) > 0) {
                     post(ctx, prayerBuilder(ctx, ev, if (hush(ctx) == 1) CH_VIBRATE else CH_SILENT, null), noteId(ev))
                 } else {
                     val i = Intent(ctx, AdhanService::class.java).putExtra("ev", ev.toString())
@@ -277,13 +282,15 @@ object Alerts {
     }
 
     /** The "remind me in" reminder itself: the prayer, when its time ends, and the user's buttons again. */
-    fun laterNote(ctx: Context, r: JSONObject) {
+    /** Returns the sound the caller should play (it keeps the receiver alive while it plays). */
+    fun laterNote(ctx: Context, r: JSONObject): String? {
         val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
         val e = JSONObject(r.toString()).put("remNote", 1).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
             .put("text", if (ex != null) (if (ar) "يخرج ${ex.name} ${ex.clock}" else "${ex.name} ends at ${ex.clock}") else r.optString("text"))
-        val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") == "ding" && loud(r) -> "tone_ding"; else -> null }
+        // there is no spoken line for "remind me in", so ringing on silent plays the phone's tone
+        val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") in setOf("ding", "speak") && loud(r) -> "tone_ding"; else -> null }
         post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || snd != null) CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
-        if (snd != null) Speaker.play(ctx, snd, loud(r)) {}
+        return snd
     }
 
     /** "20 min left until the chosen time for Asr ends", with "I prayed" and "In 10 min". */
@@ -309,7 +316,7 @@ object Alerts {
         val at = ex.at - ev.optInt("mins", 20) * 60_000L
         if (at <= now + 5_000) { exitNote(ctx, ev); return }
         Reminders.remove(ctx, pk, "later")   // one reminder per prayer: this one replaces "remind me in…"
-        Reminders.put(ctx, JSONObject(ev.toString()).put("at", at))
+        Reminders.put(ctx, JSONObject(ev.toString()).put("at", at).put("kind", "x"))
         Scheduler.reschedule(ctx)
         // swap the button for a confirmation
         if (AdhanService.playingPk() == pk) AdhanService.refresh()
@@ -330,7 +337,7 @@ object Alerts {
     fun snooze(ctx: Context, r: JSONObject) {
         val now = System.currentTimeMillis()
         val ex = Exits.next(r, now) ?: return
-        Reminders.put(ctx, JSONObject(r.toString()).put("at", minOf(now + 10 * 60_000L, ex.at - 60_000L)))
+        Reminders.put(ctx, JSONObject(r.toString()).put("at", minOf(now + 10 * 60_000L, ex.at - 60_000L)).put("kind", "x"))
         cancel(ctx, exitId(r.optString("pk")))
         Scheduler.reschedule(ctx)
     }
@@ -355,6 +362,16 @@ object Alerts {
     fun cancel(ctx: Context, id: Int) { ctx.getSystemService(NotificationManager::class.java)?.cancel(id) }
 
     fun notify(ctx: Context, channel: String, title: String, text: String, id: Int) = post(ctx, builder(ctx, channel, title, text), id)
+
+    /** The page sends a month of alerts and only the page renews them: when they are about to run out, ask once a day to open the app (0.18.1). */
+    fun staleCheck(ctx: Context, last: Long, now: Long, ar: Boolean) {
+        val p = Scheduler.prefs(ctx)
+        if (last <= 0L || last - now > 3 * 86_400_000L) { if (p.getLong("staleAt", 0L) != 0L) { p.edit().putLong("staleAt", 0L).apply(); cancel(ctx, STALE_CODE) }; return }
+        if (now - p.getLong("staleAt", 0L) < 86_400_000L) return
+        p.edit().putLong("staleAt", now).apply(); channels(ctx)
+        notify(ctx, CH_REMIND, if (ar) "افتح «على وقتها» مرة" else "Open On Time once",
+            if (ar) "مواقيت الأذان المحفوظة تخلص قريب. افتح التطبيق يحدّثها لشهر جديد." else "The saved adhan times run out soon. Open the app to renew them for another month.", STALE_CODE)
+    }
 
     fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(
         ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),

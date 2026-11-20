@@ -236,6 +236,7 @@ object WidgetArt {
 
     // ---------- entry ----------
     fun render(type: String, style: WStyle, d: WData?, now: Long, wPx: Int, hPx: Int, dpPx: Float, fonts: WFonts): Bitmap {
+        d?.let { it.cf = style.cf.ifEmpty { it.appCf } }
         val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp)
         val day = d?.day(now)
@@ -254,6 +255,7 @@ object WidgetArt {
     data class Btns(val prayed: Boolean = false, val muted: Boolean = false, val reminded: Boolean = false, val canPray: Boolean = true, val canRemind: Boolean = true)
 
     fun renderActions(style: WStyle, d: WData?, now: Long, wPx: Int, hPx: Int, dpPx: Float, fonts: WFonts, b: Btns): Bitmap {
+        d?.let { it.cf = style.cf.ifEmpty { it.appCf } }
         val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp); val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }

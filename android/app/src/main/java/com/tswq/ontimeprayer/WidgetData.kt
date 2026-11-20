@@ -107,10 +107,31 @@ class WData(val o: JSONObject) {
     }
     fun ampm(ms: Long): String = if (!h12) "" else if (cal(ms).get(Calendar.HOUR_OF_DAY) < 12) (if (ar) "ص" else "AM") else (if (ar) "م" else "PM")
 
-    /** "1 س 24 د" / "1 h 24 min", rounded up to the minute. */
+    /** The countdown's look, set for each widget before it is drawn (0.18.1): "hm" 1 س 24 د, "clock" 1:24, "m" 84 دقيقة, "text" ساعة و24 دقيقة. */
+    var cf = "hm"
+    /** Until the user picks one for a widget, it follows the app's own countdown (seconds don't fit a picture drawn once a minute). */
+    val appCf: String = when (o.optString("count")) { "hms" -> "clock"; "m" -> "m"; "text" -> "text"; else -> "hm" }
+    private fun pl(n: Long, one: String, two: String, few: String, many: String) = when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> "$n $few"; else -> "$n $many" }
+
+    /** The time left, rounded up to the minute, in the widget's countdown format. */
     fun dur(ms: Long): String {
         val m = maxOf(0L, (ms + 59_999) / 60_000); val h = m / 60; val mi = m % 60
-        return digits(if (ar) (if (h > 0) "$h س $mi د" else "$mi د") else (if (h > 0) "$h h $mi min" else "$mi min"))
+        return digits(when (cf) {
+            "clock" -> "$h:" + mi.toString().padStart(2, '0')
+            "m" -> if (ar) pl(m, "دقيقة", "دقيقتين", "دقائق", "دقيقة") else "$m min"
+            "text" -> if (!ar) listOfNotNull(if (h > 0) "$h hour" + (if (h > 1) "s" else "") else null, if (mi > 0 || h == 0L) "$mi minute" + (if (mi != 1L) "s" else "") else null).joinToString(" ")
+                else {
+                    val hs = if (h > 0) pl(h, "ساعة", "ساعتين", "ساعات", "ساعة") else ""
+                    when {
+                        h > 0 && mi == 15L -> "$hs وربع"
+                        h > 0 && mi == 30L -> "$hs ونص"
+                        h > 0 && mi == 45L -> pl(h + 1, "ساعة", "ساعتين", "ساعات", "ساعة") + " إلا ربع"
+                        else -> { val ms2 = if (mi > 0) pl(mi, "دقيقة", "دقيقتين", "دقائق", "دقيقة") else ""
+                            if (hs.isNotEmpty() && ms2.isNotEmpty()) "$hs و$ms2" else hs.ifEmpty { ms2.ifEmpty { "أقل من دقيقة" } } }
+                    }
+                }
+            else -> if (ar) (if (h > 0) "$h س $mi د" else "$mi د") else (if (h > 0) "$h h $mi min" else "$mi min")
+        })
     }
     fun inTxt(ms: Long) = (if (ar) "بعد " else "in ") + dur(ms)
     fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now) else inTxt(e.at - now)
@@ -141,11 +162,13 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
                   /** weight of the prayer's name and of the times and text: "l", "m", "b" */
                   val nw: String = "m", val dw: String = "m",
                   /** how far the name is stretched with kashida: 0 not at all … 7 fills its space to the frame */
-                  val kl: Int = 7) {
+                  val kl: Int = 7,
+                  /** the countdown's format ("" follows the app's own) */
+                  val cf: String = "") {
     val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("cf", cf)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -166,6 +189,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "ramadan" to (listOf("imsak", "fajr", "prog") to setOf("imsak", "fajr", "prog")),
             "white" to (listOf("monthu", "days") to setOf("monthu", "days")))
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
+        val CFS = setOf("hm", "clock", "m", "text")
 
         /** Until the user picks, a widget uses the name font chosen for the app's own screen. */
         fun defaultFor(type: String, font: String? = null) = WStyle(when (type) { "script", "line" -> "clear"; "prayed", "ramadan" -> "dark"; "white" -> "light"; else -> "sky" },
@@ -176,7 +200,8 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             // looks saved before "what it shows" existed keep the defaults (only the table had rows then)
             val rows = if (r == null || (j.optInt("v") < 2 && type != "table")) d.rows else (0 until r.length()).map { r.optString(it) }.toSet()
             val wt = { k: String -> j.optString(k, "m").takeIf { it in setOf("l", "m", "b") } ?: "m" }
-            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0))
+            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0),
+                j.optString("cf", "").takeIf { it in CFS } ?: "")
         }
     }
 }

@@ -26,7 +26,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 Scheduler.reschedule(ctx)
                 if (r != null && !Prayed.has(ctx, r.optString("pk"))) {
                     Alerts.channels(ctx)
-                    if (Reminders.kindOf(r) == "later") Alerts.laterNote(ctx, r)
+                    if (Reminders.kindOf(r) == "later") Alerts.laterNote(ctx, r)?.let { s -> val pr = goAsync(); Speaker.play(ctx, s, Alerts.loud(r)) { pr.finish() } }
                     else {
                         Alerts.exitNote(ctx, r)
                         Alerts.remSound(r, r.optString("xspk"))?.let { s -> val pr = goAsync(); Speaker.play(ctx, s, Alerts.loud(r)) { pr.finish() } }

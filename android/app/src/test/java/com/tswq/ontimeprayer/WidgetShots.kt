@@ -158,6 +158,13 @@ class WidgetShots {
             Item("white 2x2", ex("white", dflt("white"), ar, asr, 170, 170)),
             Item("white 4x2 on the 14th", ex("white", dflt("white"), ar, asr + 5 * WData.DAY, 340, 170)),
             Item("white en", ex("white", dflt("white"), en, asr, 340, 170))))
+        // the countdown formats (0.18.1), 1 h 24 min before Maghrib
+        val c84 = day.getLong("maghrib") - 84 * mn
+        sheet("sheet-17-countdown", listOf("hm", "clock", "m", "text").flatMap { f -> listOf(
+            Item("script $f", draw("script", dflt("script").copy(cf = f), ar, c84, 340, 90, fonts)),
+            Item("clock $f", draw("clock", dflt("clock").copy(cf = f), ar, c84, 170, 170, fonts)),
+            Item("ring $f", draw("ring", dflt("ring").copy(cf = f), ar, c84, 170, 170, fonts)),
+            Item("line en $f", draw("line", dflt("line").copy(cf = f), en, c84, 340, 90, fonts))) })
         WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
 
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker

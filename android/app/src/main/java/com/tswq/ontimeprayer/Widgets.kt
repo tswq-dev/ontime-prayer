@@ -184,7 +184,7 @@ object WidgetUpdater {
         val ex = d.day(start)?.optJSONObject("ex")?.optJSONArray(k) ?: return null
         return JSONObject().put("pk", pkOf(k, start)).put("key", k).put("title", d.name(k)).put("ex", ex)
             .put("lang", if (d.ar) "ar" else "en").put("dg", if (d.arabDigits) 1 else 0).put("f12", if (d.h12) 1 else 0)
-            .put("mins", d.o.optInt("mins", 20)).put("rs", d.o.optString("rs", "speak")).put("xspk", "spk_exit_$k")
+            .put("mins", d.o.optInt("mins", 20)).put("rs", d.o.optString("rs", "speak")).put("rring", d.o.optInt("rring", 0)).put("xspk", "spk_exit_$k")
             .takeIf { Exits.next(it, now) != null }
     }
 

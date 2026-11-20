@@ -49,6 +49,9 @@ object Scheduler {
             .filter { it.optLong("at") > now - 60_000 && !fired.has(it.optString("id")) }
             .sortedBy { it.optLong("at") }
             .take(BATCH)
+        // a month of alerts about to run out: ask to open the app
+        runCatching { Alerts.staleCheck(ctx, (0 until arr.length()).maxOfOrNull { arr.getJSONObject(it).optLong("at") } ?: 0L, now,
+            (0 until arr.length()).lastOrNull()?.let { arr.getJSONObject(it).optString("lang", "ar") != "en" } ?: true) }
         for (i in 0 until BATCH) {
             PendingIntent.getBroadcast(ctx, i, fireIntent(ctx), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
                 ?.let { am.cancel(it); it.cancel() }
