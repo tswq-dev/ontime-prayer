@@ -72,7 +72,7 @@ object Alerts {
         channels(ctx)
         val title = ev.optString("title"); val text = ev.optString("text"); val id = ev.optString("id").hashCode()
         val pk = ev.optString("pk")
-        val spoken = ev.optString("rs", "ding") == "speak"
+        val spoken = ev.optString("rs", "ding") == "speak"; val tone = ev.optString("rs") == "tone"
         val remCh = when { ev.optString("voice") == "vibrate" -> CH_VIBRATE; ev.optString("rs", "ding") == "ding" -> CH_REMIND; else -> CH_SILENT }
         var speaking = false
         fun say(name: String, then: () -> Unit = {}) { speaking = true; Speaker.play(ctx, name) { then(); done() } }
@@ -93,12 +93,12 @@ object Alerts {
             }
             "pre", "iqama" -> {
                 post(ctx, builder(ctx, remCh, title, text).also { untilNow(it, ev.optLong("until")) }, id)
-                if (spoken && remCh != CH_VIBRATE) say(ev.optString("spk"))
+                if (spoken && remCh != CH_VIBRATE) say(ev.optString("spk")) else if (tone && remCh != CH_VIBRATE) say("tone_rem")
             }
             // the spoken line first, then vibrate mode (vibrate mode would cut it off)
             "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), title, text) }
                 else silence(ctx, ev.optInt("min", 20), title, text)
-            "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); if (spoken) say(ev.optString("xspk")) }
+            "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); if (spoken) say(ev.optString("xspk")) else if (tone) say("tone_rem") }
             // a plain reminder from the page (the last third of the night, fasting tomorrow)
             "note" -> post(ctx, builder(ctx, CH_REMIND, title, text).also { untilNow(it, ev.optLong("until")) }, id)
         }
@@ -263,7 +263,8 @@ object Alerts {
         val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
         val e = JSONObject(r.toString()).put("remNote", 1).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
             .put("text", if (ex != null) (if (ar) "يخرج ${ex.name} ${ex.clock}" else "${ex.name} ends at ${ex.clock}") else r.optString("text"))
-        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet") CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
+        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || r.optString("rs") == "tone") CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
+        if (r.optString("rs") == "tone") Speaker.play(ctx, "tone_rem") {}
     }
 
     /** "20 min left until the chosen time for Asr ends", with "I prayed" and "In 10 min". */
@@ -388,7 +389,9 @@ object Alerts {
 
     /** What to play: the user's file, a bundled recording, or the phone's notification sound. Second: is it a full recording. */
     fun soundUri(ctx: Context, sound: String, userFile: Boolean = true): Pair<Uri?, Boolean> {
-        if (sound == "file" && userFile) Scheduler.prefs(ctx).getString("soundUri_file", null)?.let { return Uri.parse(it) to true }
+        // the user's own files (file, file2 …) and tones picked from the phone (tone_fajr …, tone_rem for reminders)
+        if (Regex("file\\d*").matches(sound) && userFile) Scheduler.prefs(ctx).getString("soundUri_$sound", null)?.let { return Uri.parse(it) to true }
+        if (sound.startsWith("tone_")) return (Scheduler.prefs(ctx).getString("soundUri_$sound", null)?.let { Uri.parse(it) } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)) to true
         if (sound == "notify") return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) to false
         val id = rawId(ctx, sound).takeIf { it != 0 } ?: R.raw.adhan_afasy
         return Uri.parse("android.resource://${ctx.packageName}/$id") to true

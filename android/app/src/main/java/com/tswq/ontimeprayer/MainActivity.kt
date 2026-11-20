@@ -42,6 +42,18 @@ class MainActivity : ComponentActivity() {
         override fun handleOnBackPressed() { web.evaluateJavascript("window.__closeSheet&&__closeSheet()", null) }
     }
     private val pickAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) keepSound(pendingVoice, uri) }
+    // a tone from the phone's own (notifications, alarms, ringtones)
+    private var pendingTone = ""
+    private val pickToneR = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        val uri: Uri? = res.data?.let { d -> if (Build.VERSION.SDK_INT >= 33) d.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+            else @Suppress("DEPRECATION") d.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI) }
+        if (res.resultCode == RESULT_OK && uri != null && pendingTone.isNotEmpty()) {
+            val name = runCatching { android.media.RingtoneManager.getRingtone(this, uri)?.getTitle(this) }.getOrNull() ?: ""
+            Scheduler.prefs(this).edit().putString("soundUri_$pendingTone", uri.toString()).putString("soundName_$pendingTone", name).apply()
+            web.evaluateJavascript("window.__onSound&&__onSound()", null)
+            Alerts.preview(this, pendingTone)
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,7 +105,7 @@ class MainActivity : ComponentActivity() {
     // Back from the phone's settings: the page re-checks whether notifications are allowed (and which widgets were added).
     override fun onResume() {
         super.onResume()
-        if (::web.isInitialized) { tellNotify(); web.evaluateJavascript("window.__onWidgets&&__onWidgets()", null) }
+        if (::web.isInitialized) { tellNotify(); web.evaluateJavascript("window.__onWidgets&&__onWidgets();window.__onResume&&__onResume()", null) }
     }
 
     // "Customize" on a home screen widget: the page opens that widget's look.
@@ -180,6 +192,36 @@ class MainActivity : ComponentActivity() {
         }
         @JavascriptInterface fun pickSound(voice: String) {
             main.post { pendingVoice = voice; runCatching { pickAudio.launch(arrayOf("audio/*")) } }
+        }
+        @JavascriptInterface fun pickTone(key: String) {
+            main.post {
+                pendingTone = key
+                val cur = Scheduler.prefs(this@MainActivity).getString("soundUri_$key", null)?.let { Uri.parse(it) }
+                runCatching { pickToneR.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALL)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, cur)) }
+            }
+        }
+        // battery: is the app left alone by battery saving, and the phone's maker (each hides the setting somewhere else)
+        @JavascriptInterface fun batteryState(): String = if (Build.VERSION.SDK_INT < 23) "na"
+            else if (getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(packageName) == true) "on" else "off"
+        @JavascriptInterface fun maker(): String = Build.MANUFACTURER.lowercase()
+        @JavascriptInterface fun openBattery(which: String) {
+            main.post {
+                val pkg = Uri.parse("package:$packageName")
+                val tries = ArrayList<Intent>()
+                if (which == "autostart") {
+                    tries += Intent().setComponent(android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"))
+                    tries += Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"))
+                    tries += Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"))
+                    tries += Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"))
+                }
+                if (which == "list") tries += Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                tries += Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
+                for (i in tries) if (runCatching { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) break
+            }
         }
         @JavascriptInterface fun soundName(voice: String): String =
             Scheduler.prefs(applicationContext).getString("soundName_$voice", "") ?: ""

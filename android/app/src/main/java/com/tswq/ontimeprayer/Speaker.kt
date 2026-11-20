@@ -15,8 +15,10 @@ object Speaker {
     private val main = Handler(Looper.getMainLooper())
 
     fun play(ctx: Context, name: String, done: () -> Unit) {
-        val id = Alerts.rawId(ctx, name)
-        if (id == 0) { done(); return }
+        // a tone the user picked from the phone's own (tone_rem: the reminders), else a bundled line
+        val tone = name.startsWith("tone_")
+        val uri = if (tone) Alerts.soundUri(ctx, name).first else Alerts.rawId(ctx, name).takeIf { it != 0 }?.let { Uri.parse("android.resource://${ctx.packageName}/$it") }
+        if (uri == null) { done(); return }
         var finished = false
         var mp: MediaPlayer? = null
         fun end() {
@@ -28,12 +30,12 @@ object Speaker {
         try {
             mp = MediaPlayer().apply {
                 setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                setDataSource(ctx, Uri.parse("android.resource://${ctx.packageName}/$id"))
+                setDataSource(ctx, uri)
                 setOnCompletionListener { main.post { end() } }
                 setOnErrorListener { _, _, _ -> main.post { end() }; true }
                 prepare(); start()
             }
-            main.postDelayed({ end() }, 8_000)
+            main.postDelayed({ end() }, if (tone) 20_000 else 8_000)
         } catch (e: Exception) { end() }
     }
 }

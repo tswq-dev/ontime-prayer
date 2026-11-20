@@ -30,6 +30,7 @@ class AlarmReceiver : BroadcastReceiver() {
                     else {
                         Alerts.exitNote(ctx, r)
                         if (r.optString("rs", "ding") == "speak") { val pr = goAsync(); Speaker.play(ctx, r.optString("xspk")) { pr.finish() } }
+                        else if (r.optString("rs") == "tone") { val pr = goAsync(); Speaker.play(ctx, "tone_rem") { pr.finish() } }
                     }
                 }
             }
