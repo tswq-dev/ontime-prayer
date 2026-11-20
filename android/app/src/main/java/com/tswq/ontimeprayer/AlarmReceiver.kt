@@ -37,6 +37,8 @@ class AlarmReceiver : BroadcastReceiver() {
             ACTION_SNOOZE -> json("rem")?.let { Alerts.snooze(ctx, it) }
             ACTION_LATER_MENU -> json("ev")?.let { Alerts.channels(ctx); Alerts.showLater(ctx, it) }
             ACTION_LATER -> json("ev")?.let { Alerts.later(ctx, it, intent.getLongExtra("mins", 15)) }
+            ACTION_BEFORE_MENU -> json("ev")?.let { Alerts.channels(ctx); Alerts.showBefore(ctx, it) }
+            ACTION_BEFORE -> json("ev")?.let { Alerts.channels(ctx); Alerts.before(ctx, it, intent.getLongExtra("mins", 20)) }
             ACTION_PRAYED -> intent.getStringExtra("pk")?.let { Alerts.prayed(ctx, it) }
         }
     }
@@ -47,6 +49,8 @@ class AlarmReceiver : BroadcastReceiver() {
         const val ACTION_PRAYED = "com.tswq.ontimeprayer.PRAYED"
         const val ACTION_LATER_MENU = "com.tswq.ontimeprayer.LATER_MENU"
         const val ACTION_LATER = "com.tswq.ontimeprayer.LATER"
+        const val ACTION_BEFORE_MENU = "com.tswq.ontimeprayer.BEFORE_MENU"
+        const val ACTION_BEFORE = "com.tswq.ontimeprayer.BEFORE"
     }
 }
 

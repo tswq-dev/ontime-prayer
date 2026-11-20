@@ -77,14 +77,15 @@ class AdhanActivity : Activity() {
         fun fill() {
             row.removeAllViews()
             if (!Exits.hasEx(e)) return
-            for (bt in Alerts.buttonsOf(e)) when (bt) {
-                "pray" -> row.addView(btn(if (ar) "صلّيت" else "I prayed", false) { Alerts.prayed(this, pk); finish() }, half())
-                "exit" -> if (Exits.next(e) != null) {
-                    val done = Reminders.find(this, pk) != null
-                    row.addView(btn(if (done) "✓ " + (if (ar) "بنذكّرك" else "Reminder set") else (if (ar) "ذكّرني قبل خروج الوقت" else "Remind me before the time ends"), false) { b ->
-                        if (Reminders.find(this, pk) == null) { Alerts.remind(this, e); b.text = "✓ " + (if (ar) "بنذكّرك" else "Reminder set") }
-                    }, half())
-                }
+            val btns = Alerts.buttonsOf(e)
+            // the user's buttons, as in the notification; each "remind me" opens its durations in place and picking one replaces the other
+            if ("pray" in btns || Reminders.find(this, pk) != null || Reminders.find(this, pk, "later") != null)
+                row.addView(btn(if (ar) "صلّيت" else "I prayed", false) { Alerts.prayed(this, pk); finish() }, half())
+            for (bt in btns) when (bt) {
+                "exit" -> if (Alerts.beforeChoices(e, System.currentTimeMillis()).isNotEmpty()) row.addView(btn(if (ar) "ذكّرني قبل خروج الوقت" else "Before it ends…", false) {
+                    row.removeAllViews()
+                    for (m in Alerts.beforeChoices(e, System.currentTimeMillis())) row.addView(btn((if (ar) "قبل " else "") + Exits.mins(m, e), false) { Alerts.before(this, e, m); stopAdhan() }, half())
+                }, half())
                 "later" -> if (Alerts.laterChoices(e, System.currentTimeMillis()).isNotEmpty()) row.addView(btn(if (ar) "ذكّرني بعد…" else "Remind me in…", false) {
                     row.removeAllViews()
                     for (m in Alerts.laterChoices(e, System.currentTimeMillis())) row.addView(btn(Exits.mins(m, e), false) { Alerts.later(this, e, m); stopAdhan() }, half())
