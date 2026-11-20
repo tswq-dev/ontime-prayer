@@ -142,7 +142,8 @@ class WData(val o: JSONObject) {
         val PRAY = listOf("fajr", "dhuhr", "asr", "maghrib", "isha")
         val SIX = listOf("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
         val EXK = listOf("fajr", "duha", "dhuhr", "asr", "maghrib", "isha")
-        private val KSA = TimeZone.getTimeZone("GMT+03:00")
+        // the phone's own time zone (0.18.8), like the page: the same in Saudi Arabia, right when abroad
+        private val KSA: TimeZone get() = TimeZone.getDefault()
         fun cal(ms: Long): Calendar = Calendar.getInstance(KSA).apply { timeInMillis = ms }
         // Built by hand: String.format follows the phone's language, and in Arabic it writes ٢٠٢٦ (the days never matched).
         fun dateKey(ms: Long): String { val c = cal(ms); fun p(n: Int) = n.toString().padStart(2, '0')

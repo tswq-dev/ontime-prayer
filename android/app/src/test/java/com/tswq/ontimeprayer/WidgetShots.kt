@@ -56,6 +56,7 @@ class WidgetShots {
         val ctx = RuntimeEnvironment.getApplication()
         val fonts = WFonts.get(ctx.assets)
         val all = JSONObject(javaClass.classLoader!!.getResource("wdata.json")!!.readText())
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Riyadh"))   // the sample day is in Saudi time
         val ar = WData(all.getJSONObject("ar")); val en = WData(all.getJSONObject("en"))
         val day = all.getJSONObject("ar").getJSONArray("days").getJSONObject(1)
         val ex = day.getJSONObject("ex"); val mn = 60_000L

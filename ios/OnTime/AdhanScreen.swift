@@ -52,7 +52,7 @@ struct AdhanScreen: View {
 
     private var clock: String {
         let at = Date(timeIntervalSince1970: Scheduler.at(ev) / 1000)
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(secondsFromGMT: 3 * 3600)!
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
         var h = cal.component(.hour, from: at); let m = cal.component(.minute, from: at)
         let h12 = (ev["f12"] as? Int ?? 1) == 1
         var suffix = ""

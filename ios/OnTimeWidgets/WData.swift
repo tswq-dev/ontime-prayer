@@ -14,7 +14,8 @@ struct WDay {
 /// What the widgets show, read from the page's month of days. The widgets never compute prayer times.
 struct WData {
     static let pray = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
-    static let ksa = TimeZone(secondsFromGMT: 3 * 3600)!
+    // the phone's own time zone, like the page (the same in Saudi Arabia)
+    static var ksa: TimeZone { .current }
 
     let en: Bool, arabDigits: Bool, h12: Bool, iqc: Bool
     let city: String

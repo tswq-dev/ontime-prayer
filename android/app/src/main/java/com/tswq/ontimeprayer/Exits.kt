@@ -38,9 +38,9 @@ object Exits {
     fun digits(s: String, r: JSONObject): String =
         if (r.optInt("dg") == 1) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
 
-    /** Clock in Saudi time, like the page: 12 or 24 hours, Latin or Arabic digits. */
+    /** Clock in the phone's time zone, like the page: 12 or 24 hours, Latin or Arabic digits. */
     fun clock(ms: Long, r: JSONObject): String {
-        val c = Calendar.getInstance(TimeZone.getTimeZone("GMT+03:00")).apply { timeInMillis = ms }
+        val c = Calendar.getInstance(TimeZone.getDefault()).apply { timeInMillis = ms }
         var h = c.get(Calendar.HOUR_OF_DAY)
         val m = c.get(Calendar.MINUTE)
         var suffix = ""
