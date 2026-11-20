@@ -504,19 +504,43 @@ object WidgetArt {
         // after Isha the row shows tomorrow
         val tday = if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day
         fun tt(k: String) = tday.optLong(k)
+        // where the city/date ink ends: the headline may grow up to it, never into it
+        var headBot = 0f; val hb = Rect()
         if (hasHead) {
             val p = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
             val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
-            if ("city" in rows) text(cv, x, x.d.city, startX(x, pad), y + 14 * u, p)
-            if ("date" in rows) { fit(p, x.d.digits(date), w * .62f); text(cv, x, x.d.digits(date), if ("city" in rows) endX(x, pad) else startX(x, pad), y + 14 * u, p, "city" !in rows) }
+            if ("city" in rows) { text(cv, x, x.d.city, startX(x, pad), y + 14 * u, p); p.getTextBounds(x.d.city, 0, x.d.city.length, hb); headBot = y + 14 * u + hb.bottom }
+            if ("date" in rows) { val ds = x.d.digits(date); fit(p, ds, w * .62f); text(cv, x, ds, if ("city" in rows) endX(x, pad) else startX(x, pad), y + 14 * u, p, "city" !in rows)
+                p.getTextBounds(ds, 0, ds.length, hb); headBot = max(headBot, y + 14 * u + hb.bottom) }
             y += 22 * u
         }
         if ("count" in rows) {
-            val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 22f * u }
-            val cp = tp(x, x.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = 21f * u }
-            val name = x.d.name(nx.k); val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
-            val gap = 12 * u; val tw = np.measureText(name) + gap + cp.measureText(inS); val xs = w / 2 + x.dir * tw / 2
-            text(cv, x, name, xs, y + 25 * u, np); text(cv, x, inS, xs - x.dir * (np.measureText(name) + gap), y + 25 * u, cp)
+            // the headline: the countdown at the end, the name from the start up to it, as tall as the free band
+            // between the city/date line (or the frame) and the times row, the iqama bar (or the frame) allows; those stay put
+            val edge = max(7 * u, kSafe(x)); val gap = max(12 * u, x.dp(12f))
+            val top = if (hasHead) headBot + 4 * u else edge
+            val bot = max(top + 6f, if (showT || "iqama" in rows) y + 30 * u else x.h - edge)
+            // one size for every prayer (the five names' ink together), so it doesn't jump when the prayer changes
+            val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 100f }; var t0 = 0f; var b0 = 0f
+            for (s in (WData.PRAY + nx.k).distinct().map { x.d.name(it) } + TATWEEL.toString()) { np.getTextBounds(s, 0, s.length, hb); t0 = min(t0, hb.top.toFloat()); b0 = max(b0, hb.bottom.toFloat()) }
+            np.textSize = max(6f, 100f * (bot - top) / (b0 - t0 + (if (np.heavy) 3.5f else 0f)))
+            val cp = tp(x, x.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = max(21f * u, np.textSize * .5f) }
+            val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
+            fit(cp, inS, (w - 2 * pad) * .46f)
+            // the name's room: from the start padding (more if its ink pokes past its start) to the countdown, less the gap
+            val n0 = x.d.name(nx.k); np.getTextBounds(n0, 0, n0.length, hb)
+            val ps = max(pad, kSafe(x) + max(0f, if (x.rtl) hb.right - np.measureText(n0) else -hb.left.toFloat()))
+            val room = w - ps - pad - cp.measureText(inS) - gap
+            // too wide as it is: smaller, not stretched
+            val wide = inkW(np, n0) > room
+            while (inkW(np, n0) > room && np.textSize > 6f) np.textSize *= .97f
+            val name = if (wide) n0 else kashName(x, np, n0, room)
+            val sc = np.textSize / 100f; val base = (top + bot) / 2 - (t0 + b0) / 2 * sc
+            // same baseline, kept inside the band should the countdown ever be the taller one
+            cp.getTextBounds(inS, 0, inS.length, hb)
+            if (hb.height() > bot - top) { cp.textSize *= (bot - top) / hb.height(); cp.getTextBounds(inS, 0, inS.length, hb) }
+            text(cv, x, name, startX(x, ps), base, np)
+            text(cv, x, inS, endX(x, pad), base.coerceIn(top - hb.top, max(top - hb.top, bot - hb.bottom)), cp, false)
             y += 34 * u
         }
         if (showT) {

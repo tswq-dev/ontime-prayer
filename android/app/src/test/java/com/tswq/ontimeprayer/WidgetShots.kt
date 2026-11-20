@@ -175,6 +175,25 @@ class WidgetShots {
         sheet("sheet-18-kashida", more.flatMap { (t, big) -> listOf("kufi", "ruqaa", "naskh").map { f -> Item("$t $f 7", draw(t, k7(t, f), ar, c84, sz(t).first, sz(t).second, fonts)) } +
             listOf("kufi", "ruqaa", "naskh").map { f -> Item("$t ${big.first}x${big.second} $f 7", draw(t, k7(t, f), ar, ish, big.first, big.second, fonts)) } } +
             more.keys.map { t -> Item("$t en 7", draw(t, k7(t), en, ish, sz(t).first, sz(t).second, fonts)) })
+
+        // the table's big headline: countdown at the end, the name from the start up to it, as tall as the free band;
+        // stretched at 7 (the table's default) or plain at 0. Before Maghrib, before Isha and before Dhuhr; English mirrored.
+        // "+count": the default rows (times, exit) and the countdown; "5 rows": city, date, count, times, exit
+        val dz = day.getLong("dhuhr") - 50 * mn
+        val cte = setOf("count", "times", "exit"); val full = setOf("city", "date", "count", "times", "exit"); val cdc = setOf("city", "date", "count")
+        fun tb(label: String, bg: String, f: String, r: Set<String>, kl: Int, d: WData, now: Long, w: Int, h: Int) =
+            Item("$label ${w}x$h $f $kl $bg", draw("table", WStyle(bg, f, r, kl = kl), d, now, w, h, fonts))
+        sheet("sheet-19-table-headline",
+            listOf("kufi", "ruqaa", "naskh").flatMap { f -> listOf(7, 0).map { k -> tb("maghrib +count", "sky", f, cte, k, ar, c84, sz("table").first, sz("table").second) } } +
+            listOf("kufi", "ruqaa", "naskh").map { f -> tb("isha 5 rows", "light", f, full, 7, ar, ish, 340, 170) } +
+            listOf("kufi", "ruqaa", "naskh").map { f -> tb("dhuhr city+date+count", "sky", f, cdc, 7, ar, dz, 340, 120) } +
+            listOf(tb("dhuhr city+date+count", "light", "naskh", cdc, 0, ar, dz, 340, 120),
+                tb("isha 5 rows", "sky", "kufi", full, 7, ar, ish, 360, 130), tb("isha 5 rows", "sky", "naskh", full, 0, ar, ish, 360, 130),
+                tb("maghrib count only", "light", "kufi", setOf("count"), 7, ar, c84, 340, 70), tb("maghrib count only", "light", "naskh", setOf("count"), 7, ar, c84, 340, 70),
+                tb("isha 5 rows+iqama", "sky", "kufi", full + "iqama", 7, ar, ish, 340, 350),
+                tb("dhuhr iqama wait", "sky", "ruqaa", setOf("count", "times", "iqama"), 7, ar, iqNow, 340, 200),
+                tb("en maghrib +count", "sky", "kufi", cte, 7, en, c84, sz("table").first, sz("table").second),
+                tb("en isha count only", "light", "kufi", setOf("count"), 7, en, ish, 340, 70)))
         WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
 
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
