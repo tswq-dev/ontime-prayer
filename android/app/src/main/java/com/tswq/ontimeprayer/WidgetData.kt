@@ -140,11 +140,12 @@ class WData(val o: JSONObject) {
 data class WStyle(val bg: String, val font: String, val rows: Set<String>, val tap: String = "app",
                   /** weight of the prayer's name and of the times and text: "l", "m", "b" */
                   val nw: String = "m", val dw: String = "m",
-                  /** the name stretched with kashida to fill its space */
-                  val kash: Boolean = true) {
+                  /** how far the name is stretched with kashida: 0 not at all … 7 fills its space to the frame */
+                  val kl: Int = 7) {
+    val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kash", kash)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -175,7 +176,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             // looks saved before "what it shows" existed keep the defaults (only the table had rows then)
             val rows = if (r == null || (j.optInt("v") < 2 && type != "table")) d.rows else (0 until r.length()).map { r.optString(it) }.toSet()
             val wt = { k: String -> j.optString(k, "m").takeIf { it in setOf("l", "m", "b") } ?: "m" }
-            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), j.optBoolean("kash", true))
+            return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0))
         }
     }
 }

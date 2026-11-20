@@ -163,15 +163,15 @@ object WidgetArt {
      */
     private const val TATWEEL = '\u0640'
     private val NONJOIN = "اأإآدذرزوؤةءى"
-    fun stretch(p: Paint, s: String, target: Float): String {
+    fun stretch(p: Paint, s: String, target: Float, level: Int = 7): String {
         val spots = (0 until s.length - 1).filter { i -> val a = s[i]; val b = s[i + 1]
             a in '\u0620'..'\u064A' && b in '\u0620'..'\u064A' && a !in NONJOIN && !(a == 'ل' && b in "اأإآ") }
         val w0 = p.measureText(s)
         if (spots.isEmpty() || w0 >= target) return s
-        // a calligrapher's stretch, not a line: at most half as long again as the word itself
-        val goal = min(target, w0 * 1.5f)
+        // the user's level, 1 … 7: 7 fills the space up to the frame, never past it
+        val goal = w0 + (target - w0) * level.coerceIn(0, 7) / 7f
         val at = spots.last() + 1; var out = s
-        for (n in 1..14) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > goal) break; out = t }
+        for (n in 1..80) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > goal) break; out = t }
         return out
     }
     private fun startX(x: X, pad: Float) = if (x.rtl) x.w - pad else pad
@@ -429,18 +429,14 @@ object WidgetArt {
         val room = w - 2 * pad - (if (lines.isEmpty()) 0f else colW + x.dp(18f))
         val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = h * .62f }
         var name = x.d.name(nx.k); fit(np, name, room)
-        if (x.style.kash) name = stretch(np, name, room * (if (lines.isEmpty()) .8f else .96f))
+        if (x.style.kash) name = stretch(np, name, room * (if (lines.isEmpty()) .92f else .97f), x.style.kl)
         val ny = h / 2 + np.textSize * .3f
         if (lines.isEmpty()) { center(cv, name, w / 2, ny, np); return }
+        text(cv, x, name, startX(x, pad), ny, np)
         lines.forEach { (t, p) -> fit(p, t, w * .38f) }
-        // the name and the lines beside it as one group, centred: no wide empty gap between them on a long widget
-        val colW2 = lines.maxOf { (t, p) -> p.measureText(t) }
-        val gap = max(x.dp(18f), h * .2f); val group = np.measureText(name) + gap + colW2
-        val off = ((w - 2 * pad - group) / 2).coerceAtLeast(0f)
-        text(cv, x, name, startX(x, pad + off), ny, np)
         val total = lines.sumOf { (it.second.textSize * 1.2f).toDouble() }.toFloat()
         var y = h / 2 - total / 2
-        for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad + off), y - p.textSize * .22f, p, false) }
+        for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad), y - p.textSize * .22f, p, false) }
     }
     private fun line(cv: Canvas, x: X) {
         card(cv, x, x.dp(20f)); val nx = x.next ?: return
@@ -449,8 +445,8 @@ object WidgetArt {
         val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
         rest.forEachIndexed { i, t -> if (i > 0) parts += "·" to rp; parts += t to rp }
         val gap = x.dp(8f); val total = parts.sumOf { it.second.measureText(it.first).toDouble() }.toFloat() + gap * (parts.size - 1)
-        val scale = min(1f, (x.w - x.dp(32f)) / total); np.textSize *= scale; rp.textSize *= scale
-        var xs = x.w / 2 + x.dir * total * scale / 2; val y = x.h / 2 + rp.textSize * .35f
+        val scale = min((x.w - x.dp(32f)) / total, x.h * .62f / np.textSize); np.textSize *= scale; rp.textSize *= scale
+        var xs = x.w / 2 + x.dir * total * scale / 2; val y = x.h / 2 + (if (rest.isEmpty()) np.textSize * .3f else rp.textSize * .35f)
         for ((s, p) in parts) { text(cv, x, s, xs, y, p); xs -= x.dir * (p.measureText(s) + gap * scale) }
     }
     // ---------- 5. table (4×1 up to 4×4): rows the user picks ----------
@@ -460,7 +456,7 @@ object WidgetArt {
         val hasHead = "city" in rows || "date" in rows
         val subRow = "exit" in rows || "count" !in rows
         val need = (if (hasHead) 22f else 0f) + (if ("count" in rows) 34f else 0f) + (if (showT) (if (subRow) 60f else 48f) else 0f) + (if ("iqama" in rows) 32f else 0f) + 8f
-        val k = minOf(1.3f, x.h / x.u / need, x.w / x.u / 300f); val u = x.u * k
+        val k = minOf(1.8f, x.h / x.u / need, x.w / x.u / 240f); val u = x.u * k
         var y = (x.h - need * u) / 2 + 4 * u; val w = x.w; val pad = 12 * u
         // after Isha the row shows tomorrow
         val tday = if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day
@@ -498,7 +494,7 @@ object WidgetArt {
                 if ("exit" in rows || (on && "count" !in rows)) {
                     val sub = if (on && "count" !in rows) x.d.inTxt(nx, x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
                     val p3 = tp(x, if (on) x.plexB else x.plex, 9.5f, fg, !on && x.st.shadow).apply { textSize = 9.5f * u; this.alpha = if (on) 255 else if (past) 90 else 180 }
-                    fit(p3, sub, cw - 2 * u); center(cv, sub, ccx, y + 47 * u, p3)
+                    fit(p3, sub, cw - 6 * u); center(cv, sub, ccx, y + 47 * u, p3)
                 }
             }
             y += rowH + 8 * u
@@ -600,20 +596,27 @@ object WidgetArt {
             left = if (nt == 0L) "" else x.d.inTxt(nt - x.now); frac = 0f; urgent = false
             until = if (nt == 0L) "" else if (x.d.ar) "يدخل وقت $nm " + x.d.clock(nt) + " " + x.d.ampm(nt) else "$nm begins " + x.d.clock(nt) + " " + x.d.ampm(nt)
         }
-        val bar = x.style.has("bar") && cw != null
-        // without the bar the lines sit in the middle of the widget
-        val off = if (bar) 0f else (x.h / u - (if (x.style.has("time")) 66f else 44f)) / 2f * u - 6 * u
-        val tp1 = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = (if (bar) 17f else 21f) * u }; fit(tp1, title, w * .55f)
-        text(cv, x, title, startX(x, pad), off + 30 * u, tp1)
-        val ip = tp(x, x.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u }
-        val pw = pillW(ip, left); pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, off + 25 * u, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
-        val bt = 44 * u; val bh = 8 * u; val l = pad; val r = w - pad
-        if (bar) cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
-        if (frac > 0f && bar) { val bw = (r - l) * frac
-            // what is left stays on the starting side and empties towards it (Arabic: from the left to the right)
-            val rect = if (x.rtl) RectF(r - bw, bt, r, bt + bh) else RectF(l, bt, l + bw, bt + bh)
-            cv.drawRoundRect(rect, bh / 2, bh / 2, paint(if (urgent) AMBER else if (x.st.light) c("#0B4D3B") else x.st.acc)) }
-        if (x.style.has("time")) text(cv, x, until, startX(x, pad), off + (if (bar) 72 else 58) * u, tp(x, x.plex, 11f, x.st.sub).apply { textSize = (if (bar) 11f else 12.5f) * u })
+        val bar = x.style.has("bar") && cw != null; val sub = x.style.has("time")
+        // the lines as one block, as big as the widget's height allows and centred in it (a taller widget fills, not leaves space)
+        val ts = if (bar) 17f else 21f; val ss = if (bar) 11f else 12.5f
+        val ch = ts * .8f + (if (bar) 22f else 0f) + (if (sub) 14f + ss * .8f else 0f)
+        val k2 = minOf(1.8f, (x.h / x.u - 24f) / ch, x.w / x.u / 290f).coerceAtLeast(.6f); val u2 = x.u * k2
+        val tp1 = tp(x, x.nameTf, ts, x.st.fg).apply { textSize = ts * u2 }; fit(tp1, title, w * .55f)
+        val ip = tp(x, x.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u2 }
+        val pw = pillW(ip, left); fit(ip, left, w * .4f)
+        var y = (x.h - ch * u2) / 2 + ts * .8f * u2
+        text(cv, x, title, startX(x, pad), y, tp1)
+        pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, y - ts * .3f * u2, ip, if (urgent) AMBER else if (x.st.light) c("#E3ECE6") else a(.16f, Color.WHITE))
+        if (bar) {
+            val bt = y + 14 * u2; val bh = 8 * u2; val l = pad; val r = w - pad
+            cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
+            if (frac > 0f) { val bw = (r - l) * frac
+                // what is left stays on the starting side and empties towards it (Arabic: from the left to the right)
+                val rect = if (x.rtl) RectF(r - bw, bt, r, bt + bh) else RectF(l, bt, l + bw, bt + bh)
+                cv.drawRoundRect(rect, bh / 2, bh / 2, paint(if (urgent) AMBER else if (x.st.light) c("#0B4D3B") else x.st.acc)) }
+            y = bt + bh
+        }
+        if (sub) { y += 14 * u2 + ss * .8f * u2; val sp = tp(x, x.plex, ss, x.st.sub).apply { textSize = ss * u2 }; fit(sp, until, w - 2 * pad); text(cv, x, until, startX(x, pad), y, sp) }
     }
 
     // ---------- 9. with buttons (4×2): the three buttons sit in the bottom 45% ----------
@@ -627,7 +630,7 @@ object WidgetArt {
         val cnt = if (x.style.has("count")) x.d.inTxt(nx, x.now) else ""; val tms = if (x.style.has("time")) x.d.clock(nx.at) else ""
         val side = (if (cnt.isEmpty()) 0f else cp.measureText(cnt) + x.dp(12f)) + (if (tms.isEmpty()) 0f else tm.measureText(tms) + x.dp(10f))
         var name = x.d.name(nx.k); fit(np, name, w - 2 * pad - side)
-        if (x.style.kash) name = stretch(np, name, (w - 2 * pad - side) * .8f)
+        if (x.style.kash) name = stretch(np, name, (w - 2 * pad - side) * .97f, x.style.kl)
         val yy = pad * .6f + topH / 2 + np.textSize * .3f
         text(cv, x, name, startX(x, pad), yy, np)
         if (tms.isNotEmpty()) text(cv, x, tms, startX(x, pad) - x.dir * (np.measureText(name) + x.dp(10f)), yy, tm)

@@ -111,10 +111,18 @@ class WidgetShots {
         val fajrEve = day.getLong("isha") + 6 * 60 * mn
         sheet("sheet-15-balance", listOf(
             Item("script 360x100 clear", draw("script", dflt("script"), ar, fajrEve, 360, 100, fonts)),
-            Item("script dark, not stretched", draw("script", dflt("script").copy(bg = "dark", kash = false), ar, fajrEve, 360, 100, fonts)),
+            Item("script dark, not stretched", draw("script", dflt("script").copy(bg = "dark", kl = 0), ar, fajrEve, 360, 100, fonts)),
             Item("actions 360x196", draw("actions", WStyle("dark", "kufi", setOf("count", "time")), ar, fajrEve, 360, 196, fonts)),
             Item("exit just before 360x110", draw("exit", dflt("exit").copy(bg = "dark"), ar, fajrEve, 360, 110, fonts)),
-            Item("line 360x130", draw("line", dflt("line").copy(bg = "dark", rows = setOf("time", "hijri")), ar, fajrEve, 360, 130, fonts))) +
+            Item("line 360x130", draw("line", dflt("line").copy(bg = "dark", rows = setOf("time", "hijri")), ar, fajrEve, 360, 130, fonts)),
+            Item("script stretch 3", draw("script", dflt("script").copy(bg = "dark", kl = 3), ar, fajrEve, 360, 100, fonts)),
+            Item("script stretch 7 (default)", draw("script", dflt("script").copy(bg = "dark"), ar, asr, 360, 100, fonts)),
+            Item("actions stretch 7", draw("actions", WStyle("dark", "kufi", setOf("count", "time")), ar, asr, 360, 196, fonts)),
+            Item("line: the name alone", draw("line", dflt("line").copy(bg = "dark", rows = emptySet()), ar, fajrEve, 360, 100, fonts)),
+            Item("line: name + time", draw("line", dflt("line").copy(bg = "dark", rows = setOf("time")), ar, fajrEve, 360, 100, fonts)),
+            Item("exit tall, before fajr", draw("exit", dflt("exit").copy(bg = "dark"), ar, fajrEve, 360, 130, fonts)),
+            Item("exit tall, asr with bar", draw("exit", dflt("exit").copy(bg = "dark"), ar, asr, 360, 130, fonts)),
+            Item("table tall", draw("table", WStyle("dark", "kufi", setOf("times", "exit")), ar, asr, 360, 130, fonts))) +
             listOf("kufi", "ruqaa", "naskh").flatMap { f -> listOf("l", "m", "b").map { w ->
                 Item("$f name $w / times $w", draw("script", WStyle("dark", f, setOf("time", "count"), nw = w, dw = w), ar, asr, 340, 90, fonts)) } })
 
