@@ -432,11 +432,15 @@ object WidgetArt {
         if (x.style.kash) name = stretch(np, name, room * (if (lines.isEmpty()) .8f else .96f))
         val ny = h / 2 + np.textSize * .3f
         if (lines.isEmpty()) { center(cv, name, w / 2, ny, np); return }
-        text(cv, x, name, startX(x, pad), ny, np)
         lines.forEach { (t, p) -> fit(p, t, w * .38f) }
+        // the name and the lines beside it as one group, centred: no wide empty gap between them on a long widget
+        val colW2 = lines.maxOf { (t, p) -> p.measureText(t) }
+        val gap = max(x.dp(18f), h * .2f); val group = np.measureText(name) + gap + colW2
+        val off = ((w - 2 * pad - group) / 2).coerceAtLeast(0f)
+        text(cv, x, name, startX(x, pad + off), ny, np)
         val total = lines.sumOf { (it.second.textSize * 1.2f).toDouble() }.toFloat()
         var y = h / 2 - total / 2
-        for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad), y - p.textSize * .22f, p, false) }
+        for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad + off), y - p.textSize * .22f, p, false) }
     }
     private fun line(cv: Canvas, x: X) {
         card(cv, x, x.dp(20f)); val nx = x.next ?: return
