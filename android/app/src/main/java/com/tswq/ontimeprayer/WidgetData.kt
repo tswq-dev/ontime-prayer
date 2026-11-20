@@ -166,11 +166,13 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
                    *  (until picked: 7 in script, actions and the table, 0 in the others, see [klFor]) */
                   val kl: Int = 7,
                   /** the countdown's format ("" follows the app's own) */
-                  val cf: String = "") {
+                  val cf: String = "",
+                  /** the sky background pinned to a moment of the day, "maghrib:6" (a prayer and minutes from it); "" follows the time */
+                  val sp: String = "") {
     val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf).put("sp", sp)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -193,6 +195,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "column" to (listOf("count", "time", "sunrise", "duha", "exit", "hijri", "moon") to setOf("count", "exit", "hijri", "moon")))
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
         val CFS = setOf("hm", "clock", "m", "text")
+        val SPR = Regex("^(fajr|sunrise|dhuhr|asr|maghrib|isha):-?\\d{1,4}$")
 
         /** The stretch until the user picks one: script and actions were designed stretched, and so were the table's big headline
          *  and the column's; the others keep their plain look (0.18.2). */
@@ -213,7 +216,8 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             val kl = if (type == "script" || type == "actions") (if (j.has("kl")) j.optInt("kl", 7).coerceIn(0, 7) else if (j.optBoolean("kash", true)) 7 else 0)
                      else if (j.optInt("kv") >= (if (type == "table") 3 else 2) && j.has("kl")) j.optInt("kl", d.kl).coerceIn(0, 7) else d.kl
             return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), kl,
-                j.optString("cf", "").takeIf { it in CFS } ?: "")
+                j.optString("cf", "").takeIf { it in CFS } ?: "",
+                j.optString("sp", "").takeIf { SPR.matches(it) } ?: "")
         }
     }
 }

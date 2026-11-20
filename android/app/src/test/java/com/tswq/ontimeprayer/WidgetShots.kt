@@ -159,6 +159,11 @@ class WidgetShots {
             Item("white 2x2", ex("white", dflt("white"), ar, asr, 170, 170)),
             Item("white 4x2 on the 14th", ex("white", dflt("white"), ar, asr + 5 * WData.DAY, 340, 170)),
             Item("white en", ex("white", dflt("white"), en, asr, 340, 170))))
+        // the sky background pinned to a moment of the day (0.18.9), all at the same real time (before Maghrib)
+        val now9 = day.getLong("maghrib") - 84 * mn
+        sheet("sheet-23-sky-pin", listOf("", "fajr:20", "sunrise:8", "dhuhr:0", "asr:40", "maghrib:6", "isha:90").flatMap { sp -> listOf(
+            Item("table " + sp.ifEmpty { "live" }, draw("table", dflt("table").copy(bg = "sky", sp = sp), ar, now9, 340, 170, fonts)),
+            Item("pano " + sp.ifEmpty { "live" }, draw("pano", dflt("pano").copy(sp = sp), ar, now9, 340, 170, fonts))) })
         // the countdown formats (0.18.1), 1 h 24 min before Maghrib
         val c84 = day.getLong("maghrib") - 84 * mn
         sheet("sheet-17-countdown", listOf("hm", "clock", "m", "text").flatMap { f -> listOf(

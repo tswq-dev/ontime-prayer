@@ -77,6 +77,10 @@ object WidgetArt {
 
     private class X(val d: WData, val day: JSONObject, val now: Long, val st: Sty, val f: WFonts,
                     val u: Float, val rtl: Boolean, val style: WStyle, val w: Float, val h: Float) {
+        /** The moment the sky background shows: now, or the moment the user pinned it to (today's prayer + minutes).
+         *  Only the sky's colours and stars follow it; the sun, the moon and every time stay real. */
+        val sky: Long = style.sp.takeIf { it.isNotEmpty() }?.split(':')?.let { p ->
+            day.optLong(p[0]).takeIf { it > 0 }?.plus((p.getOrNull(1)?.toLongOrNull() ?: 0L) * 60_000L) } ?: now
         val nameTf = f.name(style.font, style.nw)
         val heavy = f.heavy(style.font, style.nw)
         val plex = f.text(style.dw, false)
@@ -128,7 +132,7 @@ object WidgetArt {
         return c("#070B1A") to c("#121A33")
     }
     private fun isDay(x: X) = x.now in x.t("sunrise")..x.t("maghrib")
-    private fun starAlpha(x: X) = when { x.now < x.t("fajr") + 600_000 || x.now > x.t("isha") -> 1f; x.now < x.t("sunrise") || x.now > x.t("maghrib") -> .35f; else -> 0f }
+    private fun starAlpha(x: X) = when { x.sky < x.t("fajr") + 600_000 || x.sky > x.t("isha") -> 1f; x.sky < x.t("sunrise") || x.sky > x.t("maghrib") -> .35f; else -> 0f }
     private fun lit(x: X): Float {
         val r = (x.now - (x.t("sunrise") - 1_800_000)) / 7_200_000f; val s = ((x.t("maghrib") + 1_200_000) - x.now) / 7_200_000f
         return min(r, s).coerceIn(0f, 1f)
@@ -213,7 +217,7 @@ object WidgetArt {
             "dark" -> cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, c("#11594A"), c("#0A382C"), Shader.TileMode.CLAMP) })
             "dyn" -> { val dy = dyn ?: intArrayOf(c("#11594A"), c("#0A382C"))
                 cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, dy[0], dy[1], Shader.TileMode.CLAMP) }) }
-            else -> { val (t, b) = skyAt(x, x.now)
+            else -> { val (t, b) = skyAt(x, x.sky)
                 cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, 0f, x.h, t, b, Shader.TileMode.CLAMP) })
                 cv.drawRoundRect(rect, r, r, paint(a(.34f, c("#0A101E")))) }
         }
@@ -316,7 +320,7 @@ object WidgetArt {
         cv.save(); val clip = Path().apply { addRoundRect(RectF(0f, 0f, w, h), r, r, Path.Direction.CW) }; cv.clipPath(clip)
         if (strip) card(cv, x, r, x.style.bg)
         cv.save(); cv.clipRect(0f, 0f, w, sh)
-        val (top, bot) = skyAt(x, x.now)
+        val (top, bot) = skyAt(x, x.sky)
         cv.drawRect(0f, 0f, w, sh, paint().apply { shader = LinearGradient(0f, 0f, 0f, sh, top, bot, Shader.TileMode.CLAMP) })
         stars(cv, x, 0f, 0f, w, sh * .6f)
         val cx = w / 2; val cy = sh * (if (strip) .80f else .576f); val rx = w * .393f; val ry = sh * (if (strip) .62f else .412f)
@@ -368,7 +372,7 @@ object WidgetArt {
         val arch = Path().apply { moveTo(X0(8f), Y0(170f)); lineTo(X0(8f), Y0(78f)); cubicTo(X0(8f), Y0(40f), X0(46f), Y0(14f), X0(85f), Y0(4f))
             cubicTo(X0(124f), Y0(14f), X0(162f), Y0(40f), X0(162f), Y0(78f)); lineTo(X0(162f), Y0(170f)); close() }
         cv.save(); cv.clipPath(arch)
-        val (top, bot) = skyAt(x, x.now)
+        val (top, bot) = skyAt(x, x.sky)
         cv.drawRect(X0(0f), Y0(0f), X0(170f), Y0(170f), paint().apply { shader = LinearGradient(0f, Y0(0f), 0f, Y0(170f), top, bot, Shader.TileMode.CLAMP) })
         stars(cv, x, X0(10f), Y0(20f), 150 * k, 90 * k)
         if (isDay(x)) { val q = dayFrac(x); sun(cv, x, X0(85f + x.dir * 62f * cos(PI * q).toFloat()), Y0(150f - 110f * sin(PI * q).toFloat()), 6f * k / x.u) }
