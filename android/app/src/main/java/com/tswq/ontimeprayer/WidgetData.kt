@@ -188,13 +188,14 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "prayed" to (listOf("streak", "names", "now") to setOf("streak", "names", "now")),
             "night" to (listOf("mid", "count", "sky") to setOf("mid", "count", "sky")),
             "ramadan" to (listOf("imsak", "fajr", "prog") to setOf("imsak", "fajr", "prog")),
-            "white" to (listOf("monthu", "days") to setOf("monthu", "days")))
+            "white" to (listOf("monthu", "days") to setOf("monthu", "days")),
+            "column" to (listOf("count", "time", "sunrise", "duha", "exit", "hijri", "moon") to setOf("count", "exit", "hijri", "moon")))
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
         val CFS = setOf("hm", "clock", "m", "text")
 
-        /** The stretch until the user picks one: script and actions were designed stretched, and so was the table's big headline;
-         *  the others keep their plain look (0.18.2). */
-        fun klFor(type: String) = if (type == "script" || type == "actions" || type == "table") 7 else 0
+        /** The stretch until the user picks one: script and actions were designed stretched, and so were the table's big headline
+         *  and the column's; the others keep their plain look (0.18.2). */
+        fun klFor(type: String) = if (type == "script" || type == "actions" || type == "table" || type == "column") 7 else 0
 
         /** Until the user picks, a widget uses the name font chosen for the app's own screen. */
         fun defaultFor(type: String, font: String? = null) = WStyle(when (type) { "script", "line" -> "clear"; "prayed", "ramadan" -> "dark"; "white" -> "light"; else -> "sky" },

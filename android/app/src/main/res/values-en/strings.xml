@@ -32,4 +32,6 @@
     <string name="wd_ramadan">Iftar and imsak in Ramadan, and how long until Ramadan</string>
     <string name="w_white">White days</string>
     <string name="wd_white">The Hijri month, the white days, Mondays and Thursdays</string>
+    <string name="w_column">Column</string>
+    <string name="wd_column">The five prayers in a column, the next one in big type</string>
 </resources>

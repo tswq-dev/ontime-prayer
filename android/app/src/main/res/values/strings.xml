@@ -33,4 +33,6 @@
     <string name="wd_ramadan">الإفطار والإمساك في رمضان، وكم باقي على رمضان</string>
     <string name="w_white">الأيام البيض</string>
     <string name="wd_white">الشهر الهجري والأيام البيض والاثنين والخميس</string>
+    <string name="w_column">العمود</string>
+    <string name="wd_column">الصلوات الخمس في عمود، والقادمة بخط كبير</string>
 </resources>

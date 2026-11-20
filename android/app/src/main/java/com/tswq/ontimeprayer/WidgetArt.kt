@@ -65,7 +65,7 @@ class WFonts(private val kufiW: Map<Int, Typeface>, private val ruqaaW: Map<Int,
  * (sunrise on the right, the dial turns counter-clockwise); in English the drawing is mirrored.
  */
 object WidgetArt {
-    val TYPES = listOf("pano", "window", "ring", "orbit", "script", "table", "clock", "moon", "ribbon", "exit", "actions", "line", "prayed", "night", "ramadan", "white")
+    val TYPES = listOf("pano", "window", "ring", "orbit", "script", "table", "clock", "moon", "ribbon", "exit", "actions", "line", "prayed", "night", "ramadan", "white", "column")
 
     /** The phone's own colours (Android 12+): light background, deeper background, text, softer text, accent. */
     @Volatile var dyn: IntArray? = null
@@ -276,6 +276,7 @@ object WidgetArt {
             "script" -> script(cv, x); "table" -> table(cv, x); "clock" -> clock(cv, x); "moon" -> moonW(cv, x)
             "ribbon" -> ribbon(cv, x); "exit" -> exit(cv, x); "actions" -> actions(cv, x, Btns()); "line" -> line(cv, x)
             "prayed" -> prayed(cv, x); "night" -> nightW(cv, x); "ramadan" -> ramadan(cv, x); "white" -> white(cv, x)
+            "column" -> column(cv, x)
         }
         return bmp
     }
@@ -516,10 +517,11 @@ object WidgetArt {
         }
         if ("count" in rows) {
             // the headline: the countdown at the end, the name from the start up to it, as tall as the free band
-            // between the city/date line (or the frame) and the times row, the iqama bar (or the frame) allows; those stay put
-            val edge = max(7 * u, kSafe(x)); val gap = max(12 * u, x.dp(12f))
-            val top = if (hasHead) headBot + 4 * u else edge
-            val bot = max(top + 6f, if (showT || "iqama" in rows) y + 30 * u else x.h - edge)
+            // between the city/date line (or the frame) and the times row, the iqama bar (or the frame) allows,
+            // at least 6 dp from either line; those stay put
+            val edge = max(7 * u, kSafe(x)); val gap = max(12 * u, x.dp(12f)); val m6 = x.dp(6f)
+            val top = if (hasHead) headBot + m6 else edge
+            val bot = max(top + 6f, if (showT || "iqama" in rows) y + 34 * u - m6 else x.h - edge)
             // one size for every prayer (the five names' ink together), so it doesn't jump when the prayer changes
             val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 100f }; var t0 = 0f; var b0 = 0f
             for (s in (WData.PRAY + nx.k).distinct().map { x.d.name(it) } + TATWEEL.toString()) { np.getTextBounds(s, 0, s.length, hb); t0 = min(t0, hb.top.toFloat()); b0 = max(b0, hb.bottom.toFloat()) }
@@ -535,12 +537,14 @@ object WidgetArt {
             val wide = inkW(np, n0) > room
             while (inkW(np, n0) > room && np.textSize > 6f) np.textSize *= .97f
             val name = if (wide) n0 else kashName(x, np, n0, room)
-            val sc = np.textSize / 100f; val base = (top + bot) / 2 - (t0 + b0) / 2 * sc
-            // same baseline, kept inside the band should the countdown ever be the taller one
+            // sized by all five names, placed by this one's own ink: the font's ascent and the other names' tall letters
+            // left it high under the date line, with the space below it
+            np.getTextBounds(name, 0, name.length, hb); val base = (top + bot) / 2 - (hb.top + hb.bottom) / 2f
+            // the countdown on the same baseline, smaller should its ink ever pass the band
             cp.getTextBounds(inS, 0, inS.length, hb)
-            if (hb.height() > bot - top) { cp.textSize *= (bot - top) / hb.height(); cp.getTextBounds(inS, 0, inS.length, hb) }
+            while ((base + hb.top < top || base + hb.bottom > bot) && cp.textSize > 6f) { cp.textSize *= .95f; cp.getTextBounds(inS, 0, inS.length, hb) }
             text(cv, x, name, startX(x, ps), base, np)
-            text(cv, x, inS, endX(x, pad), base.coerceIn(top - hb.top, max(top - hb.top, bot - hb.bottom)), cp, false)
+            text(cv, x, inS, endX(x, pad), base, cp, false)
             y += 34 * u
         }
         if (showT) {
@@ -611,8 +615,12 @@ object WidgetArt {
         text(cv, x, dd.optString("hm"), startX(x, pad), pad + 40 * k, tp(x, x.plex, 11f, x.st.sub).apply { textSize = 11f * k })
         moon(cv, x, endX(x, pad) + x.dir * 23 * k, pad + 23 * k, 21 * k)
         text(cv, x, (if (x.style.has("wd")) dd.optString("wd") + " · " else "") + x.d.digits(dd.optString("hy")), startX(x, pad), pad + 72 * k, tp(x, x.plex, 11f, x.st.sub).apply { textSize = 11f * k })
-        val nx = x.next ?: return
-        if (!x.style.has("next")) return
+        // made tall, the empty middle takes today's five prayers as compact column rows, once each row gets 19 dp
+        val nx = x.next; val foot = x.style.has("next") && nx != null
+        val midTop = pad + 82 * k; val midBot = if (foot) x.h - pad - 38 * k else x.h - pad
+        val rh = min((midBot - midTop) / 5, 28 * k)
+        if (rh >= x.dp(19f)) prayerRows(cv, x, WData.PRAY, midTop + (midBot - midTop - 5 * rh) / 2, rh, 0f, pad * .55f, x.w - pad * .55f, min(rh * .48f, 12.5f * k))
+        if (nx == null || !foot) return
         cv.drawLine(pad, x.h - pad - 30 * k, x.w - pad, x.h - pad - 30 * k, paint(x.st.line).apply { strokeWidth = x.dp(1f) })
         text(cv, x, x.d.name(nx.k), startX(x, pad), x.h - pad - 8 * k, tp(x, x.nameTf, 16f, x.st.fg).apply { textSize = 16f * k })
         text(cv, x, x.d.clock(nx.at), endX(x, pad), x.h - pad - 8 * k, tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }, false)
@@ -729,6 +737,105 @@ object WidgetArt {
             center(cv, labels[i], icx, top + bh * .8f, lp)
             cv.restoreToCount(sc)
         }
+    }
+
+    // ---------- 10. the column (2×4): the next prayer big, the day's prayers under it, the Hijri date at the foot ----------
+    /** The day the rows show: after Isha, tomorrow's (as the table). */
+    private fun rowsDay(x: X): JSONObject { val nx = x.next ?: return x.day
+        return if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day }
+    /** The row of the time we are in, if it is among [keys] on the day shown: it gets the line «حتى 6:50». */
+    private fun exitKey(x: X, keys: List<String>): String? { val cw = x.cur ?: return null
+        return cw.k.takeIf { it in keys && rowsDay(x).optLong(it) == cw.start } }
+    /**
+     * Prayer rows between [l] and [r]: the name at the start, the time at the end, the next one on a gold pill, the ones gone dimmed.
+     * With [exitH] > 0 the time we are in gets a second line «حتى 6:50» under its name (inside the pill if it is the next one,
+     * as while waiting for the iqama), and is not dimmed: it is still running. Returns the bottom.
+     */
+    private fun prayerRows(cv: Canvas, x: X, keys: List<String>, top: Float, rowH: Float, exitH: Float, l: Float, r: Float, ts: Float): Float {
+        val tday = rowsDay(x); val nx = x.next; val cw = x.cur; val exK = if (exitH > 0f) exitKey(x, keys) else null
+        val inset = min(rowH * .5f, x.dp(12f)); var y = top
+        for (k in keys) {
+            val on = k == nx?.k; val going = k == exK; val t = tday.optLong(k); val past = !on && !going && t <= x.now
+            val hh = rowH + if (going) exitH else 0f
+            if (on) cv.drawRoundRect(RectF(l, y, r, y + hh), rowH / 2, rowH / 2, paint(if (x.st.light) GOLD_L else GOLD))
+            val fg = if (on) INK else x.st.fg; val al = if (past) 115 else 255; val sh = !on && x.st.shadow
+            val np = tp(x, if (on) x.plexB else x.plex, 1f, fg, sh).apply { textSize = ts; alpha = al }
+            val cp = tp(x, x.plexB, 1f, fg, sh).apply { textSize = ts * 1.08f; alpha = al }
+            val nm = x.d.name(k); val tm = x.d.clock(t)
+            fit(cp, tm, (r - l - 2 * inset) * .42f); fit(np, nm, (r - l - 2 * inset) * .54f)
+            val base = y + rowH / 2 + ts * .36f; val s0 = if (x.rtl) r - inset else l + inset; val e0 = if (x.rtl) l + inset else r - inset
+            text(cv, x, nm, s0, base, np); text(cv, x, tm, e0, base, cp, false)
+            if (going && cw != null) {
+                val b = if (x.now < cw.first) cw.first else cw.end
+                val ep = tp(x, x.plex, 1f, if (on) INK else x.st.sub, sh).apply { textSize = ts * .8f; if (on) alpha = 210 }
+                val es = (if (x.d.ar) "حتى " else "until ") + x.d.clock(b); fit(ep, es, r - l - 2 * inset)
+                text(cv, x, es, s0, base + exitH - (ts - ep.textSize) * .36f, ep)
+            }
+            y += hh
+        }
+        return y
+    }
+
+    private fun column(cv: Canvas, x: X) {
+        card(cv, x); val nx = x.next ?: return; val w = x.w; val h = x.h; val u0 = x.u
+        val keys = listOf("fajr") + (if (x.style.has("sunrise")) listOf("sunrise") else emptyList()) + (if (x.style.has("duha")) listOf("duha") else emptyList()) + listOf("dhuhr", "asr", "maghrib", "isha")
+        val cnt = if (x.style.has("count")) x.d.inTxt(nx, x.now) else ""; val tms = if (x.style.has("time")) clk(x, nx.at) else ""
+        val sub = cnt.isNotEmpty() || tms.isNotEmpty()
+        var moonOn = x.style.has("moon"); var hijOn = x.style.has("hijri"); var exOn = x.style.has("exit") && exitKey(x, keys) != null; var rowF = 1f; var nameB = 46f
+        // the parts in dp at scale 1 (laid out for 150 dp of width): margins, name, countdown line, rows, exit line, foot
+        fun foot() = if (moonOn) 22f else if (hijOn) 16f else 0f
+        fun need() = 10f + nameB + (if (sub) 21f else 0f) + 10f + keys.size * 26f * rowF + (if (exOn) 15f else 0f) + (if (foot() > 0f) 8f + foot() else 0f) + 10f
+        val kW = w / u0 / 150f
+        fun kOf() = minOf(kW, h / u0 / need(), 1.7f)
+        // shorter: the moon goes first, then the date, then the exit line, then the rows close up, then the name gives way;
+        // only then does it all shrink. Only the height drops parts: a narrow one is smaller all over, not emptier
+        while (h / u0 / need() < min(.9f, kW)) { when { moonOn -> moonOn = false; hijOn -> hijOn = false; exOn -> exOn = false
+            rowF > .75f -> rowF -= .05f; nameB > 32f -> nameB -= 2f; else -> break } }
+        val k = kOf().coerceAtLeast(.5f); val u = u0 * k
+        // taller than the width lets it grow: rows open up a little, the name takes some (as far as the width lets it),
+        // the rest goes to the gaps, so no band is left empty
+        val free0 = max(0f, h - need() * u); val rowX = min(free0 * .5f, keys.size * 26f * rowF * u * .4f) / keys.size
+        // the name: sized by the five names' ink so it doesn't jump when the prayer changes, stretched to the frame,
+        // and centred in its band by its own ink
+        val pad = max(kSafe(x), 7 * u); val room = w - 2 * pad; val hb = Rect()
+        val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = 100f }; var t0 = 0f; var b0 = 0f
+        for (s in (WData.PRAY + nx.k).distinct().map { x.d.name(it) } + TATWEEL.toString()) { np.getTextBounds(s, 0, s.length, hb); t0 = min(t0, hb.top.toFloat()); b0 = max(b0, hb.bottom.toFloat()) }
+        val want = nameB * u + min((free0 - rowX * keys.size) * .4f, nameB * u * .6f)
+        np.textSize = 100f * want / (b0 - t0 + (if (np.heavy) 3.5f else 0f))
+        val n0 = x.d.name(nx.k)
+        while (inkW(np, n0) > room && np.textSize > 6f) np.textSize *= .97f
+        val band = (b0 - t0) * np.textSize / 100f
+        val free = max(0f, h - (need() - nameB) * u - band - rowX * keys.size)
+        val gTop = 10 * u + free * .2f; val gMid = 10 * u + free * (if (foot() > 0f) .3f else .4f); val gFoot = 8 * u + free * .3f
+        var y = gTop
+        val name = kashName(x, np, n0, room)
+        np.getTextBounds(name, 0, name.length, hb)
+        center(cv, name, w / 2, y + band / 2 - (hb.top + hb.bottom) / 2f, np)
+        y += band
+        if (sub) {
+            // the countdown (or «الإقامة بعد …»), then the time if picked, as one centred line
+            val cp = tp(x, x.plexB, 1f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = 13.5f * u }
+            val sp = tp(x, x.plex, 1f, x.st.sub).apply { textSize = 13f * u }
+            val dot = if (cnt.isNotEmpty() && tms.isNotEmpty()) "  ·  " else ""
+            val tot = { cp.measureText(cnt) + sp.measureText(dot + tms) }
+            while (tot() > w - 2 * pad && cp.textSize > 6f) { cp.textSize *= .95f; sp.textSize *= .95f }
+            val base = y + 6 * u + cp.textSize * .76f; var xs = w / 2 + x.dir * tot() / 2
+            if (cnt.isNotEmpty()) { text(cv, x, cnt, xs, base, cp); xs -= x.dir * cp.measureText(cnt) }
+            if (tms.isNotEmpty()) text(cv, x, dot + tms, xs, base, sp)
+            y += 21 * u
+        }
+        y += gMid
+        val rowH = 26 * rowF * u + rowX; val ts = min(13.5f * u, rowH * .62f)
+        y = prayerRows(cv, x, keys, y, rowH, if (exOn) 15 * u else 0f, 8 * u, w - 8 * u, ts)
+        if (foot() <= 0f) return
+        // the foot: tonight's moon and the Hijri date, centred together
+        y += gFoot; val cy = y + foot() * u / 2
+        val hs = if (hijOn) x.d.digits(x.day.optString("hd") + " " + x.day.optString("hm") + " " + x.day.optString("hy")) else ""
+        val hp = tp(x, x.plex, 1f, x.st.sub).apply { textSize = 12f * u }; val mr = if (moonOn) 8 * u else 0f; val mg = if (moonOn && hs.isNotEmpty()) 7 * u else 0f
+        fit(hp, hs, w - 2 * pad - 2 * mr - mg)
+        val gw = 2 * mr + mg + hp.measureText(hs); val gs = w / 2 + x.dir * gw / 2
+        if (moonOn) moon(cv, x, gs - x.dir * mr, cy, mr)
+        if (hs.isNotEmpty()) text(cv, x, hs, gs - x.dir * (2 * mr + mg), cy + hp.textSize * .36f, hp)
     }
 
     // ---------- extra widgets (0.14): shared bits ----------

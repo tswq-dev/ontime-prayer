@@ -49,6 +49,7 @@ class WPrayed : BaseWidget("prayed")
 class WNight : BaseWidget("night")
 class WRamadan : BaseWidget("ramadan")
 class WWhite : BaseWidget("white")
+class WColumn : BaseWidget("column")
 
 object WidgetUpdater {
     const val ACTION_TICK = "com.tswq.ontimeprayer.WTICK"
@@ -58,10 +59,12 @@ object WidgetUpdater {
         "pano" to WPano::class.java, "window" to WWindow::class.java, "ring" to WRing::class.java, "orbit" to WOrbit::class.java,
         "script" to WScript::class.java, "table" to WTable::class.java, "clock" to WClock::class.java, "moon" to WMoon::class.java,
         "ribbon" to WRibbon::class.java, "exit" to WExit::class.java, "actions" to WActions::class.java, "line" to WLine::class.java,
-        "prayed" to WPrayed::class.java, "night" to WNight::class.java, "ramadan" to WRamadan::class.java, "white" to WWhite::class.java)
+        "prayed" to WPrayed::class.java, "night" to WNight::class.java, "ramadan" to WRamadan::class.java, "white" to WWhite::class.java,
+        "column" to WColumn::class.java)
 
-    /** The size each widget starts at (dp): 4×2, 2×2 or 4×1 cells. */
+    /** The size each widget starts at (dp): 4×2, 2×2, 4×1 or (the column) 2×4 cells. */
     fun defaultDp(type: String): Pair<Int, Int> = when (type) {
+        "column" -> 170 to 340
         "window", "ring", "clock", "moon", "night" -> 170 to 170
         "script", "ribbon", "exit", "line", "prayed" -> 340 to 90
         else -> 340 to 170

@@ -194,6 +194,40 @@ class WidgetShots {
                 tb("dhuhr iqama wait", "sky", "ruqaa", setOf("count", "times", "iqama"), 7, ar, iqNow, 340, 200),
                 tb("en maghrib +count", "sky", "kufi", cte, 7, en, c84, sz("table").first, sz("table").second),
                 tb("en isha count only", "light", "kufi", setOf("count"), 7, en, ish, 340, 70)))
+
+        // the column (2×4, "2x4" = its default 170x340): the next prayer stretched over the day's rows. Before Maghrib and while
+        // waiting for the Isha iqama, each font on its own background; then the other sizes (shorter ones drop the moon,
+        // the date, the exit line in turn; taller ones grow). Labels are short so they fit under the narrow ones
+        val iqIsha = day.getLong("isha") + 6 * mn
+        val colAll = WStyle.SHOW["column"]!!.first.toSet(); val colDef = WStyle.SHOW["column"]!!.second
+        fun cl(label: String, f: String, bg: String, d: WData, now: Long, w: Int, h: Int, r: Set<String> = colDef, kl: Int = 7) =
+            Item("$label $f $bg" + (if (kl != 7) " kl $kl" else ""), draw("column", WStyle(bg, f, r, kl = kl), d, now, w, h, fonts))
+        val fb = listOf("kufi" to "sky", "ruqaa" to "light", "naskh" to "dark")
+        sheet("sheet-20-column",
+            fb.map { (f, bg) -> cl("2x4 maghrib", f, bg, ar, c84, 170, 340) } + fb.map { (f, bg) -> cl("2x4 isha iq.", f, bg, ar, iqIsha, 170, 340) } +
+            fb.map { (f, bg) -> cl("170x250", f, bg, ar, c84, 170, 250) } +
+            listOf(cl("250x400 isha, all rows", "kufi", "dark", ar, ish, 250, 400, colAll), cl("250x400 dhuhr", "naskh", "light", ar, dz, 250, 400),
+                cl("250x400 duha, all rows", "ruqaa", "sky", ar, day.getLong("duha") + 30 * mn, 250, 400, colAll),
+                cl("170x190", "kufi", "sky", ar, c84, 170, 190), cl("2x4 night", "kufi", "sky", ar, moments["5-night"]!!, 170, 340),
+                cl("2x4 name only", "naskh", "sky", ar, dz, 170, 340, emptySet()), cl("2x4", "kufi", "dark", ar, c84, 170, 340, kl = 0),
+                cl("2x4 en +time", "kufi", "sky", en, c84, 170, 340, colDef + "time")))
+
+        // the moon made tall: today's prayers fill the middle once each row gets 19 dp; the default size stays as it was
+        sheet("sheet-21-moon-tall", listOf(
+            Item("moon 170x170 default", draw("moon", dflt("moon"), ar, c84, 170, 170, fonts)),
+            Item("moon 170x250 (too short: as before)", draw("moon", dflt("moon"), ar, c84, 170, 250, fonts)),
+            Item("moon 170x340 sky", draw("moon", dflt("moon"), ar, c84, 170, 340, fonts)),
+            Item("moon 170x340 dark isha iqama", draw("moon", dflt("moon").copy(bg = "dark"), ar, iqIsha, 170, 340, fonts)),
+            Item("moon 220x420 light", draw("moon", dflt("moon").copy(bg = "light"), ar, ish, 220, 420, fonts)),
+            Item("moon 220x420 sky, no next", draw("moon", dflt("moon").copy(rows = setOf("wd")), ar, c84, 220, 420, fonts)),
+            Item("moon 170x340 en", draw("moon", dflt("moon"), en, c84, 170, 340, fonts))))
+
+        // the table's headline centred by the drawn name's own ink between the city/date line (or the frame) and the times row
+        sheet("sheet-22-table-centred", listOf("kufi", "naskh").flatMap { f -> listOf(
+            tb("maghrib +count", "sky", f, cte, 7, ar, c84, 340, 170), tb("isha 5 rows", "light", f, full, 7, ar, ish, 340, 170),
+            tb("maghrib 5 rows", "sky", f, full, 7, ar, c84, 340, 170), tb("isha 5 rows", "sky", f, full, 7, ar, ish, 360, 130),
+            tb("dhuhr 5 rows", "dark", f, full, 7, ar, dz, 340, 200), tb("dhuhr +count", "dark", f, cte, 7, ar, dz, 340, 200)) } +
+            listOf(tb("isha 5 rows", "light", "naskh", full, 0, ar, ish, 340, 170), tb("en maghrib 5 rows", "sky", "kufi", full, 7, en, c84, 340, 170)))
         WidgetArt.marks = WidgetArt.Marks(0b00011, 6)
 
         // previews for the widget picker: golden afternoon, the clear ones on green so they show on any picker
