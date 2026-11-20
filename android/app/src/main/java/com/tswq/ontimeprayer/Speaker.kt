@@ -9,12 +9,13 @@ import android.os.Looper
 
 /**
  * Plays a short spoken line ("the Asr adhan is near") on the notification stream, so it stays quiet
- * when the phone is on silent or vibrate. The lines are a couple of seconds long; [done] runs when it ends.
+ * when the phone is on silent or vibrate, unless the user asked it to ring even on silent ([alarm]: the alarm stream).
+ * The lines are a couple of seconds long; [done] runs when it ends.
  */
 object Speaker {
     private val main = Handler(Looper.getMainLooper())
 
-    fun play(ctx: Context, name: String, done: () -> Unit) {
+    fun play(ctx: Context, name: String, alarm: Boolean = false, done: () -> Unit) {
         // a tone the user picked from the phone's own (tone_rem: the reminders), else a bundled line
         val tone = name.startsWith("tone_")
         val uri = if (tone) Alerts.soundUri(ctx, name).first else Alerts.rawId(ctx, name).takeIf { it != 0 }?.let { Uri.parse("android.resource://${ctx.packageName}/$it") }
@@ -29,7 +30,7 @@ object Speaker {
         }
         try {
             mp = MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                setAudioAttributes(AudioAttributes.Builder().setUsage(if (alarm) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 setDataSource(ctx, uri)
                 setOnCompletionListener { main.post { end() } }
                 setOnErrorListener { _, _, _ -> main.post { end() }; true }

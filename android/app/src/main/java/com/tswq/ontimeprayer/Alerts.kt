@@ -72,17 +72,20 @@ object Alerts {
         channels(ctx)
         val title = ev.optString("title"); val text = ev.optString("text"); val id = ev.optString("id").hashCode()
         val pk = ev.optString("pk")
-        val spoken = ev.optString("rs", "ding") == "speak"; val tone = ev.optString("rs") == "tone"
-        val remCh = when { ev.optString("voice") == "vibrate" -> CH_VIBRATE; ev.optString("rs", "ding") == "ding" -> CH_REMIND; else -> CH_SILENT }
+        val spoken = ev.optString("rs", "ding") == "speak"; val loud = loud(ev)
+        val remCh = when { ev.optString("voice") == "vibrate" -> CH_VIBRATE; ev.optString("rs", "ding") == "ding" && !loud -> CH_REMIND; else -> CH_SILENT }
         var speaking = false
-        fun say(name: String, then: () -> Unit = {}) { speaking = true; Speaker.play(ctx, name) { then(); done() } }
+        fun say(name: String, alarm: Boolean = false, then: () -> Unit = {}) { speaking = true; Speaker.play(ctx, name, alarm) { then(); done() } }
         fun quietNote() = post(ctx, if (Exits.hasEx(ev)) prayerBuilder(ctx, ev, CH_SILENT, null) else builder(ctx, CH_SILENT, title, text), noteId(ev))
         when (ev.optString("kind")) {
             "adhan" -> when (val s = soundOf(ev).let { if (it != "none" && WidgetUpdater.takeMute(ctx, ev)) "notify" else it }) {
                 "none" -> {}
                 "vibrate" -> post(ctx, prayerBuilder(ctx, ev, CH_VIBRATE, null), noteId(ev))
                 "notify" -> quietNote()
-                else -> if (s.startsWith("spk_")) { quietNote(); say(s) } else {
+                // an adhan set to keep to silent mode (ring 0, 0.18): a quiet note, or only vibrate on vibrate mode
+                else -> if (s.startsWith("spk_")) { quietNote(); say(s, ev.optInt("ring", 0) == 1) } else if (ev.optInt("ring", 1) == 0 && hush(ctx) > 0) {
+                    post(ctx, prayerBuilder(ctx, ev, if (hush(ctx) == 1) CH_VIBRATE else CH_SILENT, null), noteId(ev))
+                } else {
                     val i = Intent(ctx, AdhanService::class.java).putExtra("ev", ev.toString())
                     try {
                         if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
@@ -93,12 +96,12 @@ object Alerts {
             }
             "pre", "iqama" -> {
                 post(ctx, builder(ctx, remCh, title, text).also { untilNow(it, ev.optLong("until")) }, id)
-                if (spoken && remCh != CH_VIBRATE) say(ev.optString("spk")) else if (tone && remCh != CH_VIBRATE) say("tone_rem")
+                if (remCh != CH_VIBRATE) remSound(ev, ev.optString("spk"))?.let { say(it, loud) }
             }
             // the spoken line first, then vibrate mode (vibrate mode would cut it off)
             "silence" -> if (spoken && ringerNormal(ctx)) say(ev.optString("spk")) { silence(ctx, ev.optInt("min", 20), title, text) }
                 else silence(ctx, ev.optInt("min", 20), title, text)
-            "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); if (spoken) say(ev.optString("xspk")) else if (tone) say("tone_rem") }
+            "exit" -> if (!Prayed.has(ctx, pk)) { exitNote(ctx, ev); remSound(ev, ev.optString("xspk"))?.let { say(it, loud) } }
             // a plain reminder from the page (the last third of the night, fasting tomorrow)
             "note" -> post(ctx, builder(ctx, CH_REMIND, title, text).also { untilNow(it, ev.optLong("until")) }, id)
         }
@@ -106,6 +109,21 @@ object Alerts {
     }
 
     private fun ringerNormal(ctx: Context) = ctx.getSystemService(AudioManager::class.java)?.ringerMode == AudioManager.RINGER_MODE_NORMAL
+
+    /** 0: sound on, 1: vibrate, 2: silent or do-not-disturb (what an adhan that keeps to silent mode goes by). */
+    private fun hush(ctx: Context): Int {
+        val f = ctx.getSystemService(NotificationManager::class.java)?.currentInterruptionFilter ?: NotificationManager.INTERRUPTION_FILTER_ALL
+        if (f != NotificationManager.INTERRUPTION_FILTER_ALL && f != NotificationManager.INTERRUPTION_FILTER_UNKNOWN) return 2
+        return when (ctx.getSystemService(AudioManager::class.java)?.ringerMode) { AudioManager.RINGER_MODE_VIBRATE -> 1; AudioManager.RINGER_MODE_SILENT -> 2; else -> 0 }
+    }
+
+    /** Reminders that ring even on silent (0.18): the notification goes out quiet and the app plays the sound on the alarm stream. */
+    fun loud(r: JSONObject) = r.optInt("rring") == 1 && r.optString("voice") != "vibrate"
+
+    /** What a reminder plays itself: the spoken line, the tone the user picked, or (ringing on silent) the phone's notification tone. */
+    fun remSound(r: JSONObject, spk: String): String? = when (r.optString("rs", "ding")) {
+        "speak" -> spk.ifEmpty { null }; "tone" -> "tone_rem"; "ding" -> if (loud(r)) "tone_ding" else null; else -> null
+    }
 
     fun noteId(ev: JSONObject) = ev.optString("pk").ifEmpty { ev.optString("id") }.let { (it.hashCode() and 0x0FFFFFFF) or 0x10000000 }
     fun noteIdOf(pk: String) = (pk.hashCode() and 0x0FFFFFFF) or 0x10000000
@@ -263,8 +281,9 @@ object Alerts {
         val ar = Exits.ar(r); val now = System.currentTimeMillis(); val ex = Exits.next(r, now)
         val e = JSONObject(r.toString()).put("remNote", 1).put("title", if (ar) "تذكير: صلاة ${r.optString("title")}" else "Reminder: ${r.optString("title")}")
             .put("text", if (ex != null) (if (ar) "يخرج ${ex.name} ${ex.clock}" else "${ex.name} ends at ${ex.clock}") else r.optString("text"))
-        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || r.optString("rs") == "tone") CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
-        if (r.optString("rs") == "tone") Speaker.play(ctx, "tone_rem") {}
+        val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") == "ding" && loud(r) -> "tone_ding"; else -> null }
+        post(ctx, prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || snd != null) CH_SILENT else CH_LATER, null), noteIdOf(r.optString("pk")))
+        if (snd != null) Speaker.play(ctx, snd, loud(r)) {}
     }
 
     /** "20 min left until the chosen time for Asr ends", with "I prayed" and "In 10 min". */
@@ -274,7 +293,7 @@ object Alerts {
         val pk = r.optString("pk"); val ar = Exits.ar(r)
         val left = maxOf(1L, Math.round((ex.at - now) / 60_000.0))
         val title = if (ar) "باقي ${Exits.mins(left, r)} على خروج ${ex.name}" else "$left min until ${ex.name} ends"
-        val b = builder(ctx, if (r.optString("rs", "ding") == "ding") CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
+        val b = builder(ctx, if (r.optString("rs", "ding") == "ding" && !loud(r)) CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
         b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
         if (ex.at - now > 11 * 60_000L)
             b.addAction(action(ctx, AlarmReceiver.ACTION_SNOOZE, pk, if (ar) "بعد ${Exits.mins(10, r)}" else "In 10 min", "rem", r.toString()))
