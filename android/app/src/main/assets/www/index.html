@@ -2050,7 +2050,7 @@ $('weOpts').addEventListener('click', e => { const b = e.target.closest('button[
   if (f === 'ims' || f === 'third') { if (f === 'ims') S.imsak = +v; else S.thirdOn = v === '1';
     save(); pushSchedule(); if (v !== 'off' && v !== '0') needNotify(); weDraw(); return; }
   if (f === 'rows') { const r = new Set(we.st.rows || []); if (r.has(v)) r.delete(v); else r.add(v); if (we.t === 'table' && !r.size) r.add('times'); we.st.rows = ((wInfo.show && wInfo.show[we.t]) || []).filter(k => r.has(k)); }
-  else if (f === 'kl') { we.st.kl = +v; we.st.kash = +v > 0; we.st.kv = 2; }
+  else if (f === 'kl') { we.st.kl = +v; we.st.kash = +v > 0; we.st.kv = 3; }
   else we.st[f] = v;
   we.st.v = 2; try { Android.widgetStyle(we.t, we.id, JSON.stringify(we.st)); } catch(x) {} wLoad(); weDraw(); });
 $('weAdd').onclick = () => { if (!we) return; if (!we.id && wInfo.pin) { try { Android.pinWidget(we.t); } catch(x) {} } weBack(); };
