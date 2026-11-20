@@ -374,7 +374,7 @@ object Alerts {
     }
 
     fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(
-        ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        ctx, 0, Intent(ctx, MainActivity::class.java).putExtra("quiet", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 

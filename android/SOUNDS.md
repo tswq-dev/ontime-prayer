@@ -47,3 +47,5 @@ then cut at the pauses into one file per sentence, loudness-normalised (−16 LU
 `spk_exit_*` (before a time ends), `spk_pre_*` (before the adhan), `spk_now_*` (the "spoken alert" at the adhan time),
 `spk_iq_*` (iqama), `spk_silent` (phone set to vibrate). The "iqama is near" lines were generated too but are not used yet.
 Check that the ElevenLabs plan used allows commercial use before publishing.
+
+> تنبيه (0.18.3): بعض المصادر فيها صورة غلاف مدموجة كمسار فيديو، والجوال يفشل في تشغيلها. كل ملف لازم يكون مسار صوت واحد: `ffprobe -show_entries stream=codec_type` يطلع `audio` بس، وإلا `ffmpeg -i in -map 0:a -c copy out`.

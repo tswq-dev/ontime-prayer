@@ -80,6 +80,8 @@ class MainActivity : ComponentActivity() {
         web.overScrollMode = WebView.OVER_SCROLL_NEVER
         web.webViewClient = WebViewClient()
         web.addJavascriptInterface(Bridge(), "Android")
+        // the opening animation is for opening the app from its icon; not when the phone brings it back after closing it itself
+        if (savedInstanceState != null) quietStart = true
         if (savedInstanceState == null) web.loadUrl("file:///android_asset/www/index.html")
         else web.restoreState(savedInstanceState)
 
@@ -112,8 +114,11 @@ class MainActivity : ComponentActivity() {
     private var pendingWidget = ""
     // a tap on a widget set to open the month table or the next prayer's settings
     private var pendingOpen = ""
+    /** Opened from a widget, a notification or the adhan screen (or restored): the page skips the opening animation. */
+    private var quietStart = false
     private fun takeWidget(i: Intent?): Boolean {
         if (i == null) return false
+        if (i.hasExtra("open") || i.hasExtra("widgetId") || i.getBooleanExtra("quiet", false)) quietStart = true
         i.getStringExtra("open")?.let { o -> i.removeExtra("open"); pendingOpen = o
             if (::web.isInitialized) web.evaluateJavascript("if(window.__openFrom){__openFrom(Android.pendingOpen())}", null) }
         val id = i.getIntExtra("widgetId", 0); val type = i.getStringExtra("widgetType")
@@ -176,6 +181,7 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun pinWidget(type: String) { main.post { WidgetUpdater.pin(applicationContext, type) } }
         @JavascriptInterface fun pendingWidget(): String { val p = pendingWidget; pendingWidget = ""; return p }
         @JavascriptInterface fun pendingOpen(): String { val p = pendingOpen; pendingOpen = ""; return p }
+        @JavascriptInterface fun quietStart(): Boolean = quietStart
         // the adhan screen (full screen when locked): from Android 14 the phone may ask for a permission
         @JavascriptInterface fun fsiState(): String = if (Build.VERSION.SDK_INT < 34) "na"
             else if (getSystemService(android.app.NotificationManager::class.java)?.canUseFullScreenIntent() == true) "on" else "off"
