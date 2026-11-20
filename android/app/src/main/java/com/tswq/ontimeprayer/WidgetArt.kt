@@ -600,7 +600,7 @@ object WidgetArt {
         // the lines as one block, as big as the widget's height allows and centred in it (a taller widget fills, not leaves space)
         val ts = if (bar) 17f else 21f; val ss = if (bar) 11f else 12.5f
         val ch = ts * .8f + (if (bar) 22f else 0f) + (if (sub) 14f + ss * .8f else 0f)
-        val k2 = minOf(1.8f, (x.h / x.u - 24f) / ch, x.w / x.u / 290f).coerceAtLeast(.6f); val u2 = x.u * k2
+        val k2 = minOf(1.8f, (x.h / x.u - 24f) / ch, x.w / x.u / 220f).coerceAtLeast(.6f); val u2 = x.u * k2
         val tp1 = tp(x, x.nameTf, ts, x.st.fg).apply { textSize = ts * u2 }; fit(tp1, title, w * .55f)
         val ip = tp(x, x.plexB, 12.5f, if (urgent) c("#241406") else if (x.st.light) c("#0B4D3B") else x.st.fg, false).apply { textSize = 12.5f * u2 }
         val pw = pillW(ip, left); fit(ip, left, w * .4f)
