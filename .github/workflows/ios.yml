@@ -1,0 +1,48 @@
+name: iPhone app (trial build)
+
+# Builds the iPhone app unsigned and publishes ontime-prayer.ipa, to install with a free Apple ID through Sideloadly
+# until there is a paid developer account. macOS minutes cost ~10x Linux, so it runs only in the private repo and only
+# when the iPhone app or the shared page changes (or by hand).
+on:
+  push:
+    branches: [app]
+    paths: ['ios/**', 'android/app/src/main/assets/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate the Xcode project
+        run: brew install xcodegen && cd ios && xcodegen generate
+
+      - name: Build for iPhone (unsigned)
+        shell: bash
+        run: |
+          cd ios
+          xcodebuild -project OnTime.xcodeproj -target OnTime -sdk iphoneos -configuration Release \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build.log | grep -E "error:|warning: .*OnTime/|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+          mkdir -p Payload && cp -R build/Release-iphoneos/OnTime.app Payload/ && zip -qry ../ontime-prayer.ipa Payload
+
+      - name: Keep the build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios/build.log
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: "على وقتها آيفون - نسخة تجريبية ${{ github.run_number }}"
+          body: "ملف ontime-prayer.ipa غير موقّع: ثبّته على الآيفون ببرنامج Sideloadly وحساب Apple العادي (يحتاج إعادة تثبيت كل 7 أيام)."
+          files: ontime-prayer.ipa
+          prerelease: true

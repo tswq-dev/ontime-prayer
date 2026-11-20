@@ -1,0 +1,53 @@
+# «على وقتها» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
+# with local notifications for the adhan. Generate the Xcode project with `xcodegen generate`.
+name: OnTime
+options:
+  bundleIdPrefix: com.tswq
+  developmentLanguage: ar
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.17.1"
+    CURRENT_PROJECT_VERSION: "18"
+targets:
+  OnTime:
+    type: application
+    platform: iOS
+    sources:
+      # Swift, the asset catalog, the notification clips (Sounds/*.caf, at most 30 s) and the full recordings (Full/*.m4a)
+      - path: OnTime
+      - path: ../android/app/src/main/assets/www
+        type: folder
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts
+        type: folder
+        buildPhase: resources
+      - path: ../android/app/src/main/res/raw/adhan_afasy.mp3
+        buildPhase: resources
+      - path: ../android/app/src/main/res/raw/adhan_afasy_fajr.mp3
+        buildPhase: resources
+      - path: ../android/app/src/main/res/raw/adhan_qatami.mp3
+        buildPhase: resources
+      - path: ../android/app/src/main/res/raw/adhan_takbir_afasy.mp3
+        buildPhase: resources
+      - path: ../android/app/src/main/res/raw/adhan_takbir_qatami.mp3
+        buildPhase: resources
+    info:
+      path: OnTime/Info.plist
+      properties:
+        CFBundleDisplayName: على وقتها
+        CFBundleDevelopmentRegion: ar
+        UILaunchScreen:
+          UIColorName: LaunchBg
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [audio, fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.tswq.ontime.refresh]
+        NSLocationWhenInUseUsageDescription: نحدد مدينتك من موقعك لنحسب أوقات الصلاة بدقة. الموقع يبقى على جوالك.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tswq.ontime
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
