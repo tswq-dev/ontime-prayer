@@ -159,6 +159,18 @@ class WidgetShots {
             Item("white 2x2", ex("white", dflt("white"), ar, asr, 170, 170)),
             Item("white 4x2 on the 14th", ex("white", dflt("white"), ar, asr + 5 * WData.DAY, 340, 170)),
             Item("white en", ex("white", dflt("white"), en, asr, 340, 170))))
+        // Friday's name and no iqama wait; the time since the adhan; kashida split between two joints (0.19)
+        val friD = ar.day(day.getLong("dhuhr") + WData.DAY)!!; val fdh = friD.getLong("dhuhr")
+        val arS = WData(JSONObject(all.getJSONObject("ar").toString()).put("ia", "since")); val asr5 = day.getLong("asr") + 5 * mn
+        sheet("sheet-24-friday-since", listOf(
+            Item("table fri -30m", draw("table", dflt("table"), ar, fdh - 30 * mn, 340, 170, fonts)),
+            Item("column fri +5m", draw("column", dflt("column"), ar, fdh + 5 * mn, 170, 340, fonts)),
+            Item("line fri -30m", draw("line", dflt("line"), ar, fdh - 30 * mn, 340, 90, fonts)),
+            Item("table asr+5 iq", draw("table", dflt("table").copy(rows = setOf("count", "times")), ar, asr5, 340, 170, fonts)),
+            Item("table asr+5 since", draw("table", dflt("table").copy(rows = setOf("count", "times")), arS, asr5, 340, 170, fonts)),
+            Item("column asr+5 since", draw("column", dflt("column"), arS, asr5, 170, 340, fonts)),
+            Item("script C", draw("script", dflt("script"), ar, day.getLong("maghrib") - 40 * mn, 340, 90, fonts)),
+            Item("script C isha", draw("script", dflt("script"), ar, day.getLong("isha") - 40 * mn, 340, 90, fonts))))
         // the sky background pinned to a moment of the day (0.18.9), all at the same real time (before Maghrib)
         val now9 = day.getLong("maghrib") - 84 * mn
         sheet("sheet-23-sky-pin", listOf("", "fajr:20", "sunrise:8", "dhuhr:0", "asr:40", "maghrib:6", "isha:90").flatMap { sp -> listOf(

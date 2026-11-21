@@ -19,7 +19,14 @@ class WData(val o: JSONObject) {
     private val iq = o.optJSONObject("iq") ?: JSONObject()
     private val days: List<JSONObject> = o.optJSONArray("days").let { a -> if (a == null) emptyList() else (0 until a.length()).mapNotNull { a.optJSONObject(it) } }
 
-    fun name(k: String): String = names.optString(k, k)
+    /** Friday: «الجمعة» in place of «الظهر» (the page's switch, on by default). */
+    val fri = o.optInt("fri", 1) == 1
+    /** After the adhan: the iqama countdown ("iq") or the time since the adhan ("since"). */
+    val since = o.optString("ia") == "since"
+    /** Set before drawing: the day whose dhuhr the widget is about (today until asr, then tomorrow). */
+    var dhuhrDay = 0L
+    fun isFri(ms: Long) = Calendar.getInstance(KSA).apply { timeInMillis = ms }.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
+    fun name(k: String): String = if (k == "dhuhr" && fri && dhuhrDay > 0 && isFri(dhuhrDay)) (if (ar) "الجمعة" else "Jumuah") else names.optString(k, k)
     fun iqMin(k: String): Int = iq.optInt(k, 20)
 
     /** The day (Saudi date) that contains [now]; null when the pushed month has run out. */
@@ -34,7 +41,9 @@ class WData(val o: JSONObject) {
     data class Ev(val k: String, val at: Long, val iqAt: Long = 0L) { val target get() = if (iqAt > 0) iqAt else at }
     /** What the widgets are about: after the adhan, until the iqama (if that countdown is on), the same prayer; else the next one. */
     fun hero(now: Long): Ev? {
-        if (o.optInt("iqc", 1) == 1) prev(now)?.let { p -> val iq = p.at + iqMin(p.k) * 60_000L; if (now < iq) return Ev(p.k, p.at, iq) }
+        // no iqama wait on Friday's dhuhr: it follows the khutbah
+        if (o.optInt("iqc", 1) == 1) prev(now)?.let { p -> if (p.k == "dhuhr" && fri && isFri(p.at)) return next(now)
+            val iq = p.at + iqMin(p.k) * 60_000L; if (now < iq) return Ev(p.k, p.at, iq) }
         return next(now)
     }
 
@@ -117,7 +126,8 @@ class WData(val o: JSONObject) {
     fun dur(ms: Long): String {
         val m = maxOf(0L, (ms + 59_999) / 60_000); val h = m / 60; val mi = m % 60
         return digits(when (cf) {
-            "clock" -> "$h:" + mi.toString().padStart(2, '0')
+            // under an hour, minutes alone ("0:30" could read as seconds)
+            "clock" -> if (h == 0L) (if (ar) "$mi د" else "$mi min") else "$h:" + mi.toString().padStart(2, '0')
             "m" -> if (ar) pl(m, "دقيقة", "دقيقتين", "دقائق", "دقيقة") else "$m min"
             "text" -> if (!ar) listOfNotNull(if (h > 0) "$h hour" + (if (h > 1) "s" else "") else null, if (mi > 0 || h == 0L) "$mi minute" + (if (mi != 1L) "s" else "") else null).joinToString(" ")
                 else {
@@ -134,7 +144,10 @@ class WData(val o: JSONObject) {
         })
     }
     fun inTxt(ms: Long) = (if (ar) "بعد " else "in ") + dur(ms)
-    fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now) else inTxt(e.at - now)
+    fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (since) sinceTxt(now - e.at) else (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now)) else inTxt(e.at - now)
+    fun sinceTxt(ms: Long) = if (ar) "مضى على الأذان " + dur(ms) else dur(ms) + " since the adhan"
+    /** The time a countdown shows: to the iqama or the next prayer, or (the user's pick) the time since the adhan. */
+    fun leftMs(e: Ev, now: Long) = if (e.iqAt > 0 && since) now - e.at else e.target - now
     fun leftTxt(ms: Long) = (if (ar) "باقي " else "") + dur(ms) + (if (ar) "" else " left")
 
     companion object {

@@ -178,8 +178,14 @@ object WidgetArt {
         if (p.measureText(TATWEEL.toString()) < 2f) return s
         // the user's level, 1 … 7: 7 fills the space up to the frame, never past it
         val goal = w0 + (target - w0) * level.coerceIn(0, 7) / 7f
-        val at = spots.last() + 1; var out = s
-        for (n in 1..80) { val t = s.substring(0, at) + TATWEEL.toString().repeat(n) + s.substring(at); if (p.measureText(t) > goal) break; out = t }
+        // split between two joints, the first and the last after «ال» (the user's pick, like the page)
+        val use = spots.filter { !(s.startsWith("ال") && it < 2) }.ifEmpty { spots }
+        val at = if (use.size > 1) listOf(use.first(), use.last()) else listOf(use.first())
+        fun build(n: Int): String { val sb = StringBuilder()
+            for (i in s.indices) { sb.append(s[i]); val k = at.indexOf(i); if (k >= 0) sb.append(TATWEEL.toString().repeat(if (k == 0) (n + at.size - 1) / at.size else n / at.size)) }
+            return sb.toString() }
+        var out = s
+        for (n in 1..80) { val t = build(n); if (p.measureText(t) > goal) break; out = t }
         return out
     }
     /** Room kept clear on each side of a stretched name: at least 4 real dp, even at the smallest fit scale (.8). */
@@ -268,7 +274,7 @@ object WidgetArt {
 
     // ---------- entry ----------
     fun render(type: String, style: WStyle, d: WData?, now: Long, wPx: Int, hPx: Int, dpPx: Float, fonts: WFonts): Bitmap {
-        d?.let { it.cf = style.cf.ifEmpty { it.appCf } }
+        d?.let { it.cf = style.cf.ifEmpty { it.appCf }; it.dhuhrDay = it.day(now)?.let { dd -> if (now < dd.optLong("asr")) dd.optLong("dhuhr") else it.day(now, 1)?.optLong("dhuhr") } ?: now }
         val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp)
         val day = d?.day(now)
@@ -288,7 +294,7 @@ object WidgetArt {
     data class Btns(val prayed: Boolean = false, val muted: Boolean = false, val reminded: Boolean = false, val canPray: Boolean = true, val canRemind: Boolean = true)
 
     fun renderActions(style: WStyle, d: WData?, now: Long, wPx: Int, hPx: Int, dpPx: Float, fonts: WFonts, b: Btns): Bitmap {
-        d?.let { it.cf = style.cf.ifEmpty { it.appCf } }
+        d?.let { it.cf = style.cf.ifEmpty { it.appCf }; it.dhuhrDay = it.day(now)?.let { dd -> if (now < dd.optLong("asr")) dd.optLong("dhuhr") else it.day(now, 1)?.optLong("dhuhr") } ?: now }
         val bmp = Bitmap.createBitmap(max(1, wPx), max(1, hPx), Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp); val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }
@@ -404,7 +410,7 @@ object WidgetArt {
         val col = if (x.st.kind == "dyn") x.st.acc else c(RC[nx.k] ?: "#E8C15A")
         cv.drawArc(ov, -90f, -360f * prog * x.dir, false, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = sw; strokeCap = Paint.Cap.ROUND })
         val k = s / 170f
-        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(nx.target - x.now) else "")
+        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(x.d.leftMs(nx, x.now)) else "")
         val top = if (nx.iqAt > 0) (if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
         if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
         val np = tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k }; val ny = cy + (if (sub.isEmpty()) 16 else 9) * k; val n0 = x.d.name(nx.k)
@@ -579,7 +585,7 @@ object WidgetArt {
             cv.drawRoundRect(RectF(8 * u, y, w - 8 * u, y + 28 * u), 12 * u, 12 * u, paint(x.st.line))
             val p = tp(x, x.plex, 12.5f, x.st.fg).apply { textSize = 12.5f * u }; val pb = tp(x, x.plexB, 12.5f, x.st.fg).apply { textSize = 12.5f * u }
             text(cv, x, (if (x.d.ar) "إقامة " else "Iqama ") + x.d.name(nx.k) + " " + x.d.clock(iq), startX(x, 18 * u), y + 19 * u, p)
-            text(cv, x, x.d.inTxt(iq - x.now), endX(x, 18 * u), y + 19 * u, pb, false)
+            text(cv, x, if (x.d.since && x.now in nx.at until iq) x.d.sinceTxt(x.now - nx.at) else x.d.inTxt(iq - x.now), endX(x, 18 * u), y + 19 * u, pb, false)
         }
     }
 
@@ -604,7 +610,7 @@ object WidgetArt {
         val nx = x.next ?: return; val k = s / 150f
         val l2 = ArrayList<Pair<String, Paint>>()
         if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }
-        if (x.style.has("count")) l2 += x.d.dur(nx.target - x.now) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
+        if (x.style.has("count")) l2 += x.d.dur(x.d.leftMs(nx, x.now)) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
         var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
         val np = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k }; val n0 = x.d.name(nx.k)
         // stretched, it stays inside the dial's inner edge, at the height of its letters
