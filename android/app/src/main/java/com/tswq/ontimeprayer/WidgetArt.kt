@@ -507,60 +507,74 @@ object WidgetArt {
     private fun table(cv: Canvas, x: X) {
         card(cv, x); val nx = x.next ?: return
         val rows = x.style.rows; val showT = "times" in rows || rows.none { it in setOf("city", "date", "count", "iqama") }
-        val hasHead = "city" in rows || "date" in rows
-        val subRow = "exit" in rows || "count" !in rows
-        val need = (if (hasHead) 22f else 0f) + (if ("count" in rows) 34f else 0f) + (if (showT) (if (subRow) 60f else 48f) else 0f) + (if ("iqama" in rows) 32f else 0f) + 8f
+        val hasHead = "city" in rows || "date" in rows; val hasCount = "count" in rows; val hasIq = "iqama" in rows
+        val subRow = "exit" in rows || !hasCount
+        // the city and the date on one line: on top at the end (over the countdown, the default), on top in the middle, or at the bottom (0.20)
+        val headAt = if (!hasHead) "" else x.style.hp.takeIf { it == "c" || it == "b" } ?: "l"
+        val need = (if (hasHead) 22f else 0f) + (if (hasCount) 34f else 0f) + (if (showT) (if (subRow) 60f else 48f) else 0f) + (if (hasIq) 32f else 0f) + 8f
         val k = minOf(1.8f, x.h / x.u / need, x.w / x.u / 240f); val u = x.u * k
-        var y = (x.h - need * u) / 2 + 4 * u; val w = x.w; val pad = 12 * u
+        val w = x.w; val pad = 12 * u; val hb = Rect()
         // after Isha the row shows tomorrow
         val tday = if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day
         fun tt(k: String) = tday.optLong(k)
-        // where the city/date ink ends: the headline may grow up to it, never into it
-        var headBot = 0f; val hb = Rect()
-        if (hasHead) {
-            val p = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
-            val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
-            if ("city" in rows) { text(cv, x, x.d.city, startX(x, pad), y + 14 * u, p); p.getTextBounds(x.d.city, 0, x.d.city.length, hb); headBot = y + 14 * u + hb.bottom }
-            if ("date" in rows) { val ds = x.d.digits(date); fit(p, ds, w * .62f); text(cv, x, ds, if ("city" in rows) endX(x, pad) else startX(x, pad), y + 14 * u, p, "city" !in rows)
-                p.getTextBounds(ds, 0, ds.length, hb); headBot = max(headBot, y + 14 * u + hb.bottom) }
-            y += 22 * u
-        }
-        if ("count" in rows) {
-            // the headline: the countdown at the end, the name from the start up to it, as tall as the free band
-            // between the city/date line (or the frame) and the times row, the iqama bar (or the frame) allows,
-            // at least 6 dp from either line; those stay put
-            val edge = max(7 * u, kSafe(x)); val gap = max(12 * u, x.dp(12f)); val m6 = x.dp(6f)
-            val top = if (hasHead) headBot + m6 else edge
-            val bot = max(top + 6f, if (showT || "iqama" in rows) y + 34 * u - m6 else x.h - edge)
-            // one size for every prayer (the five names' ink together), so it doesn't jump when the prayer changes
-            val np = tp(x, x.nameTf, 22f, x.st.fg).apply { textSize = 100f }; var t0 = 0f; var b0 = 0f
+        // ---- measure: every block by its ink, so the margins look the same above and below
+        val hp = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
+        val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
+        val hs = listOfNotNull(x.d.city.takeIf { "city" in rows && it.isNotEmpty() }, x.d.digits(date).takeIf { "date" in rows }).joinToString(" · ")
+        var hTop = 0f; var hH = 0f
+        if (hasHead) { fit(hp, hs, w - 2 * pad); hp.getTextBounds(hs, 0, hs.length, hb); hTop = hb.top.toFloat(); hH = (hb.bottom - hb.top).toFloat() }
+        val gH = 7 * u; val gR = 6 * u; val gI = 6 * u
+        val rowH = if (subRow) 52 * u else 40 * u; val iqH = 28 * u
+        // the gold cell of the times row reaches past its text; it counts half its padding, so the row's text sits as far from the frame as the header
+        val rowIn = 3.5f * u
+        val below = listOfNotNull(if (showT) rowH - 2 * rowIn else null, if (hasIq) iqH else null)
+        val fixed = (if (hasHead) hH + gH else 0f) + below.sum() + (if (below.size > 1) gI - rowIn else 0f) + (if (hasCount && below.isNotEmpty()) gR - rowIn else 0f)
+        val margin = max(8 * u, kSafe(x))
+        // the headline: the name sized by the five names' ink (one size for every prayer, so it doesn't jump),
+        // growing into the height the widget has spare (a share of it, so it never swallows the frame)
+        var bandH = 0f; val np = tp(x, x.nameTf, 22f, x.st.fg); var t0 = 0f; var b0 = 0f
+        val cp = tp(x, x.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc)
+        val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
+        var name = ""; var ps = pad
+        if (hasCount) {
+            np.textSize = 100f
             for (s in (WData.PRAY + nx.k).distinct().map { x.d.name(it) } + TATWEEL.toString()) { np.getTextBounds(s, 0, s.length, hb); t0 = min(t0, hb.top.toFloat()); b0 = max(b0, hb.bottom.toFloat()) }
-            np.textSize = max(6f, 100f * (bot - top) / (b0 - t0 + (if (np.heavy) 3.5f else 0f)))
-            val cp = tp(x, x.plexB, 21f, if (x.st.light) c("#0B4D3B") else x.st.acc).apply { textSize = max(21f * u, np.textSize * .5f) }
-            val inS = x.d.inTxt(nx, x.now) + if (!showT) "  " + x.d.clock(nx.at) else ""
-            fit(cp, inS, (w - 2 * pad) * .46f)
+            val inkH = b0 - t0 + (if (np.heavy) 3.5f else 0f)
+            val avail = x.h - 2 * margin - fixed; val nominal = 26 * u
+            bandH = max(8 * u, if (avail > nominal) nominal + min((avail - nominal) * .6f, 12 * u) else avail)
+            np.textSize = max(6f, 100f * bandH / inkH)
+            cp.textSize = max(21f * u, np.textSize * .5f); fit(cp, inS, (w - 2 * pad) * .46f)
             // the name's room: from the start padding (more if its ink pokes past its start) to the countdown, less the gap
             val n0 = x.d.name(nx.k); np.getTextBounds(n0, 0, n0.length, hb)
-            val ps = max(pad, kSafe(x) + max(0f, if (x.rtl) hb.right - np.measureText(n0) else -hb.left.toFloat()))
-            val room = w - ps - pad - cp.measureText(inS) - gap
-            // too wide as it is: smaller, not stretched
+            ps = max(pad, kSafe(x) + max(0f, if (x.rtl) hb.right - np.measureText(n0) else -hb.left.toFloat()))
+            val room = w - ps - pad - cp.measureText(inS) - max(12 * u, x.dp(12f))
+            // too wide as it is: smaller, not stretched, and the band shrinks with it (the spare goes back to the margins)
             val wide = inkW(np, n0) > room
             while (inkW(np, n0) > room && np.textSize > 6f) np.textSize *= .97f
-            val name = if (wide) n0 else kashName(x, np, n0, room)
-            // sized by all five names, placed by this one's own ink: the font's ascent and the other names' tall letters
-            // left it high under the date line, with the space below it
-            np.getTextBounds(name, 0, name.length, hb); val base = (top + bot) / 2 - (hb.top + hb.bottom) / 2f
+            if (wide) bandH = inkH * np.textSize / 100f
+            name = if (wide) n0 else kashName(x, np, n0, room)
+        }
+        val total = fixed + bandH
+        // ---- place, from the top: the rest of the height is shared equally above and below
+        var y = (x.h - total) / 2
+        fun head(top: Float) { val base = top - hTop
+            if (headAt == "l") text(cv, x, hs, endX(x, pad), base, hp, false) else center(cv, hs, w / 2, base, hp) }
+        if (hasHead && headAt != "b") { head(y); y += hH + gH }
+        if (hasCount) {
+            // sized by all five names, placed by this one's own ink, in the middle of the band
+            np.getTextBounds(name, 0, name.length, hb); val base = y + bandH / 2 - (hb.top + hb.bottom) / 2f
             // the countdown on the same baseline, smaller should its ink ever pass the band
             cp.getTextBounds(inS, 0, inS.length, hb)
-            while ((base + hb.top < top || base + hb.bottom > bot) && cp.textSize > 6f) { cp.textSize *= .95f; cp.getTextBounds(inS, 0, inS.length, hb) }
+            while ((base + hb.top < y - 2 * u || base + hb.bottom > y + bandH + 2 * u) && cp.textSize > 6f) { cp.textSize *= .95f; cp.getTextBounds(inS, 0, inS.length, hb) }
             text(cv, x, name, startX(x, ps), base, np)
             text(cv, x, inS, endX(x, pad), base, cp, false)
-            y += 34 * u
+            y += bandH + (if (below.isNotEmpty()) gR - rowIn else 0f)
         }
         if (showT) {
+            y -= rowIn
             // the five prayers; sunrise and Duha only if the user adds them
             val keys = listOf("fajr") + (if ("sunrise" in rows) listOf("sunrise") else emptyList()) + (if ("duha" in rows) listOf("duha") else emptyList()) + listOf("dhuhr", "asr", "maghrib", "isha")
-            val n = keys.size; val cw = (w - 16 * u) / n; val rowH = if (subRow) 52 * u else 40 * u
+            val n = keys.size; val cw = (w - 16 * u) / n
             val ex = tday.optJSONObject("ex")
             for ((i, key) in keys.withIndex()) {
                 val col = if (x.rtl) i else n - 1 - i; val left = w - 8 * u - (col + 1) * cw; val ccx = left + cw / 2
@@ -572,21 +586,23 @@ object WidgetArt {
                 fit(p2, x.d.clock(tt(key)), cw - 4 * u); fit(p1, x.d.name(key), cw - 4 * u)
                 center(cv, x.d.name(key), ccx, y + 15 * u, p1)
                 center(cv, x.d.clock(tt(key)), ccx, y + 33 * u, p2)
-                if ("exit" in rows || (on && "count" !in rows)) {
-                    val sub = if (on && "count" !in rows) x.d.inTxt(nx, x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
+                if ("exit" in rows || (on && !hasCount)) {
+                    val sub = if (on && !hasCount) x.d.inTxt(nx, x.now) else ex?.optJSONArray(key)?.let { if (it.length() > 0) (if (x.d.ar) "حتى " else "to ") + x.d.clock(it.getJSONObject(0).optLong("at")) else "" } ?: ""
                     val p3 = tp(x, if (on) x.plexB else x.plex, 9.5f, fg, !on && x.st.shadow).apply { textSize = 9.5f * u; this.alpha = if (on) 255 else if (past) 90 else 180 }
                     fit(p3, sub, cw - 6 * u); center(cv, sub, ccx, y + 47 * u, p3)
                 }
             }
-            y += rowH + 8 * u
+            y += rowH - rowIn + (if (hasIq) gI - rowIn else 0f)
         }
-        if ("iqama" in rows) {
+        if (hasIq) {
             val iq = nx.at + x.d.iqMin(nx.k) * 60_000L
-            cv.drawRoundRect(RectF(8 * u, y, w - 8 * u, y + 28 * u), 12 * u, 12 * u, paint(x.st.line))
+            cv.drawRoundRect(RectF(8 * u, y, w - 8 * u, y + iqH), 12 * u, 12 * u, paint(x.st.line))
             val p = tp(x, x.plex, 12.5f, x.st.fg).apply { textSize = 12.5f * u }; val pb = tp(x, x.plexB, 12.5f, x.st.fg).apply { textSize = 12.5f * u }
             text(cv, x, (if (x.d.ar) "إقامة " else "Iqama ") + x.d.name(nx.k) + " " + x.d.clock(iq), startX(x, 18 * u), y + 19 * u, p)
-            text(cv, x, if (x.d.since && x.now in nx.at until iq) x.d.sinceTxt(x.now - nx.at) else x.d.inTxt(iq - x.now), endX(x, 18 * u), y + 19 * u, pb, false)
+            text(cv, x, if (x.d.since && x.now in nx.at until iq) x.d.adhanSince(x.now - nx.at) else x.d.inTxt(iq - x.now), endX(x, 18 * u), y + 19 * u, pb, false)
+            y += iqH
         }
+        if (hasHead && headAt == "b") head(y + gH)
     }
 
     // ---------- 6. sky clock (2×2) and moon (2×2) ----------

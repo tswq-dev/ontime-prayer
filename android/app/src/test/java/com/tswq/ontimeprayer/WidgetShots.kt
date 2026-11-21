@@ -162,6 +162,18 @@ class WidgetShots {
         // Friday's name and no iqama wait; the time since the adhan; kashida split between two joints (0.19)
         val friD = ar.day(day.getLong("dhuhr") + WData.DAY)!!; val fdh = friD.getLong("dhuhr")
         val arS = WData(JSONObject(all.getJSONObject("ar").toString()).put("ia", "since")); val asr5 = day.getLong("asr") + 5 * mn
+        // the table's city and date on one line (0.20): at the end on top (default), in the middle on top, at the bottom;
+        // with and without the exit times, in three heights; the spare height goes to the headline and equally above and below
+        val tz5 = day.getLong("dhuhr") - 317 * mn
+        val thead = setOf("city", "date", "count", "times")
+        sheet("sheet-25-table-head", listOf("l", "c", "b").flatMap { hp -> listOf(
+            Item("$hp", draw("table", dflt("table").copy(rows = thead, hp = hp), ar, tz5, 340, 170, fonts)),
+            Item("$hp exit", draw("table", dflt("table").copy(rows = thead + "exit", hp = hp), ar, tz5, 340, 170, fonts)),
+            Item("$hp 4x1", draw("table", dflt("table").copy(rows = thead, hp = hp), ar, tz5, 340, 110, fonts)),
+            Item("$hp 4x3", draw("table", dflt("table").copy(rows = thead + "iqama", hp = hp), ar, tz5, 340, 250, fonts))) } +
+            listOf(Item("l en", draw("table", dflt("table").copy(rows = thead, hp = "l"), en, tz5, 340, 170, fonts)),
+                Item("l times only", draw("table", dflt("table").copy(rows = setOf("times", "exit")), ar, tz5, 340, 170, fonts)),
+                Item("l city only", draw("table", dflt("table").copy(rows = setOf("city", "count", "times")), ar, tz5, 340, 170, fonts))))
         sheet("sheet-24-friday-since", listOf(
             Item("table fri -30m", draw("table", dflt("table"), ar, fdh - 30 * mn, 340, 170, fonts)),
             Item("column fri +5m", draw("column", dflt("column"), ar, fdh + 5 * mn, 170, 340, fonts)),

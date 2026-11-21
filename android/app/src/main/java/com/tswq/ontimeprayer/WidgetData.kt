@@ -145,7 +145,10 @@ class WData(val o: JSONObject) {
     }
     fun inTxt(ms: Long) = (if (ar) "بعد " else "in ") + dur(ms)
     fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (since) sinceTxt(now - e.at) else (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now)) else inTxt(e.at - now)
-    fun sinceTxt(ms: Long) = if (ar) "مضى على الأذان " + dur(ms) else dur(ms) + " since the adhan"
+    /** after the adhan, next to the prayer's name: «العصر منذ ٥ د», as «الظهر بعد ٥:١٧» before it (0.20) */
+    fun sinceTxt(ms: Long) = if (ar) "منذ " + dur(ms) else dur(ms) + " ago"
+    /** on its own (the iqama bar, beside the iqama's time): the adhan named */
+    fun adhanSince(ms: Long) = if (ar) "الأذان منذ " + dur(ms) else "Adhan " + dur(ms) + " ago"
     /** The time a countdown shows: to the iqama or the next prayer, or (the user's pick) the time since the adhan. */
     fun leftMs(e: Ev, now: Long) = if (e.iqAt > 0 && since) now - e.at else e.target - now
     fun leftTxt(ms: Long) = (if (ar) "باقي " else "") + dur(ms) + (if (ar) "" else " left")
@@ -181,11 +184,13 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
                   /** the countdown's format ("" follows the app's own) */
                   val cf: String = "",
                   /** the sky background pinned to a moment of the day, "maghrib:6" (a prayer and minutes from it); "" follows the time */
-                  val sp: String = "") {
+                  val sp: String = "",
+                  /** where the table puts the city and the date: "l" on top over the countdown, "c" on top in the middle, "b" at the bottom (0.20) */
+                  val hp: String = "l") {
     val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf).put("sp", sp)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf).put("sp", sp).put("hp", hp)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -230,7 +235,8 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
                      else if (j.optInt("kv") >= (if (type == "table") 3 else 2) && j.has("kl")) j.optInt("kl", d.kl).coerceIn(0, 7) else d.kl
             return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), kl,
                 j.optString("cf", "").takeIf { it in CFS } ?: "",
-                j.optString("sp", "").takeIf { SPR.matches(it) } ?: "")
+                j.optString("sp", "").takeIf { SPR.matches(it) } ?: "",
+                j.optString("hp", "l").takeIf { it in setOf("l", "c", "b") } ?: "l")
         }
     }
 }
