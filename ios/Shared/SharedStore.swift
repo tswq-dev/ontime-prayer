@@ -8,7 +8,7 @@ enum SharedStore {
 
     /// The group as built, then one derived from the bundle id (installers that rename the app also rename its group).
     static var groupIDs: [String] {
-        var ids = ["group.com.tswq.ontime"]
+        var ids = ["group.com.itqan.ontime"]
         if var b = Bundle.main.bundleIdentifier {
             if b.hasSuffix(".widgets") { b = String(b.dropLast(".widgets".count)) }
             let g = "group." + b

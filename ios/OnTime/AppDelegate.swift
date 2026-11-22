@@ -4,7 +4,7 @@ import BackgroundTasks
 
 /// Notifications (what happens when one comes or is tapped) and the background refresh that keeps them coming.
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    static let refreshId = "com.tswq.ontime.refresh"
+    static let refreshId = "com.itqan.ontime.refresh"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self

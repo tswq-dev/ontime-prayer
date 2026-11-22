@@ -1,8 +1,9 @@
 # «الركن الثاني» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
 # with local notifications for the adhan. Generate the Xcode project with `xcodegen generate`.
+# CI signs for TestFlight with profiles it makes itself (ios/ci/asc.py) and passes their names as CI_PROFILE_*.
 name: OnTime
 options:
-  bundleIdPrefix: com.tswq
+  bundleIdPrefix: com.itqan
   developmentLanguage: ar
   deploymentTarget:
     iOS: "17.0"
@@ -35,12 +36,14 @@ targets:
         buildPhase: resources
       - path: ../android/app/src/main/res/raw/adhan_takbir_qatami.mp3
         buildPhase: resources
+    # a shared scheme, for `xcodebuild archive` on CI
+    scheme: {}
     dependencies:
       - target: OnTimeWidgets
     entitlements:
       path: OnTime/OnTime.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.tswq.ontime]
+        com.apple.security.application-groups: [group.com.itqan.ontime]
     info:
       path: OnTime/Info.plist
       properties:
@@ -50,12 +53,13 @@ targets:
           UIColorName: LaunchBg
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [audio, fetch]
-        BGTaskSchedulerPermittedIdentifiers: [com.tswq.ontime.refresh]
+        BGTaskSchedulerPermittedIdentifiers: [com.itqan.ontime.refresh]
         NSLocationWhenInUseUsageDescription: نحدد مدينتك من موقعك لنحسب أوقات الصلاة بدقة. الموقع يبقى على جوالك.
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.tswq.ontime
+        PRODUCT_BUNDLE_IDENTIFIER: com.itqan.ontime
+        PROVISIONING_PROFILE_SPECIFIER: $(CI_PROFILE_APP)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
 
@@ -80,7 +84,7 @@ targets:
     entitlements:
       path: OnTimeWidgets/OnTimeWidgets.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.tswq.ontime]
+        com.apple.security.application-groups: [group.com.itqan.ontime]
     info:
       path: OnTimeWidgets/Info.plist
       properties:
@@ -90,7 +94,8 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.tswq.ontime.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.itqan.ontime.widgets
+        PROVISIONING_PROFILE_SPECIFIER: $(CI_PROFILE_WIDGET)
         TARGETED_DEVICE_FAMILY: "1"
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES

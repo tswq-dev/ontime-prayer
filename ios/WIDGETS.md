@@ -1,9 +1,9 @@
 # ويدجت الآيفون (المرحلة 2)
 
-امتداد WidgetKit اسمه `OnTimeWidgets` (`com.tswq.ontime.widgets`)، مضمَّن في التطبيق.
+امتداد WidgetKit اسمه `OnTimeWidgets` (`com.itqan.ontime.widgets`)، مضمَّن في التطبيق.
 
 ## من وين تجي البيانات
-- الصفحة ترسل شهر من الأيام (`buildWidgetData()` → `Android.widgetData`). التطبيق يحفظه في App Group `group.com.tswq.ontime` (`ios/Shared/SharedStore.swift`)، ويعيد تحميل الويدجت بس لو تغيّر.
+- الصفحة ترسل شهر من الأيام (`buildWidgetData()` → `Android.widgetData`). التطبيق يحفظه في App Group `group.com.itqan.ontime` (`ios/Shared/SharedStore.swift`)، ويعيد تحميل الويدجت بس لو تغيّر.
 - الويدجت ما تحسب أوقات أبداً. تقرأ الأيام وتسوي جدول زمني بنقطة عند كل صلاة وكل إقامة (لو عد الإقامة شغّال) والشروق ونص الليل، لمدة 36 ساعة. العد التنازلي يمشي لحاله بدون إعادة تحميل (`Text(timerInterval:)`).
 - الأوقات بتوقيت السعودية مثل الصفحة، واللغة والأرقام وصيغة 12/24 حسب اختيار المستخدم في التطبيق.
 
