@@ -2,7 +2,7 @@
 
 <img src="docs/assets/logo.svg" width="96" height="96" alt="On Time Prayer logo">
 
-# On Time Prayer — على وقتها
+# On Time Prayer — الركن الثاني
 
 **Prayer times exactly as the official Umm al-Qura calendar website shows them: to the minute, for any date and any coordinates, offline.**
 
@@ -14,7 +14,7 @@
 
 </div>
 
-> The name comes from the hadith of ʿAbdullah ibn Masʿud: *I asked the Prophet ﷺ: "Which deed is most beloved to Allah?" He said:
+> The Arabic name, «الركن الثاني» (*the second pillar*), is prayer: the second pillar of Islam. The motto comes from the hadith of ʿAbdullah ibn Masʿud: *I asked the Prophet ﷺ: "Which deed is most beloved to Allah?" He said:
 > "Prayer on its time"* (*al-ṣalātu ʿalā waqtihā*). Sahih al-Bukhari 527 and Sahih Muslim 85; literal translation.
 
 ## At a glance
@@ -25,7 +25,7 @@
 
 - **An open formula** with no dependencies, in five languages: Python, JavaScript, Kotlin (Android), Swift (iOS) and Dart (Flutter),
   each checked automatically on all the data, plus a complete specification for porting it to any other language.
-- **[The On Time Prayer website](https://ontime-prayer.pages.dev/?lang=en)** («على وقتها»), in Arabic and English, computes the times on the device, works offline and installs
+- **[The On Time Prayer website](https://ontime-prayer.pages.dev/?lang=en)** («الركن الثاني»), in Arabic and English, computes the times on the device, works offline and installs
   on a phone like an app.
 - **Verifiable**: every answer of the official Umm al-Qura calendar website we used is in this repository, and one script re-runs the
   whole check.
@@ -213,7 +213,7 @@ node js/verify.js           # the same check, JavaScript
 | `umm_al_qura_times.py` | Reference implementation (Python) |
 | `js/` | JavaScript port and its full check |
 | `ports/` | Kotlin, Swift and Dart ports, each with a full check |
-| `site/` | The On Time Prayer website («على وقتها») |
+| `site/` | The On Time Prayer website («الركن الثاني») |
 | `ALGORITHM.md` | Full specification for porting |
 | `METHOD.md` | Research log: every round, dead ends included |
 | `data/vectors.csv.gz` | Every server answer used: one row per date, place and time zone |

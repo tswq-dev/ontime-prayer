@@ -32,7 +32,7 @@ body:
     validations: { required: true }
   - type: input
     id: ours
-    attributes: { label: "ما تعطيه المعادلة أو موقع «على وقتها» / Given by this formula or the «على وقتها» website", placeholder: "05:16" }
+    attributes: { label: "ما تعطيه المعادلة أو موقع «الركن الثاني» / Given by this formula or the «الركن الثاني» website", placeholder: "05:16" }
   - type: textarea
     id: notes
     attributes: { label: "ملاحظات / Notes" }
