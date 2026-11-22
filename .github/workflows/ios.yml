@@ -50,7 +50,8 @@ jobs:
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          # a clean PEM (the secret may carry Windows line endings or spaces from Notepad, which Xcode rejects)
+          python3 -c 'import os,re,textwrap; b="".join(re.findall(r"[A-Za-z0-9+/=]+", re.sub(r"-----[^-]+-----", "", os.environ["ASC_KEY_P8"]))); print("-----BEGIN PRIVATE KEY-----\n" + "\n".join(textwrap.wrap(b, 64)) + "\n-----END PRIVATE KEY-----")' > "$RUNNER_TEMP/AuthKey.p8"
           BUILD=$(( ${{ github.run_number }} + 100 ))
           cd ios
           set -o pipefail
