@@ -314,7 +314,7 @@ object WidgetArt {
     private fun empty(cv: Canvas, w: Float, h: Float, u: Float, f: WFonts, ar: Boolean) {
         cv.drawRoundRect(RectF(0f, 0f, w, h), 22 * u, 22 * u, paint().apply { shader = LinearGradient(0f, 0f, w * .35f, h, c("#11594A"), c("#0A382C"), Shader.TileMode.CLAMP) })
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = f.plexB; textSize = 13 * u; color = c("#F4ECDC"); textAlign = Paint.Align.CENTER }
-        val s = if (ar) "افتح «على وقتها» مرة لتظهر الأوقات" else "Open On Time once to show the times"
+        val s = if (ar) "افتح «الركن الثاني» مرة لتظهر الأوقات" else "Open On Time once to show the times"
         fit(p, s, w - 24 * u); cv.drawText(s, w / 2, h / 2 + p.textSize * .35f, p)
     }
 

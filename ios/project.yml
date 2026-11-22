@@ -1,4 +1,4 @@
-# «على وقتها» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
+# «الركن الثاني» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
 # with local notifications for the adhan. Generate the Xcode project with `xcodegen generate`.
 name: OnTime
 options:
@@ -9,8 +9,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.20.0"
-    CURRENT_PROJECT_VERSION: "31"
+    MARKETING_VERSION: "0.21.0"
+    CURRENT_PROJECT_VERSION: "32"
 targets:
   OnTime:
     type: application
@@ -44,7 +44,7 @@ targets:
     info:
       path: OnTime/Info.plist
       properties:
-        CFBundleDisplayName: على وقتها
+        CFBundleDisplayName: الركن الثاني
         CFBundleDevelopmentRegion: ar
         UILaunchScreen:
           UIColorName: LaunchBg
@@ -84,7 +84,7 @@ targets:
     info:
       path: OnTimeWidgets/Info.plist
       properties:
-        CFBundleDisplayName: على وقتها
+        CFBundleDisplayName: الركن الثاني
         CFBundleDevelopmentRegion: ar
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

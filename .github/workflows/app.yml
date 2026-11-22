@@ -59,7 +59,7 @@ jobs:
         if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
         with:
           tag_name: app-${{ github.run_number }}
-          name: "على وقتها - نسخة تجريبية ${{ github.run_number }}"
+          name: "الركن الثاني - نسخة تجريبية ${{ github.run_number }}"
           body: "حمّل ملف ontime-prayer.apk وثبّته على جوال أندرويد."
           files: ontime-prayer.apk
           prerelease: true

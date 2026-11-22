@@ -455,7 +455,7 @@ object Alerts {
         if (last <= 0L || last - now > 3 * 86_400_000L) { if (p.getLong("staleAt", 0L) != 0L) { p.edit().putLong("staleAt", 0L).apply(); cancel(ctx, STALE_CODE) }; return }
         if (now - p.getLong("staleAt", 0L) < 86_400_000L) return
         p.edit().putLong("staleAt", now).apply(); channels(ctx)
-        notify(ctx, CH_REMIND, if (ar) "افتح «على وقتها» مرة" else "Open On Time once",
+        notify(ctx, CH_REMIND, if (ar) "افتح «الركن الثاني» مرة" else "Open On Time once",
             if (ar) "مواقيت الأذان المحفوظة تخلص قريب. افتح التطبيق يحدّثها لشهر جديد." else "The saved adhan times run out soon. Open the app to renew them for another month.", STALE_CODE)
     }
 
