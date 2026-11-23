@@ -224,10 +224,17 @@ class MainActivity : ComponentActivity() {
                     tries += Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"))
                     tries += Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"))
                 }
+                // "ask": the system's own one-tap dialog ("Stop optimising battery usage?"), as YouTube does (0.22)
+                if (which == "ask" && Build.VERSION.SDK_INT >= 23) tries += Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg)
                 if (which == "list") tries += Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                 tries += Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
                 for (i in tries) if (runCatching { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) break
             }
+        }
+        // the privacy page, in the phone's browser (the app itself has no internet permission); only our own site
+        @JavascriptInterface fun openUrl(u: String) {
+            if (!u.startsWith("https://ontime-prayer.pages.dev/")) return
+            main.post { runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
         }
         @JavascriptInterface fun soundName(voice: String): String =
             Scheduler.prefs(applicationContext).getString("soundName_$voice", "") ?: ""

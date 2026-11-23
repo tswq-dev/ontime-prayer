@@ -232,10 +232,10 @@ object Alerts {
         return b
     }
 
-    /** "بنذكّرك 5:56 ص · يخرج وقت الفجر 6:16 ص": when the reminder rings, and when the time ends. */
+    /** "سنذكّرك 5:56 ص · يخرج وقت الفجر 6:16 ص": when the reminder rings, and when the time ends. */
     private fun setText(r: JSONObject): String {
         val at = Exits.clock(r.optLong("at"), r); val ex = Exits.next(r)
-        return if (Exits.ar(r)) "بنذكّرك $at" + (if (ex != null) " · يخرج ${ex.name} ${ex.clock}" else "")
+        return if (Exits.ar(r)) "سنذكّرك $at" + (if (ex != null) " · يخرج ${ex.name} ${ex.clock}" else "")
                else "Reminder at $at" + (if (ex != null) " · ${ex.name} ends at ${ex.clock}" else "")
     }
 
@@ -243,7 +243,7 @@ object Alerts {
     private fun beforeMenu(ctx: Context, ev: JSONObject, channel: String): Notification.Builder {
         val pk = ev.optString("pk"); val ar = Exits.ar(ev); val now = System.currentTimeMillis()
         val ex = Exits.next(ev, now)
-        val text = (if (ar) "قبل الخروج بكم أذكّرك؟" else "How long before it ends?") + (if (ex != null) (if (ar) " يخرج ${ex.name} ${ex.clock}" else " ${ex.name} ends at ${ex.clock}") else "")
+        val text = (if (ar) "متى أذكّرك قبل خروج الوقت؟" else "How long before it ends?") + (if (ex != null) (if (ar) " يخرج ${ex.name} ${ex.clock}" else " ${ex.name} ends at ${ex.clock}") else "")
         val b = builder(ctx, channel, ev.optString("title"), text)
         for (m in beforeChoices(ev, now)) {
             val i = Intent(ctx, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_BEFORE).setData(Uri.parse("ontime://before/${Uri.encode(pk)}/$m"))
@@ -298,7 +298,7 @@ object Alerts {
         while (base.startsWith("تذكير: صلاة ")) base = base.removePrefix("تذكير: صلاة ")
         while (base.startsWith("Reminder: ")) base = base.removePrefix("Reminder: ")
         val e = JSONObject(r.toString()).put("remNote", 1).put("pname", base).put("title", if (ar) "تذكير: صلاة $base" else "Reminder: $base")
-            .put("text", if (ex != null) (if (ar) "باقي ${leftTxt(leftMin(ex.at, now), r)} على خروج ${ex.name}، ينتهي ${ex.clock}" else "${ex.name} ends at ${ex.clock}, in ${leftTxt(leftMin(ex.at, now), r)}") else r.optString("text"))
+            .put("text", if (ex != null) (if (ar) "بقي ${leftTxt(leftMin(ex.at, now), r)} على خروج ${ex.name}، ينتهي ${ex.clock}" else "${ex.name} ends at ${ex.clock}, in ${leftTxt(leftMin(ex.at, now), r)}") else r.optString("text"))
         // there is no spoken line for "remind me in", so ringing on silent plays the phone's tone
         val snd = when { r.optString("rs") == "tone" -> "tone_rem"; r.optString("rs", "ding") in setOf("ding", "speak") && loud(r) -> "tone_ding"; else -> null }
         val b = prayerBuilder(ctx, e, if (r.optString("rs", "ding") == "quiet" || snd != null) CH_SILENT else CH_LATER, null)
@@ -314,7 +314,7 @@ object Alerts {
         val ex = Exits.next(r, now) ?: return
         val pk = r.optString("pk"); val ar = Exits.ar(r)
         val left = leftMin(ex.at, now)
-        val title = if (ar) "باقي ${Exits.mins(left, r)} على خروج ${ex.name}" else "$left min until ${ex.name} ends"
+        val title = if (ar) "بقي ${Exits.mins(left, r)} على خروج ${ex.name}" else "$left min until ${ex.name} ends"
         val b = builder(ctx, if (r.optString("rs", "ding") == "ding" && !loud(r)) CH_EXIT else CH_SILENT, title, if (ar) "ينتهي ${ex.clock}" else "Ends at ${ex.clock}")
         b.addAction(action(ctx, AlarmReceiver.ACTION_PRAYED, pk, if (ar) "صلّيت" else "I prayed", "pk", pk))
         if (ex.at - now > 11 * 60_000L)
@@ -367,7 +367,7 @@ object Alerts {
     /** Phone on vibrate after the iqama: when the sound comes back. */
     private fun silenceNote(ctx: Context, r: JSONObject, quiet: Boolean) {
         val until = r.optLong("until"); val now = System.currentTimeMillis(); val ar = Exits.ar(r); val m = leftMin(until, now)
-        val text = if (ar) "يرجع الصوت بعد ${Exits.mins(m, r)}" else "Sound back in $m min"
+        val text = if (ar) "يعود الصوت بعد ${Exits.mins(m, r)}" else "Sound back in $m min"
         val b = builder(ctx, CH_REMIND, if (ar) "الجوال على الاهتزاز" else "Phone on vibrate", text)
         if (quiet) b.setOnlyAlertOnce(true)
         post(ctx, b, RESTORE_CODE)
@@ -376,7 +376,7 @@ object Alerts {
     /** The last third of the night: a silent notification (always), with how long until Fajr. */
     private fun thirdNote(ctx: Context, ev: JSONObject, quiet: Boolean) {
         val until = ev.optLong("until"); val now = System.currentTimeMillis(); val ar = Exits.ar(ev); val id = ev.optString("id").hashCode()
-        val text = if (until <= now) ev.optString("text") else { val m = leftMin(until, now); if (ar) "باقي ${leftTxt(m, ev)} على الفجر" else "${leftTxt(m, ev)} until Fajr" }
+        val text = if (until <= now) ev.optString("text") else { val m = leftMin(until, now); if (ar) "بقي ${leftTxt(m, ev)} على الفجر" else "${leftTxt(m, ev)} until Fajr" }
         val b = builder(ctx, CH_SILENT, ev.optString("title"), text).also { untilNow(it, until) }
         if (quiet) b.setOnlyAlertOnce(true)
         post(ctx, b, id)
@@ -456,7 +456,7 @@ object Alerts {
         if (now - p.getLong("staleAt", 0L) < 86_400_000L) return
         p.edit().putLong("staleAt", now).apply(); channels(ctx)
         notify(ctx, CH_REMIND, if (ar) "افتح «الركن الثاني» مرة" else "Open On Time once",
-            if (ar) "مواقيت الأذان المحفوظة تخلص قريب. افتح التطبيق يحدّثها لشهر جديد." else "The saved adhan times run out soon. Open the app to renew them for another month.", STALE_CODE)
+            if (ar) "ستنتهي مواقيت الأذان المحفوظة قريباً. افتح التطبيق لتحديثها لشهر جديد." else "The saved adhan times run out soon. Open the app to renew them for another month.", STALE_CODE)
     }
 
     fun openApp(ctx: Context): PendingIntent = PendingIntent.getActivity(

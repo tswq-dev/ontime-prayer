@@ -134,7 +134,7 @@ class WData(val o: JSONObject) {
                     val hs = if (h > 0) pl(h, "ساعة", "ساعتين", "ساعات", "ساعة") else ""
                     when {
                         h > 0 && mi == 15L -> "$hs وربع"
-                        h > 0 && mi == 30L -> "$hs ونص"
+                        h > 0 && mi == 30L -> "$hs ونصف"
                         h > 0 && mi == 45L -> pl(h + 1, "ساعة", "ساعتين", "ساعات", "ساعة") + " إلا ربع"
                         else -> { val ms2 = if (mi > 0) pl(mi, "دقيقة", "دقيقتين", "دقائق", "دقيقة") else ""
                             if (hs.isNotEmpty() && ms2.isNotEmpty()) "$hs و$ms2" else hs.ifEmpty { ms2.ifEmpty { "أقل من دقيقة" } } }
@@ -151,7 +151,7 @@ class WData(val o: JSONObject) {
     fun adhanSince(ms: Long) = if (ar) "الأذان منذ " + dur(ms) else "Adhan " + dur(ms) + " ago"
     /** The time a countdown shows: to the iqama or the next prayer, or (the user's pick) the time since the adhan. */
     fun leftMs(e: Ev, now: Long) = if (e.iqAt > 0 && since) now - e.at else e.target - now
-    fun leftTxt(ms: Long) = (if (ar) "باقي " else "") + dur(ms) + (if (ar) "" else " left")
+    fun leftTxt(ms: Long) = (if (ar) "بقي " else "") + dur(ms) + (if (ar) "" else " left")
 
     companion object {
         const val DAY = 86_400_000L

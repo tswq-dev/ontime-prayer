@@ -411,7 +411,7 @@ object WidgetArt {
         cv.drawArc(ov, -90f, -360f * prog * x.dir, false, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = sw; strokeCap = Paint.Cap.ROUND })
         val k = s / 170f
         val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(x.d.leftMs(nx, x.now)) else "")
-        val top = if (nx.iqAt > 0) (if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
+        val top = if (nx.iqAt > 0) (if (x.d.since) (if (x.d.ar) "منذ الأذان" else "since the adhan") else if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
         if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
         val np = tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k }; val ny = cy + (if (sub.isEmpty()) 16 else 9) * k; val n0 = x.d.name(nx.k)
         // stretched, it stays inside the ring's inner edge, at the height of its letters
@@ -520,7 +520,11 @@ object WidgetArt {
         // ---- measure: every block by its ink, so the margins look the same above and below
         val hp = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
         val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
-        val hs = listOfNotNull(x.d.city.takeIf { "city" in rows && it.isNotEmpty() }, x.d.digits(date).takeIf { "date" in rows }).joinToString(" · ")
+        // narrow (4×1): the year goes first, then the date, before the line would shrink past readable (0.22)
+        val cityS = x.d.city.takeIf { "city" in rows && it.isNotEmpty() }
+        val noYear = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm")).joinToString(" · ")
+        val heads = listOf(date, noYear, dd.optString("wd")).map { d -> listOfNotNull(cityS, x.d.digits(d).takeIf { "date" in rows }).joinToString(" · ") }.distinct()
+        val hs = heads.firstOrNull { hp.measureText(it) <= (w - 2 * pad) / .85f } ?: heads.last()
         var hTop = 0f; var hH = 0f
         if (hasHead) { fit(hp, hs, w - 2 * pad); hp.getTextBounds(hs, 0, hs.length, hb); hTop = hb.top.toFloat(); hH = (hb.bottom - hb.top).toFloat() }
         val gH = 7 * u; val gR = 6 * u; val gI = 6 * u
@@ -742,7 +746,7 @@ object WidgetArt {
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),
-            if (b.reminded) "✓ " + (if (x.d.ar) "بنذكّرك" else "Reminder set") else (if (x.d.ar) "ذكّرني قبل خروج الوقت" else "Remind before it ends"))
+            if (b.reminded) "✓ " + (if (x.d.ar) "سنذكّرك" else "Reminder set") else (if (x.d.ar) "ذكّرني قبل خروج الوقت" else "Remind before it ends"))
         val on = listOf(b.canPray || b.prayed, true, b.canRemind || b.reminded)
         val top = h * BTN_TOP; val bh = h - top - pad; val gap = x.dp(8f); val bw = (w - 2 * pad - 2 * gap) / 3
         for (i in 0..2) {
@@ -986,7 +990,7 @@ object WidgetArt {
         val third = m + (f - m) * 2 / 3; val mid = m + (f - m) / 2; val inThird = x.now in third until f
         val fg = x.st.fg; val sub = x.st.sub; val gold = if (x.st.light) GOLD_L else GOLD
         val track = if (x.st.light) a(.14f, c("#0B4D3B")) else a(.2f, Color.WHITE)
-        val cnt = if (inThird) (if (x.d.ar) "الآن · باقي " + x.d.dur(f - x.now) + " للفجر" else "Now · " + x.d.dur(f - x.now) + " to Fajr") else x.d.inTxt(third - x.now)
+        val cnt = if (inThird) (if (x.d.ar) "الآن · بقي " + x.d.dur(f - x.now) + " للفجر" else "Now · " + x.d.dur(f - x.now) + " to Fajr") else x.d.inTxt(third - x.now)
         if (isWide(x)) {
             val u = x.u; val pad = 16 * u; val l = pad; val r = x.w - pad; val bw = r - l
             fun px(t: Long): Float { val q = ((t - m).toFloat() / max(1L, f - m)).coerceIn(0f, 1f); return if (x.rtl) r - bw * q else l + bw * q }

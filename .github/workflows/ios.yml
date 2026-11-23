@@ -15,7 +15,8 @@ permissions:
 
 jobs:
   build:
-    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+    # «[skip ios]» in the commit message: a change to the shared page that needs no iPhone build yet (Android first)
+    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times' && !contains(github.event.head_commit.message, '[skip ios]')
     runs-on: macos-15
     timeout-minutes: 30
     env:
