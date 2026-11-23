@@ -106,6 +106,8 @@ object WidgetArt {
         "light" -> Sty(kind, c("#0B3B2E"), c("#5B6B5F"), c("#0B4D3B"), a(.14f, c("#0B4D3B")), false)
         "dark" -> Sty(kind, c("#F4ECDC"), a(.74f, c("#F4ECDC")), c("#E2C27A"), a(.28f, c("#E2C27A")), false)
         "clear" -> Sty(kind, Color.WHITE, a(.85f, Color.WHITE), c("#F3D58C"), a(.28f, Color.WHITE), true)
+        // «ليلي»: the sky half an hour after Isha, navy, with the writing in gold (0.23)
+        "navy" -> Sty(kind, c("#E9CD8A"), a(.8f, c("#F3E6C4")), c("#E2C27A"), a(.26f, c("#E2C27A")), false)
         "dyn" -> dyn?.let { Sty(kind, it[2], it[3], it[4], a(.16f, it[2]), false) } ?: sty("dark")
         else -> Sty("sky", c("#FFF8EA"), a(.8f, c("#FFF8EA")), c("#FBE3A6"), a(.22f, Color.WHITE), true)
     }
@@ -221,6 +223,9 @@ object WidgetArt {
             "clear" -> return
             "light" -> cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, 0f, x.h, c("#F5EEE1"), c("#EBE1CE"), Shader.TileMode.CLAMP) })
             "dark" -> cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, c("#11594A"), c("#0A382C"), Shader.TileMode.CLAMP) })
+            "navy" -> { cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, c("#1B2C52"), c("#0B1630"), Shader.TileMode.CLAMP) })
+                // a few faint stars, kept off the edges
+                val m = x.dp(10f); for (i in STARS.indices step 2) cv.drawCircle(m + (x.w - 2 * m) * (if (x.rtl) 1 - STARS[i] else STARS[i]), m + (x.h - 2 * m) * STARS[i + 1], x.dp(if (i % 4 == 0) 1.1f else .8f), paint(a(if (i % 6 == 0) .5f else .28f, c("#F3E6C4")))) }
             "dyn" -> { val dy = dyn ?: intArrayOf(c("#11594A"), c("#0A382C"))
                 cv.drawRoundRect(rect, r, r, paint().apply { shader = LinearGradient(0f, 0f, x.w * .35f, x.h, dy[0], dy[1], Shader.TileMode.CLAMP) }) }
             else -> { val (t, b) = skyAt(x, x.sky)
@@ -279,7 +284,7 @@ object WidgetArt {
         val cv = Canvas(bmp)
         val day = d?.day(now)
         if (d == null || day == null) { empty(cv, wPx.toFloat(), hPx.toFloat(), dpPx, fonts, d?.ar ?: true); return bmp }
-        val st = sty(if (type == "pano" || type == "window") (if (type == "window" && style.bg in setOf("light", "dark", "dyn")) style.bg else "sky") else style.bg)
+        val st = sty(if (type == "pano" || type == "window") (if (type == "window" && style.bg in setOf("light", "dark", "navy", "dyn")) style.bg else "sky") else style.bg)
         val x = X(d, day, now, st, fonts, dpPx * fitScale(type, wPx / dpPx, hPx / dpPx), d.ar, style, wPx.toFloat(), hPx.toFloat())
         when (type) {
             "pano" -> pano(cv, x); "window" -> window(cv, x); "ring" -> ring(cv, x); "orbit" -> orbit(cv, x)
@@ -322,7 +327,7 @@ object WidgetArt {
     private fun pano(cv: Canvas, x: X) {
         val w = x.w; val h = x.h; val r = x.dp(22f)
         // light, green or the phone's colours: the sky on top and a strip for the text under it
-        val strip = x.style.bg in setOf("light", "dark", "dyn"); val ss = sty(x.style.bg); val sh = if (strip) h * .64f else h
+        val strip = x.style.bg in setOf("light", "dark", "navy", "dyn"); val ss = sty(x.style.bg); val sh = if (strip) h * .64f else h
         cv.save(); val clip = Path().apply { addRoundRect(RectF(0f, 0f, w, h), r, r, Path.Direction.CW) }; cv.clipPath(clip)
         if (strip) card(cv, x, r, x.style.bg)
         cv.save(); cv.clipRect(0f, 0f, w, sh)
@@ -370,7 +375,7 @@ object WidgetArt {
     }
     private fun window(cv: Canvas, x: X) {
         // light, green or the phone's colours: a card behind the arch
-        val framed = x.style.bg in setOf("light", "dark", "dyn")
+        val framed = x.style.bg in setOf("light", "dark", "navy", "dyn")
         if (framed) card(cv, x, x.dp(22f), x.style.bg)
         val s = min(x.w, x.h) * (if (framed) .86f else 1f); val ox = (x.w - s) / 2; val oy = (x.h - s) / 2 + (if (framed) s * .04f else 0f); val k = s / 170f
         fun X0(v: Float) = ox + v * k

@@ -214,7 +214,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "ramadan" to (listOf("imsak", "fajr", "prog") to setOf("imsak", "fajr", "prog")),
             "white" to (listOf("monthu", "days") to setOf("monthu", "days")),
             "column" to (listOf("count", "time", "sunrise", "duha", "exit", "hijri", "moon") to setOf("count", "exit", "hijri", "moon")))
-        val BGS = setOf("sky", "light", "dark", "clear", "dyn")
+        val BGS = setOf("sky", "light", "dark", "navy", "clear", "dyn")
         val CFS = setOf("hm", "clock", "m", "text")
         val LNS = setOf("pray", "day", "hijri", "greg", "dayh")
         val SPR = Regex("^(fajr|sunrise|dhuhr|asr|maghrib|isha):-?\\d{1,4}$")

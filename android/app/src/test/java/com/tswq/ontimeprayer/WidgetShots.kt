@@ -187,6 +187,25 @@ class WidgetShots {
             listOf(Item("hijri en", draw("line", dflt("line").copy(bg = "dark", ln = "hijri"), enG, tz5, 340, 90, fonts)),
                 Item("dayh 4x1 narrow", draw("line", dflt("line").copy(bg = "dark", ln = "dayh"), arG, tz5, 250, 90, fonts)),
                 Item("prayer (as before)", draw("line", dflt("line").copy(bg = "dark"), arG, tz5, 340, 90, fonts))))
+        // «ليلي» (0.23): navy with the writing in gold, across the kinds that take a background
+        val nv = { t: String -> dflt(t).copy(bg = "navy") }
+        sheet("sheet-27-navy", listOf(
+            Item("line", draw("line", nv("line"), arG, tz5, 340, 90, fonts)),
+            Item("line day", draw("line", nv("line").copy(ln = "day"), arG, tz5, 340, 90, fonts)),
+            Item("line hijri", draw("line", nv("line").copy(ln = "hijri"), arG, tz5, 340, 90, fonts)),
+            Item("script", draw("script", nv("script"), arG, tz5, 340, 90, fonts)),
+            Item("table", draw("table", nv("table"), arG, tz5, 340, 170, fonts)),
+            Item("actions", draw("actions", nv("actions"), arG, tz5, 340, 170, fonts)),
+            Item("window", draw("window", nv("window"), arG, tz5, 170, 170, fonts)),
+            Item("ring", draw("ring", nv("ring"), arG, tz5, 170, 170, fonts)),
+            Item("clock", draw("clock", nv("clock"), arG, tz5, 170, 170, fonts)),
+            Item("moon", draw("moon", nv("moon"), arG, tz5, 170, 170, fonts)),
+            Item("exit", draw("exit", nv("exit"), arG, tz5, 340, 90, fonts)),
+            Item("ribbon", draw("ribbon", nv("ribbon"), arG, tz5, 340, 96, fonts)),
+            Item("column", draw("column", nv("column"), arG, tz5, 170, 340, fonts)),
+            Item("night", draw("night", nv("night"), arG, tz5, 170, 170, fonts)),
+            Item("white", draw("white", nv("white"), arG, tz5, 340, 170, fonts)),
+            Item("en table", draw("table", nv("table"), enG, tz5, 340, 170, fonts))))
         sheet("sheet-24-friday-since", listOf(
             Item("table fri -30m", draw("table", dflt("table"), ar, fdh - 30 * mn, 340, 170, fonts)),
             Item("column fri +5m", draw("column", dflt("column"), ar, fdh + 5 * mn, 170, 340, fonts)),
