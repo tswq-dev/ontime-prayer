@@ -518,7 +518,8 @@ object WidgetArt {
         val tday = if (WData.dateKey(nx.at) != WData.dateKey(x.now)) (x.d.day(nx.at) ?: x.day) else x.day
         fun tt(k: String) = tday.optLong(k)
         // ---- measure: every block by its ink, so the margins look the same above and below
-        val hp = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = 11.5f * u }
+        // never smaller than 10.5dp: a short widget (4×1) shortens the line instead of shrinking it to unreadable (0.22)
+        val hp = tp(x, x.plex, 11.5f, x.st.sub).apply { textSize = max(11.5f * u, 10.5f * x.u) }
         val dd = x.day; val date = listOf(dd.optString("wd"), dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")).joinToString(" · ")
         // narrow (4×1): the year goes first, then the date, before the line would shrink past readable (0.22)
         val cityS = x.d.city.takeIf { "city" in rows && it.isNotEmpty() }
