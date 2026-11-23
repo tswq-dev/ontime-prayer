@@ -571,6 +571,11 @@ html.ios .andonly{display:none}
   </div>
   <script>/* skip the opening before the first paint (opened from a widget or a notification, restored by the phone, or turned off) */
   (function(){ var q = false, s = {}; try { q = !!(window.Android && Android.quietStart && Android.quietStart()); } catch(e) {}
+    // iPhone: iOS closes apps in the background without telling them, so a start within a day of last leaving the app counts as coming back (0.22.3)
+    var seen = function(){ try { localStorage.setItem('ontime.seen', String(Date.now())); } catch(e) {} };
+    document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') seen(); }); window.addEventListener('pagehide', seen);
+    try { if (window.__host === 'ios' && Date.now() - (+localStorage.getItem('ontime.seen') || 0) < 864e5) q = true; } catch(e) {}
+    window.__qs = q;
     try { s = JSON.parse(localStorage.getItem('ontime.calm') || 'null') || {}; } catch(e) {}
     var m = s.intro || 'always'; if (q || !(m === 'always' || (m === 'first' && !s.introSeen))) { var b = document.getElementById('intro'); if (b) b.parentNode.removeChild(b); } })();</script>
 
@@ -2264,7 +2269,7 @@ let introOn = false;
 function playIntro(tries){
   const box = $('intro'); if (!box) { afterIntro(); return; }
   // only when opened from the app's icon: not from a widget, a notification or the adhan screen, nor when the phone restores it
-  let quiet = false; try { quiet = !!(window.Android && Android.quietStart && Android.quietStart()); } catch(e) {}
+  let quiet = !!window.__qs; try { quiet = quiet || !!(window.Android && Android.quietStart && Android.quietStart()); } catch(e) {}
   const play = !quiet && (S.intro === 'always' || (S.intro === 'first' && !S.introSeen));
   if (!play) { box.remove(); afterIntro(); return; }
   if (document.visibilityState === 'hidden') { const go = () => { if (document.visibilityState === 'hidden') return; document.removeEventListener('visibilitychange', go); playIntro(tries); }; document.addEventListener('visibilitychange', go); return; }
