@@ -490,7 +490,9 @@ object WidgetArt {
         for ((t, p) in lines) { y += p.textSize * 1.2f; text(cv, x, t, endX(x, pad), y - p.textSize * .22f, p, false) }
     }
     private fun line(cv: Canvas, x: X) {
-        card(cv, x, x.dp(20f)); val nx = x.next ?: return
+        card(cv, x, x.dp(20f))
+        if (x.style.ln != "pray") { lineText(cv, x); return }
+        val nx = x.next ?: return
         val np = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = x.h * .36f }; val rp = tp(x, x.plex, 1f, x.st.fg).apply { textSize = x.h * .27f }
         val parts = ArrayList<Pair<String, Paint>>(); parts += x.d.name(nx.k) to np
         val rest = listOf(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.inTxt(nx, x.now) else "", if (x.style.has("hijri")) hijriTxt(x) else "").filter { it.isNotEmpty() }
@@ -502,6 +504,19 @@ object WidgetArt {
         parts[0] = kashName(x, np, n0, x.w - x.dp(32f) - 2 * kSafe(x) - others) to np
         var xs = x.w / 2 + x.dir * (total * scale + np.measureText(parts[0].first) - np.measureText(n0)) / 2; val y = x.h / 2 + (if (rest.isEmpty()) np.textSize * .3f else rp.textSize * .35f)
         for ((s, p) in parts) { text(cv, x, s, xs, y, p); xs -= x.dir * (p.measureText(s) + gap * scale) }
+    }
+    /** The one-line widget with the day or the date instead of the prayer (0.22.6): one line in the name's font, as large as the
+     *  height allows and never past the frame, stretched with kashida like a name when the user picks it. */
+    private fun lineText(cv: Canvas, x: X) {
+        val dd = x.day; val ar = x.d.ar
+        val hij = x.d.digits(dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")) + if (ar) "هـ" else " AH"
+        val greg = dd.optString("gr").ifEmpty { dd.optString("d") }.let { x.d.digits(it) + if (ar && it.isNotEmpty()) "م" else "" }
+        val s = when (x.style.ln) { "day" -> dd.optString("wd"); "hijri" -> hij; "greg" -> greg; else -> dd.optString("wd") + "  " + hij }.trim()
+        if (s.isEmpty()) return
+        val p = tp(x, x.nameTf, 1f, x.st.fg).apply { textSize = x.h * .5f }; val room = x.w - x.dp(32f)
+        p.textSize *= min(1f, room / max(1f, p.measureText(s))); p.textSize = min(p.textSize, x.h * .62f)
+        val out = kashName(x, p, s, room - 2 * kSafe(x))
+        center(cv, out, x.w / 2, x.h / 2 + p.textSize * .3f, p)
     }
     // ---------- 5. table (4×1 up to 4×4): rows the user picks ----------
     private fun table(cv: Canvas, x: X) {

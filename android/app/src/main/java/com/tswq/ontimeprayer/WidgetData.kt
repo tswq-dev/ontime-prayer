@@ -186,11 +186,13 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
                   /** the sky background pinned to a moment of the day, "maghrib:6" (a prayer and minutes from it); "" follows the time */
                   val sp: String = "",
                   /** where the table puts the city and the date: "l" on top over the countdown, "c" on top in the middle, "b" at the bottom (0.20) */
-                  val hp: String = "l") {
+                  val hp: String = "l",
+                  /** what the one-line widget shows: "pray" the next prayer, or "day", "hijri", "greg", "dayh" (the day and the Hijri date) (0.22.6) */
+                  val ln: String = "pray") {
     val kash get() = kl > 0
     fun has(k: String) = k in rows
     fun toJson(): JSONObject = JSONObject().put("v", 2).put("bg", bg).put("font", font).put("rows", JSONArray(rows.toList())).put("tap", tap)
-        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf).put("sp", sp).put("hp", hp)
+        .put("nw", nw).put("dw", dw).put("kl", kl).put("kash", kl > 0).put("kv", 3).put("cf", cf).put("sp", sp).put("hp", hp).put("ln", ln)
     companion object {
         /** What each widget can show; the first set is what it shows until the user changes it. */
         val SHOW: Map<String, Pair<List<String>, Set<String>>> = mapOf(
@@ -213,6 +215,7 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             "column" to (listOf("count", "time", "sunrise", "duha", "exit", "hijri", "moon") to setOf("count", "exit", "hijri", "moon")))
         val BGS = setOf("sky", "light", "dark", "clear", "dyn")
         val CFS = setOf("hm", "clock", "m", "text")
+        val LNS = setOf("pray", "day", "hijri", "greg", "dayh")
         val SPR = Regex("^(fajr|sunrise|dhuhr|asr|maghrib|isha):-?\\d{1,4}$")
 
         /** The stretch until the user picks one: script and actions were designed stretched, and so were the table's big headline
@@ -236,7 +239,8 @@ data class WStyle(val bg: String, val font: String, val rows: Set<String>, val t
             return WStyle(j.optString("bg", d.bg).takeIf { it in BGS } ?: d.bg, j.optString("font", d.font), rows, j.optString("tap", d.tap), wt("nw"), wt("dw"), kl,
                 j.optString("cf", "").takeIf { it in CFS } ?: "",
                 j.optString("sp", "").takeIf { SPR.matches(it) } ?: "",
-                j.optString("hp", "l").takeIf { it in setOf("l", "c", "b") } ?: "l")
+                j.optString("hp", "l").takeIf { it in setOf("l", "c", "b") } ?: "l",
+                j.optString("ln", "pray").takeIf { it in LNS } ?: "pray")
         }
     }
 }

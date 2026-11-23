@@ -174,6 +174,19 @@ class WidgetShots {
             listOf(Item("l en", draw("table", dflt("table").copy(rows = thead, hp = "l"), en, tz5, 340, 170, fonts)),
                 Item("l times only", draw("table", dflt("table").copy(rows = setOf("times", "exit")), ar, tz5, 340, 170, fonts)),
                 Item("l city only", draw("table", dflt("table").copy(rows = setOf("city", "count", "times")), ar, tz5, 340, 170, fonts))))
+        // the one-line widget with the day or the date (0.22.6): each choice, plain and stretched, on dark and see-through, and in English
+        val gj = JSONObject(all.getJSONObject("ar").toString()); val gd = gj.getJSONArray("days")
+        for (i in 0 until gd.length()) gd.getJSONObject(i).put("gr", "23 نوفمبر 2026")
+        val arG = WData(gj); val ej = JSONObject(all.getJSONObject("en").toString()); val ed = ej.getJSONArray("days")
+        for (i in 0 until ed.length()) ed.getJSONObject(i).put("gr", "23 November 2026")
+        val enG = WData(ej)
+        sheet("sheet-26-line-date", listOf("day", "hijri", "greg", "dayh").flatMap { ln -> listOf(
+            Item("$ln", draw("line", dflt("line").copy(bg = "dark", ln = ln), arG, tz5, 340, 90, fonts)),
+            Item("$ln stretch 7", draw("line", dflt("line").copy(bg = "dark", ln = ln, kl = 7), arG, tz5, 340, 90, fonts)),
+            Item("$ln clear", draw("line", dflt("line").copy(ln = ln), arG, tz5, 340, 90, fonts))) } +
+            listOf(Item("hijri en", draw("line", dflt("line").copy(bg = "dark", ln = "hijri"), enG, tz5, 340, 90, fonts)),
+                Item("dayh 4x1 narrow", draw("line", dflt("line").copy(bg = "dark", ln = "dayh"), arG, tz5, 250, 90, fonts)),
+                Item("prayer (as before)", draw("line", dflt("line").copy(bg = "dark"), arG, tz5, 340, 90, fonts))))
         sheet("sheet-24-friday-since", listOf(
             Item("table fri -30m", draw("table", dflt("table"), ar, fdh - 30 * mn, 340, 170, fonts)),
             Item("column fri +5m", draw("column", dflt("column"), ar, fdh + 5 * mn, 170, 340, fonts)),
