@@ -87,12 +87,20 @@ object WidgetUpdater {
         return WStyle.from(type, j?.let { runCatching { JSONObject(it) }.getOrNull() }, d?.o?.optString("font"))
     }
 
+    /** A widget on the home screen keeps its own look; the kind's look (id 0, the app's gallery) is for the next one added (0.22.7):
+     *  so two or three of one kind can each show something else, the one-line widget the prayer, the day and the date. */
     fun setStyle(ctx: Context, type: String, id: Int, json: String) {
         val e = Scheduler.prefs(ctx).edit()
-        if (id > 0) e.putString("w_$id", json)
-        else { e.putString("wt_$type", json); placed(ctx).filter { it.second == type }.forEach { e.remove("w_${it.first}") } }
+        if (id > 0) e.putString("w_$id", json) else e.putString("wt_$type", json)
         e.apply()
-        refresh(ctx, type)
+        if (id > 0) refresh(ctx, type)
+    }
+
+    /** The first time a widget is drawn it takes the kind's look as its own (just chosen in the app when added from there). */
+    private fun own(ctx: Context, id: Int, type: String, d: WData?) {
+        val p = Scheduler.prefs(ctx); if (p.getString("w_$id", null) != null) return
+        val j = p.getString("wt_$type", null) ?: WStyle.defaultFor(type, d?.o?.optString("font")).toJson().toString()
+        p.edit().putString("w_$id", j).apply()
     }
 
     fun updateAll(ctx: Context) {
@@ -112,7 +120,7 @@ object WidgetUpdater {
             var w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH); var h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
             if (w < 40 || h < 40) defaultDp(type).let { w = it.first; h = it.second }
             val now = System.currentTimeMillis()
-            val d = WData.load(Scheduler.prefs(ctx))
+            val d = WData.load(Scheduler.prefs(ctx)); own(ctx, id, type, d)
             val bmp = draw(ctx, type, style(ctx, id, type, d), d, now, w, h, ctx.resources.displayMetrics.density)
             val rv: RemoteViews; val st = style(ctx, id, type, d)
             if (type == "prayed" && st.tap == "pray" && w.toFloat() / h > 1.8f) {
