@@ -1502,7 +1502,7 @@ function tourDraw(){ const st = tourSteps[tourI], b = $('tourBody'); let h = '';
     const nt = (h.match(/<li>/g) || []).length; h = '<h2 id="tourT">' + tr(nt >= 4 ? 'أربعة أمور تفيدك' : nt === 2 ? 'أمران يفيدانك' : 'ثلاثة أمور تفيدك') + '</h2>' + h; }
   else if (st === 'q0') h = '<div class="tic">' + TOUR_IC + '</div><h2 id="tourT">' + tr('هل تريد ضبط أهم الإعدادات الآن؟') + '</h2><p class="sub">' + tr('شكل الشاشة، والمؤذن، وما يظهر فيها. ويمكنك تغييرها لاحقاً من الإعدادات.') + '</p>';
   else if (st === 'qmu') { const one = S.vmode !== 'rot';
-    h = '<h2 id="tourT">' + tr('اختر المؤذن') + '</h2><p class="sub">' + tr('اضغط ▶ للاستماع. ويمكنك اختيار مؤذن لكل صلاة من إعداداتها.') + '</p><div class="box"><div class="voices">'
+    h = '<h2 id="tourT">' + tr('اختر المؤذن') + '</h2><p class="sub">' + tr('اضغط ▶ للاستماع. ويمكنك اختيار مؤذن لكل صلاة من إعداداتها.') + '</p><div class="box" style="max-height:42vh;overflow-y:auto"><div class="voices">'
       + MU.map(m => '<button class="voice" data-qm="' + m[0] + '" aria-pressed="' + (one && S.mu === m[0]) + '"><span class="pl">' + ICON.play + '</span><span class="vn"><b>' + tr(m[1]) + '</b><span>' + (m[2] ? tr(m[2]) : '') + '</span></span>' + ICON.check + '</button>').join('') + '</div></div>'; }
   else if (st === 'qshow') h = '<h2 id="tourT">' + tr('ما يظهر في الشاشة') + '</h2><div class="box">'
       + QS_OPTS.filter(o => optFits(o[0])).map(o => '<label class="opt"><span>' + tr(o[1]) + '</span><input type="checkbox" data-qk="' + o[0] + '"' + (S[o[0]] ? ' checked' : '') + '><span class="sw"></span></label>').join('') + '</div>'
