@@ -106,7 +106,8 @@ class WData(val o: JSONObject) {
         return -1
     }
 
-    fun digits(s: String) = if (arabDigits) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
+    /** Digits as the user chose them, whichever kind the text came with (a date from the phone may carry Arabic-Indic ones) (0.22.8) */
+    fun digits(s: String) = if (arabDigits) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s.map { if (it in '٠'..'٩') '0' + (it - '٠') else it }.joinToString("")
 
     /** "5:39" (12 or 24 hours), and its AM/PM mark separately. */
     fun clock(ms: Long): String {

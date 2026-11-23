@@ -36,7 +36,7 @@ object Exits {
     fun short(n: Long, r: JSONObject): String = if (!ar(r)) "$n min" else digits("$n", r) + " د"
 
     fun digits(s: String, r: JSONObject): String =
-        if (r.optInt("dg") == 1) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s
+        if (r.optInt("dg") == 1) s.map { if (it in '0'..'9') '٠' + (it - '0') else it }.joinToString("") else s.map { if (it in '٠'..'٩') '0' + (it - '٠') else it }.joinToString("")
 
     /** Clock in the phone's time zone, like the page: 12 or 24 hours, Latin or Arabic digits. */
     fun clock(ms: Long, r: JSONObject): String {

@@ -268,7 +268,15 @@ object WidgetUpdater {
         if (Build.VERSION.SDK_INT < 26 || !mgr.isRequestPinAppWidgetSupported) return false
         // its look was just chosen in the app: the launcher's customise step need not open the app again
         Scheduler.prefs(ctx).edit().putLong("pinAt", System.currentTimeMillis()).apply()
-        return runCatching { mgr.requestPinAppWidget(ComponentName(ctx, cls), null, null) }.getOrDefault(false)
+        // the phone's «add» window shows the look just chosen, not the stock picture (0.22.8; launchers that honour it, Pixel's among them);
+        // the picture stays small, as it travels to the launcher in one parcel
+        val extras = runCatching {
+            val d = WData.load(Scheduler.prefs(ctx)); val (w, h) = defaultDp(type); val sc = min(2f, sqrt(100_000f / (w * h)))
+            val rv = RemoteViews(ctx.packageName, R.layout.widget_image)
+            rv.setImageViewBitmap(R.id.img, draw(ctx, type, style(ctx, 0, type, d), d, System.currentTimeMillis(), w, h, sc))
+            Bundle().apply { putParcelable(AppWidgetManager.EXTRA_APPWIDGET_PREVIEW, rv) }
+        }.getOrNull()
+        return runCatching { mgr.requestPinAppWidget(ComponentName(ctx, cls), extras, null) }.getOrDefault(false)
     }
 }
 
