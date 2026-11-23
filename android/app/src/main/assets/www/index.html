@@ -76,6 +76,8 @@ body[data-font="naskh"] .hero .name{font-family:"Amiri",serif;font-weight:700;fo
 .hintp span{display:inline-flex;align-items:center;gap:7px}.hintp i{width:1px;height:14px;background:rgba(255,255,255,.3)}
 @keyframes ot-nudge{0%,100%{transform:translateX(6px)}50%{transform:translateX(-6px)}}
 #intro{position:absolute;inset:0;z-index:30;overflow:hidden}
+/* until the script has placed the logo it is a plain dark screen: the raw drawing sat at the top right for a frame or two (0.22.1) */
+#intro:not(.ready){background:#06140F}#intro:not(.ready) #isvg,#intro:not(.ready) .skip,#intro:not(.ready) #iword,#intro:not(.ready) #itag{visibility:hidden}
 #isvg{position:absolute;inset:0;width:100%;height:100%;display:block}
 #parch,#pline{fill:none;stroke:#D9B46A;stroke-linecap:round;stroke-linejoin:round}
 #intro.go #parch{transition:stroke-dashoffset 1.5s cubic-bezier(.65,.05,.3,1) .1s;stroke-dashoffset:0 !important}
@@ -569,6 +571,10 @@ html.ios .andonly{display:none}
     <div id="itag" aria-hidden="true">الصلاة على وقتها</div>
     <button class="skip" id="skip">تخطَّ</button>
   </div>
+  <script>/* skip the opening before the first paint (opened from a widget or a notification, restored by the phone, or turned off) */
+  (function(){ var q = false, s = {}; try { q = !!(window.Android && Android.quietStart && Android.quietStart()); } catch(e) {}
+    try { s = JSON.parse(localStorage.getItem('ontime.calm') || 'null') || {}; } catch(e) {}
+    var m = s.intro || 'always'; if (q || !(m === 'always' || (m === 'first' && !s.introSeen))) { var b = document.getElementById('intro'); if (b) b.parentNode.removeChild(b); } })();</script>
 
   <div class="sheet" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setT">
     <div class="grab"></div>
@@ -2253,7 +2259,7 @@ $('obYes').addEventListener('click', () => { if ($('obSheet').dataset.step === '
 $('obNo').addEventListener('click', () => { if ($('obSheet').dataset.step === 'notify') obNext(); else toCity(false); });
 let introOn = false;
 function playIntro(tries){
-  const box = $('intro'); if (!box) return;
+  const box = $('intro'); if (!box) { afterIntro(); return; }
   // only when opened from the app's icon: not from a widget, a notification or the adhan screen, nor when the phone restores it
   let quiet = false; try { quiet = !!(window.Android && Android.quietStart && Android.quietStart()); } catch(e) {}
   const play = !quiet && (S.intro === 'always' || (S.intro === 'first' && !S.introSeen));
@@ -2268,7 +2274,7 @@ function playIntro(tries){
   // everything is placed from the screen's size, again whenever it changes (system bars arrive after the first frame)
   const layout = () => { const r = $('isvg').getBoundingClientRect(); Wp = r.width || phoneEl.clientWidth || innerWidth; Hp = r.height || phoneEl.clientHeight || innerHeight; sz = Math.min(200, Wp*0.48); u = sz/320; ccx = Wp/2; ccy = Hp*0.36;
     $('isvg').setAttribute('viewBox', '0 0 ' + Wp + ' ' + Hp); setT(k0); $('iword').style.top = (ccy + sz*0.5) + 'px'; $('itag').style.top = (ccy + sz*0.5 + 76) + 'px'; };
-  layout();
+  layout(); box.classList.add('ready');
   const ro = new ResizeObserver(layout); ro.observe(phoneEl); ro.observe($('isvg'));
   // right after installing, the screen can still change size in the first frames (system bars arrive late): follow it
   { const t1 = performance.now(); (function fol(){ layout(); if (performance.now() - t1 < 1600 && box.parentNode) requestAnimationFrame(fol); })(); }

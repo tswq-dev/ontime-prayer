@@ -72,6 +72,10 @@ class MainActivity : ComponentActivity() {
             WindowInsetsCompat.CONSUMED
         }
         setContentView(root)
+        // Back on the main screen leaves the app without closing it (Android 12+ does this itself), so coming back is not a fresh start with the opening
+        if (Build.VERSION.SDK_INT < 31) onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { moveTaskToBack(true) }
+        })
         onBackPressedDispatcher.addCallback(this, closeSheet)
 
         web.setBackgroundColor(getColor(R.color.bg))
