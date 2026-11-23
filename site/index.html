@@ -109,6 +109,7 @@ tr[data-d]{cursor:pointer}@media (hover:hover){tr[data-d]:hover td{background:va
 a{color:var(--acc)}
 .near{background:var(--acc2);border:1px solid var(--line);border-radius:12px;padding:12px}.near p{margin:0 0 10px;font-weight:600}
 .nearb{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nearb button{white-space:normal;line-height:1.35;font-weight:600}#nacc{display:block;margin-top:8px;font-size:13px}.nearb small{display:block;margin-top:3px;font-size:13px;font-weight:400;color:inherit;opacity:.88}
+.foot{text-align:center;padding:0 16px 22px;font-size:13px}.foot a{color:var(--mute)}
 .inst{position:fixed;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:10px;background:var(--band);color:var(--bandink);border-radius:14px;padding:10px 10px 10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:560px;margin:0 auto}
 .inst span{flex:1;font-size:14px;line-height:1.5}.inst .pri{background:var(--brass);border-color:var(--brass);color:#13201B;font-weight:600}.inst .x{background:transparent;border:0;color:var(--bandink);font-size:22px;padding:2px 8px}
 @page{size:A4;margin:12mm}
@@ -148,6 +149,7 @@ a{color:var(--acc)}
 </section>
 <section class="card" id="out"></section>
 </main>
+<footer class="foot noprint"><a id="priv" href="privacy">سياسة الخصوصية</a></footer>
 <div id="inst" class="inst noprint" hidden role="dialog" aria-live="polite"><span id="instt"></span><button id="instgo" class="pri"></button><button id="instx" class="x" aria-label="إغلاق">×</button></div>
 <script>
 /* umq.js — Umm al-Qura prayer times (reconstruction), browser + Node, no dependencies.
@@ -401,7 +403,7 @@ const L = {
   ar: {
     dir: 'rtl', name: 'الركن الثاني', doc: 'الركن الثاني — مواقيت الصلاة', other: 'EN', otherL: 'English',
     themes: { auto: 'الثيم: تلقائي حسب الجهاز', light: 'الثيم: فاتح', dark: 'الثيم: داكن' },
-    tag: 'مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت',
+    tag: 'مواقيت الصلاة مطابقة لموقع تقويم أم القرى الرسمي، وتُحسب على جهازك بلا إنترنت', priv: 'سياسة الخصوصية',
     search: 'ابحث عن مدينتك', city: 'المدينة', cities: 'المدن', gps: 'موقعي', coords: 'إحداثيات', lat: 'خط العرض', lon: 'خط الطول',
     eg: 'مثل', showT: 'عرض الأوقات', cancel: 'إلغاء', views: { day: 'يوم', month: 'شهر', year: 'سنة' }, viewL: 'العرض',
     cals: { h: 'هجري', g: 'ميلادي' }, calL: 'نوع التقويم', fmts: { 12: '12 ساعة', 24: '24 ساعة' }, fmtL: 'نظام الساعة',
@@ -427,7 +429,7 @@ const L = {
   en: {
     dir: 'ltr', name: 'On Time Prayer', doc: 'On Time Prayer — prayer times', other: 'عربي', otherL: 'العربية',
     themes: { auto: 'Theme: automatic (device)', light: 'Theme: light', dark: 'Theme: dark' },
-    tag: 'Prayer times matching the official Umm al-Qura calendar website, computed on your device, offline',
+    tag: 'Prayer times matching the official Umm al-Qura calendar website, computed on your device, offline', priv: 'Privacy policy',
     search: 'Search for your city', city: 'City', cities: 'Cities', gps: 'Locate me', coords: 'Lat/Long', lat: 'Latitude', lon: 'Longitude',
     eg: 'e.g.', showT: 'Show times', cancel: 'Cancel', views: { day: 'Day', month: 'Month', year: 'Year' }, viewL: 'View',
     cals: { h: 'Hijri', g: 'Gregorian' }, calL: 'Calendar', fmts: { 12: '12-hour', 24: '24-hour' }, fmtL: 'Clock',
@@ -614,7 +616,7 @@ function seg(id, key, cb) { const g = $(id), upd = () => g.querySelectorAll('but
 function applyLang() {
   T = L[st.lang]; wkf = new Intl.DateTimeFormat(T.wk, { weekday: 'long', timeZone: 'UTC' });
   const root = document.documentElement; root.lang = st.lang; root.dir = T.dir; document.title = T.doc; document.querySelector('meta[name=description]').content = T.tag;
-  $('#bname').textContent = T.name; $('#btag').textContent = T.tag; $('#lang').textContent = T.other; $('#lang').setAttribute('aria-label', T.otherL); $('#lang').title = T.otherL; applyTheme();
+  $('#bname').textContent = T.name; $('#btag').textContent = T.tag; $('#priv').textContent = T.priv; $('#lang').textContent = T.other; $('#lang').setAttribute('aria-label', T.otherL); $('#lang').title = T.otherL; applyTheme();
   $('#lang').setAttribute('lang', st.lang === 'ar' ? 'en' : 'ar');
   inp.placeholder = T.search; inp.setAttribute('aria-label', T.city); clist.setAttribute('aria-label', T.cities);
   $('#gps').textContent = T.gps; $('#cbtn').textContent = T.coords; $('#cgo').textContent = T.showT; $('#cx').textContent = T.cancel;
