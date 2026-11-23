@@ -11,8 +11,8 @@ android {
         applicationId = "com.tswq.ontimeprayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 37
-        versionName = "0.22.4"
+        versionCode = 38
+        versionName = "0.22.5"
     }
 
     signingConfigs {
