@@ -41,6 +41,10 @@ class AlarmReceiver : BroadcastReceiver() {
             ACTION_BEFORE_MENU -> json("ev")?.let { Alerts.channels(ctx); Alerts.showBefore(ctx, it) }
             ACTION_BEFORE -> json("ev")?.let { Alerts.channels(ctx); Alerts.before(ctx, it, intent.getLongExtra("mins", 20)) }
             ACTION_PRAYED -> intent.getStringExtra("pk")?.let { Alerts.prayed(ctx, it) }
+            // the prayer alarms (0.24)
+            PrayerAlarms.ACTION_RING -> PrayerAlarms.fire(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", System.currentTimeMillis()))
+            PrayerAlarms.ACTION_SOON -> PrayerAlarms.soon(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", 0L))
+            PrayerAlarms.ACTION_SKIP -> PrayerAlarms.skip(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", 0L))
         }
     }
 
@@ -59,6 +63,7 @@ class AlarmReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Scheduler.reschedule(ctx)
+        runCatching { PrayerAlarms.schedule(ctx) }
         runCatching { WidgetUpdater.updateAll(ctx) }
     }
 }

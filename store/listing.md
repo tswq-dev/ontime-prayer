@@ -23,6 +23,11 @@
 • أزرار في إشعار الأذان: «صلّيت» و«ذكّرني بعد» و«ذكّرني قبل خروج الوقت».
 • يتوقف الأذان بزر القفل أو زر الصوت أو بقلب الجوال على وجهه.
 
+**المنبّهات**
+• منبّهات مربوطة بالصلاة: «قبل الفجر بـ٢٠ دقيقة» أو «الثلث الأخير من الليل»، يتغيّر وقتها كل يوم مع المواقيت.
+• تعمل مثل منبّه الساعة: أصوات المنبّه في الجوال، والغفوة، والأيام التي تختارها، وحتى لو كان الجوال صامتاً.
+• قبلها بنصف ساعة إشعار هادئ لتخطّي المرة القادمة فقط.
+
 **الشاشة الرئيسية**
 • سماء حية تتغير مع يومك، فيها الشمس والقمر والنجوم في مواضعها الحقيقية.
 • اسحب على السماء لتتنقل في يومك، وثبّت المنظر الذي يعجبك.
@@ -64,6 +69,11 @@ The adhan comes in the first second of its minute, in the voice of the muezzin y
 • Buttons on the adhan notification: “I prayed”, “Remind me in…” and “Remind me before it ends”.
 • Stop the adhan with the power or volume button, or by turning the phone face down.
 
+**Alarms**
+• Alarms tied to a prayer: “20 min before Fajr” or “the last third of the night”, their time moving with the prayer times every day.
+• Like the clock’s alarm: your phone’s alarm sounds, snooze, the days you pick, and even on silent.
+• Half an hour before, a quiet notice lets you skip just the next one.
+
 **Home screen**
 • A live sky that follows your day, with the sun, moon and stars where they really are.
 • Swipe across the sky to move through your day, and pin the view you like.
@@ -90,7 +100,7 @@ In Arabic and English, light and dark.
 - التشفير أثناء النقل وطلب حذف البيانات: لا ينطبق، لا توجد بيانات تُنقل.
 
 ### إقرارات الأذونات (Play Console ← محتوى التطبيق)
-- **USE_EXACT_ALARM** و**USE_FULL_SCREEN_INTENT**: وظيفة التطبيق الأساسية منبّه (الأذان في وقته، وشاشة الأذان والجوال مقفل مثل المنبّه).
+- **USE_EXACT_ALARM** و**USE_FULL_SCREEN_INTENT**: التطبيق منبّه فعلاً: منبّهات يضبطها المستخدم (`setAlarmClock`، تظهر في شريط الحالة) بشاشة كاملة فوق القفل، إضافة إلى الأذان في وقته وشاشته.
 - **FOREGROUND_SERVICE_MEDIA_PLAYBACK**: تشغيل الأذان كاملاً بعد بدء التنبيه، ويتوقف بإيقافه أو انتهائه. يُطلب فيديو قصير يوضح ذلك.
 - **REQUEST_IGNORE_BATTERY_OPTIMIZATIONS** (أُضيف في 0.22): زر «السماح بالعمل في الخلفية» يفتح نافذة النظام مباشرة. إذا رفضه Google Play نحذف الإذن ويعود الزر لفتح إعدادات البطارية.
 

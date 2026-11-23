@@ -178,6 +178,28 @@ class MainActivity : ComponentActivity() {
         // home screen widgets
         @JavascriptInterface fun widgetData(json: String) {
             runCatching { org.json.JSONObject(json); Scheduler.prefs(applicationContext).edit().putString("widgetData", json).apply(); WidgetUpdater.updateAll(applicationContext) }
+            runCatching { PrayerAlarms.schedule(applicationContext) }   // the alarms' times follow the days just sent
+        }
+        // the prayer alarms (0.24): the list, when each rings next, skipping one time, trying one now, and the phone's alarm sounds
+        @JavascriptInterface fun alarms(json: String) { runCatching { PrayerAlarms.save(applicationContext, json) } }
+        @JavascriptInterface fun alarmState(): String = runCatching { PrayerAlarms.state(applicationContext) }.getOrDefault("{}")
+        @JavascriptInterface fun alarmSkip(id: Int, on: Boolean) { runCatching { PrayerAlarms.find(applicationContext, id)?.let { a ->
+            PrayerAlarms.next(applicationContext, a, System.currentTimeMillis() + 1_000)?.let { PrayerAlarms.skip(applicationContext, id, it.first, on) } } } }
+        @JavascriptInterface fun alarmTry(json: String) { main.post { runCatching {
+            val i = Intent(this@MainActivity, RingService::class.java).putExtra("al", json).putExtra("at", System.currentTimeMillis())
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i) } } }
+        @JavascriptInterface fun pickAlarm(key: String) {
+            main.post {
+                pendingTone = key
+                val cur = Scheduler.prefs(this@MainActivity).getString("soundUri_$key", null)?.let { Uri.parse(it) }
+                    ?: android.media.RingtoneManager.getActualDefaultRingtoneUri(this@MainActivity, android.media.RingtoneManager.TYPE_ALARM)
+                runCatching { pickToneR.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, cur)) }
+            }
         }
         @JavascriptInterface fun widgets(): String = runCatching { WidgetUpdater.info(applicationContext) }.getOrDefault("{\"placed\":[],\"styles\":{},\"pin\":false}")
         @JavascriptInterface fun widgetPreview(type: String, json: String): String = runCatching { WidgetUpdater.preview(applicationContext, type, json) }.getOrDefault("")

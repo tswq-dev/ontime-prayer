@@ -513,7 +513,8 @@ object Alerts {
     fun soundUri(ctx: Context, sound: String, userFile: Boolean = true): Pair<Uri?, Boolean> {
         // the user's own files (file, file2 …) and tones picked from the phone (tone_fajr …, tone_rem for reminders)
         if (Regex("file\\d*").matches(sound) && userFile) Scheduler.prefs(ctx).getString("soundUri_$sound", null)?.let { return Uri.parse(it) to true }
-        if (sound.startsWith("tone_")) return (Scheduler.prefs(ctx).getString("soundUri_$sound", null)?.let { Uri.parse(it) } ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)) to true
+        if (sound.startsWith("tone_")) return (Scheduler.prefs(ctx).getString("soundUri_$sound", null)?.let { Uri.parse(it) }
+            ?: RingtoneManager.getDefaultUri(if (sound.startsWith("tone_al")) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION)) to true
         if (sound == "notify") return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) to false
         val id = rawId(ctx, sound).takeIf { it != 0 } ?: R.raw.adhan_afasy
         return Uri.parse("android.resource://${ctx.packageName}/$id") to true
