@@ -25,6 +25,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.media.VolumeProvider
@@ -386,6 +387,7 @@ class RingService : Service() {
         awake?.let { runCatching { if (it.isHeld) it.release() } }
         runCatching { awake = getSystemService(PowerManager::class.java)?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ontime:alarm")?.apply { acquire(31 * 60_000L) } }
         main.removeCallbacksAndMessages(null)
+        loudest(a)
         play(a)
         if (a.optBoolean("vib", true)) runCatching { getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 600), 0),
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()) }
@@ -400,6 +402,15 @@ class RingService : Service() {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
     /** Stopped, or unanswered: the snooze goes; a check ring stopped means awake; otherwise the wake-up check may follow. */
+    /** «أعلى صوت»: the phone's alarm volume all the way up while it goes off, then back as it was. */
+    private var volBefore = -1
+    private fun loudest(a: JSONObject) {
+        if (!a.optBoolean("max")) return
+        runCatching { val am = getSystemService(AudioManager::class.java) ?: return
+            if (volBefore < 0) volBefore = am.getStreamVolume(AudioManager.STREAM_ALARM)
+            am.setStreamVolume(AudioManager.STREAM_ALARM, am.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0) }
+    }
+
     private fun stopAll() { if (done) return; done = true
         als.forEach { PrayerAlarms.stopped(this, it.optInt("id")); if (it.optBoolean("_check")) PrayerAlarms.awake(this, it.optInt("id")) else PrayerAlarms.ended(this, it) } }
     /** Snooze (each with its own minutes, while it has snoozes left), or stop when the first one has none left. */
@@ -454,8 +465,10 @@ class RingService : Service() {
     }
 
     private fun soundUri(a: JSONObject): Uri? {
+        // «يقوى الصوت مع السلسلة»: after the first ring of a series, a strong sound of the app's (0.28)
+        val s = if (a.optBoolean("esc") && a.optInt("_idx") > 0) a.optString("escSnd", "al_sharp").ifEmpty { "al_sharp" } else a.optString("snd")
+        if (s.startsWith("al_")) Alerts.rawId(this, s).takeIf { it != 0 }?.let { return Uri.parse("android.resource://$packageName/$it") }
         // an adhan from the app's voices: Fajr alarms take the voice's own Fajr adhan where it has one
-        val s = a.optString("snd")
         if (s.isNotEmpty() && s != "tone") { val f = if (a.optString("k") == "fajr" && Alerts.rawId(this, s + "_fajr") != 0) s + "_fajr" else s
             Alerts.rawId(this, f).takeIf { it != 0 }?.let { return Uri.parse("android.resource://$packageName/$it") } }
         val key = "tone_al" + a.optInt("id")
@@ -497,6 +510,7 @@ class RingService : Service() {
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null); unlisten()
+        if (volBefore >= 0) runCatching { getSystemService(AudioManager::class.java)?.setStreamVolume(AudioManager.STREAM_ALARM, volBefore, 0) }; volBefore = -1
         player?.let { runCatching { it.stop() }; it.release() }; player = null
         runCatching { getSystemService(Vibrator::class.java)?.cancel() }
         awake?.let { runCatching { if (it.isHeld) it.release() } }; awake = null

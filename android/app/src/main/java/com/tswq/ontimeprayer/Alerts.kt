@@ -28,6 +28,8 @@ object Alerts {
     const val CH_REMIND = "remind"
     const val CH_EXIT = "exit"
     const val CH_AFTER = "after"
+    /** The choices after «ذكّرني بعد» / «ذكّرني قبل خروج الوقت» pop up again in place, without a sound (0.28); quietly they hid in the shade. */
+    const val CH_MENU = "menu"
     const val CH_SILENT = "quiet"
     const val CH_LATER = "later"
 
@@ -63,6 +65,9 @@ object Alerts {
         // What stays in the shade after the adhan (with "remind me" and "I prayed"): no sound of its own.
         nm.createNotificationChannel(NotificationChannel(CH_AFTER, t("بعد الأذان", "After the adhan"), NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null); enableVibration(false)
+        })
+        nm.createNotificationChannel(NotificationChannel(CH_MENU, t("خيارات التذكير", "Reminder choices"), NotificationManager.IMPORTANCE_HIGH).apply {
+            setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
     }
 
@@ -257,13 +262,21 @@ object Alerts {
     fun showBefore(ctx: Context, ev: JSONObject) {
         val pk = ev.optString("pk"); menuPk = pk; menuKind = "before"
         if (AdhanService.playingPk() == pk) AdhanService.stop(ctx)
-        else post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+        else post(ctx, prayerBuilder(ctx, ev, CH_MENU, null), noteIdOf(pk))
+    }
+    /** The channel for what follows a prayer's notification: the choices pop up; anything else stays quiet. */
+    fun afterChannel(pk: String) = if (menuPk == pk) CH_MENU else CH_AFTER
+    /** «سنذكّرك ٥:٥٦ ص · يخرج وقت الفجر ٦:١٦ ص» on the screen for a moment, after a duration is picked. */
+    private fun confirm(ctx: Context, r: JSONObject) {
+        val t = setText(r)
+        android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { android.widget.Toast.makeText(ctx.applicationContext, t, android.widget.Toast.LENGTH_LONG).show() } }
     }
 
     /** A "before" duration picked: it replaces a "remind me in" reminder, if there was one. */
     fun before(ctx: Context, ev: JSONObject, mins: Long) {
         val pk = ev.optString("pk"); menuPk = null
         remind(ctx, JSONObject(ev.toString()).put("mins", mins))
+        Exits.next(ev, System.currentTimeMillis())?.let { x -> confirm(ctx, JSONObject(ev.toString()).put("at", x.at - mins * 60_000L)) }
         if (AdhanService.playingPk() != pk) post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
     }
 
@@ -271,7 +284,7 @@ object Alerts {
     fun showLater(ctx: Context, ev: JSONObject) {
         val pk = ev.optString("pk"); menuPk = pk; menuKind = "later"
         if (AdhanService.playingPk() == pk) AdhanService.stop(ctx)   // what it leaves behind is the notification with the choices
-        else post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
+        else post(ctx, prayerBuilder(ctx, ev, CH_MENU, null), noteIdOf(pk))
     }
 
     /** A duration picked: a reminder then; it replaces a "before the time ends" one (the last choice is the one kept). */
@@ -283,6 +296,7 @@ object Alerts {
             Reminders.remove(ctx, pk, "x")
             Reminders.put(ctx, JSONObject(ev.toString()).put("at", at).put("kind", "later"))
             Scheduler.reschedule(ctx)
+            confirm(ctx, JSONObject(ev.toString()).put("at", at))
         }
         if (AdhanService.playingPk() == pk) AdhanService.refresh()
         else post(ctx, prayerBuilder(ctx, ev, CH_AFTER, null), noteIdOf(pk))
@@ -493,7 +507,7 @@ object Alerts {
     /** A bundled recording by name: the adhan voices, or the spoken lines (spk_…). 0 if there is none. */
     fun rawId(ctx: Context, name: String): Int = raw(name).takeIf { it != 0 }
         ?: when {
-            name.startsWith("spk_") -> ctx.resources.getIdentifier(name, "raw", ctx.packageName)
+            name.startsWith("spk_") || name.startsWith("al_") -> ctx.resources.getIdentifier(name, "raw", ctx.packageName)   // al_: the app's alarm sounds (0.28)
             // the other voices (0.14): adhan_<voice>, adhan_<voice>_fajr, adhan_tk1_<voice> (one takbir), adhan_takbir_<voice> (four)
             name.matches(Regex("[a-z0-9_]+")) -> ctx.resources.getIdentifier("adhan_$name", "raw", ctx.packageName)
             else -> 0

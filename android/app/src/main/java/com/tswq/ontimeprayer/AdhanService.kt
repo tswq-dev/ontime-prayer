@@ -189,7 +189,7 @@ class AdhanService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         val e = ev
         if (e != null && !noAfter && Exits.hasEx(e) && !Prayed.has(this, e.optString("pk")))
-            Alerts.post(this, Alerts.prayerBuilder(this, e, Alerts.CH_AFTER, null), Alerts.noteId(e))
+            Alerts.post(this, Alerts.prayerBuilder(this, e, Alerts.afterChannel(e.optString("pk")), null), Alerts.noteId(e))
         super.onDestroy()
     }
 

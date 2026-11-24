@@ -40,7 +40,7 @@ enum Sounds {
         if s.hasPrefix("file"), let p = UserDefaults.standard.string(forKey: "filePath_\(s)") {
             let u = files.appendingPathComponent(p); if FileManager.default.fileExists(atPath: u.path) { return u }
         }
-        if s.hasPrefix("spk_") { return Bundle.main.url(forResource: s, withExtension: "caf") }
+        if s.hasPrefix("spk_") || s.hasPrefix("al_") { return Bundle.main.url(forResource: s, withExtension: "caf") }   // al_: the alarm sounds (0.28)
         return Bundle.main.url(forResource: s, withExtension: "m4a")
             ?? Bundle.main.url(forResource: "adhan_\(s)", withExtension: "mp3")
             ?? Bundle.main.url(forResource: "n_\(s)", withExtension: "caf")

@@ -124,6 +124,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         case "alarms": Alarms.save(b["json"] as? String ?? "[]"); pushState()
         case "alarmSkip": Alarms.skip((b["id"] as? NSNumber)?.intValue ?? 0, (b["on"] as? NSNumber)?.boolValue ?? true); pushState()
         case "alarmTry": Alarms.tryNow(b["json"] as? String ?? "{}")
+        case "alarmUnsnooze": let al = (b["id"] as? NSNumber)?.intValue ?? 0; Alarms.unsnooze(UserDefaults.standard.string(forKey: "alSnzU_\(al)") ?? "", al: al); pushState()
         case "openSettings": if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
         case "openUrl": if let u = URL(string: b["url"] as? String ?? ""), ["https", "http", "mailto"].contains(u.scheme ?? "") { UIApplication.shared.open(u) }
         default: break
@@ -200,7 +201,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         alarmState: function(){ return JSON.stringify(st.alarmState || {}); },
         alarmSkip: function(id, on){ post('alarmSkip', { id: id, on: !!on }); },
         alarmTry: function(j){ post('alarmTry', { json: j }); },
-        alarmUnsnooze: function(){},
+        alarmUnsnooze: function(id){ post('alarmUnsnooze', { id: id }); },
         alarmAuth: function(){ return st.alarmAuth || 'ask'; }
       });
     })();

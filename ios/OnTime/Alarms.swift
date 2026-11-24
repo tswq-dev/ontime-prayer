@@ -104,6 +104,7 @@ enum Alarms {
             guard let first = rings(a, after: now + 1_000, until: now + 40 * day, skipped: false).first else { continue }
             let skip = ud.double(forKey: "alSkip_\(id(a))") == first.base
             var j: [String: Any] = ["at": first.at, "skip": skip]
+            let snz = ud.double(forKey: "alSnz_\(id(a))"); if snz > now { j["snooze"] = snz }
             if skip, let then = rings(a, after: now + 1_000, until: now + 40 * day).first { j["then"] = then.at }
             o["\(id(a))"] = j
         }
@@ -135,12 +136,21 @@ enum Alarms {
         var al = 0; var base: Double = 0; var idx = 0; var snN = 0
         var sig: String { "\(Int(at))|\(kind)|\(key)|\(title)|\(snooze)|\(snN)|\(sound)" } }
 
-    static func alarmSound(_ a: [String: Any]) -> String {
-        guard let s = a["snd"] as? String, s != "tone", !s.isEmpty else { return "" }
-        if a["k"] as? String == "fajr", Bundle.main.url(forResource: "n_\(s)_fajr", withExtension: "caf") != nil { return "n_\(s)_fajr.caf" }
-        return Bundle.main.url(forResource: "n_\(s)", withExtension: "caf") != nil ? "n_\(s).caf" : ""
+    /// A bundled sound by name, if it is there.
+    static func has(_ n: String) -> String? { Bundle.main.url(forResource: n, withExtension: "caf") != nil ? n + ".caf" : nil }
+    /// An adhan voice for an alarm: its full adhan made for alarms (a_<voice>, 0.28) when there is one, else the 30-second clip,
+    /// which the iPhone repeats; Fajr takes the voice's Fajr adhan.
+    static func voice(_ s: String, fajr: Bool) -> String {
+        (fajr ? has("a_\(s)_fajr") : nil) ?? has("a_\(s)") ?? (fajr ? has("n_\(s)_fajr") : nil) ?? has("n_\(s)") ?? ""
     }
-    static func adhanSound(_ s: String) -> String { Bundle.main.url(forResource: "n_\(s)", withExtension: "caf") != nil ? "n_\(s).caf" : "" }
+    static func alarmSound(_ a: [String: Any], idx: Int = 0) -> String {
+        // «يقوى الصوت مع السلسلة»: after the first ring, a strong sound of the app's
+        if idx > 0, (a["esc"] as? NSNumber)?.boolValue == true { return has((a["escSnd"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "al_sharp") ?? "" }
+        guard let s = a["snd"] as? String, s != "tone", !s.isEmpty else { return "" }
+        if s.hasPrefix("al_") { return has(s) ?? "" }   // the app's alarm sounds
+        return voice(s, fajr: a["k"] as? String == "fajr")
+    }
+    static func adhanSound(_ s: String) -> String { voice(s, fajr: false) }
 
     static func wanted() -> [Want] {
         let now = Scheduler.nowMs, until = now + 30 * day
@@ -151,7 +161,7 @@ enum Alarms {
             let wake = (a["wake"] as? NSNumber)?.boolValue == true, wakeIn = Double(min(15, max(1, (a["wakeIn"] as? NSNumber)?.intValue ?? 3))) * 60_000
             let cut = ud.double(forKey: "alCut_\(id(a))")
             for r in rings(a, after: now + 5_000, until: until) {
-                w.append(Want(at: r.at, kind: "alarm", key: "\(id(a))|\(Int(r.base))|\(r.idx)", title: t, snooze: snz, sound: snd, al: id(a), base: r.base, idx: r.idx, snN: snN))
+                w.append(Want(at: r.at, kind: "alarm", key: "\(id(a))|\(Int(r.base))|\(r.idx)", title: t, snooze: snz, sound: r.idx > 0 ? alarmSound(a, idx: r.idx) : snd, al: id(a), base: r.base, idx: r.idx, snN: snN))
                 // the wake-up check: after the last of the series, unless «نعم، استيقظت» comes first
                 if wake && r.idx == rep(a) - 1 && r.base != cut {
                     w.append(Want(at: r.at + wakeIn, kind: "check", key: "\(id(a))|\(Int(r.base))", title: ar ? "هل استيقظت؟" : "Are you up?", snooze: 0, sound: snd, al: id(a), base: r.base, idx: r.idx))
@@ -242,6 +252,7 @@ enum Alarms {
 
     /// While snoozed: «غفوة حتى ٥:٠٥» with «إيقاف المنبّه».
     static func snoozed(_ al: Int, at: Double, title: String, uuid: String) {
+        ud.set(at, forKey: "alSnz_\(al)"); ud.set(uuid, forKey: "alSnzU_\(al)")   // the card shows it, with «إلغاء الغفوة»
         let e = fmt(), ar = Fmt.ar(e), n = UNMutableNotificationContent()
         n.title = (ar ? "غفوة حتى " : "Snoozed until ") + clock(at, e)
         n.body = title
@@ -252,6 +263,7 @@ enum Alarms {
     }
     /// «إيقاف المنبّه» on that notice: the snooze goes.
     static func unsnooze(_ uuid: String, al: Int) {
+        ud.removeObject(forKey: "alSnz_\(al)"); ud.removeObject(forKey: "alSnzU_\(al)")
         Scheduler.center.removeDeliveredNotifications(withIdentifiers: ["alsnz:\(al)"])
         if #available(iOS 26.0, *), let u = UUID(uuidString: uuid) { try? AlarmManager.shared.cancel(id: u) }
     }
@@ -306,7 +318,7 @@ enum AK {
         }
         let presentation = AlarmPresentation(alert: alert)
         let attributes = AlarmAttributes<OnTimeAlarm>(presentation: presentation, metadata: OnTimeAlarm(kind: w.kind, key: w.key, title: w.title),
-                                                      tintColor: Color(red: 0.91, green: 0.80, blue: 0.54))
+                                                      tintColor: Color(red: 0.827, green: 0.655, blue: 0.353))   // the app's gold
         let sound: AlertConfiguration.AlertSound = w.sound.isEmpty ? .default : .named(w.sound)
         let intent: (any LiveActivityIntent)? = adhan ? OpenAdhanIntent(alarmID: id.uuidString, key: w.key)
             : snooze ? SnoozeIntent(alarmID: id.uuidString, info: "\(w.al)|\(Int(w.base))|\(w.idx)|\(w.snooze)|\(w.snN)", title: w.title, sound: w.sound) : nil

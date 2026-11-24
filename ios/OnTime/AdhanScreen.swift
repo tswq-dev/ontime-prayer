@@ -13,13 +13,25 @@ struct AdhanScreen: View {
 
     private var ev: [String: Any] { adhan.ev }
     private var ar: Bool { Fmt.ar(ev) }
-    private let cream = Color(red: 0.957, green: 0.925, blue: 0.863), gold = Color(red: 0.886, green: 0.761, blue: 0.478)
+    @Environment(\.colorScheme) private var scheme
+    /// The app's own colours (0.28): dark (its #101A16 and gold) or light (its cream and green), as the user set the app, or the phone on auto.
+    private var dark: Bool {
+        let w = (UserDefaults.standard.string(forKey: "widgetData") ?? "").data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let th = w?["theme"] as? String ?? "auto"
+        return th == "dark" || (th != "light" && scheme == .dark)
+    }
+    private func rgb(_ v: UInt32) -> Color { Color(red: Double((v >> 16) & 255) / 255, green: Double((v >> 8) & 255) / 255, blue: Double(v & 255) / 255) }
+    private var cream: Color { rgb(dark ? 0xECE4D4 : 0x1F2A24) }      // the text
+    private var gold: Color { rgb(dark ? 0xD3A75A : 0x0B4D3B) }       // the accent
+    private var onGold: Color { dark ? rgb(0x13201B) : .white }
+    private var brass: Color { rgb(dark ? 0xD3A75A : 0xC99A4B) }      // the arch
 
     var body: some View {
         ZStack {
-            RadialGradient(colors: [Color(red: 0.08, green: 0.38, blue: 0.31), Color(red: 0.04, green: 0.23, blue: 0.18)], center: .init(x: 0.5, y: 0.35), startRadius: 10, endRadius: 520)
+            LinearGradient(colors: [rgb(dark ? 0x17241F : 0xFBF8F2), rgb(dark ? 0x0A110E : 0xEFE7D8)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
-            Arch().stroke(gold.opacity(0.55), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+            RadialGradient(colors: [brass.opacity(dark ? 0.24 : 0.18), .clear], center: .init(x: 0.5, y: 0.35), startRadius: 10, endRadius: 320).ignoresSafeArea()
+            Arch().stroke(brass.opacity(0.6), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                 .frame(width: 250, height: 300).offset(y: -70)
             VStack(spacing: 10) {
                 Spacer()
@@ -29,13 +41,13 @@ struct AdhanScreen: View {
                 Spacer()
                 Button { player.stop(); dismiss() } label: {
                     Text(ar ? "إيقاف الأذان" : "Stop the adhan").font(.custom("IBM Plex Sans Arabic SemiBold", size: 18))
-                        .frame(maxWidth: .infinity, minHeight: 60).foregroundStyle(Color(red: 0.04, green: 0.18, blue: 0.14)).background(gold, in: RoundedRectangle(cornerRadius: 20))
+                        .frame(maxWidth: .infinity, minHeight: 60).foregroundStyle(onGold).background(gold, in: RoundedRectangle(cornerRadius: 20))
                 }
                 if Scheduler.hasEx(ev) {
                     Button { Reminders.prayed(ev); player.stop(); dismiss() } label: {
                         Text(ar ? "صلّيت" : "I prayed").font(.custom("IBM Plex Sans Arabic SemiBold", size: 15))
                             .frame(maxWidth: .infinity, minHeight: 52).foregroundStyle(cream)
-                            .background(RoundedRectangle(cornerRadius: 18).fill(.white.opacity(0.08)).stroke(gold.opacity(0.35), lineWidth: 1))
+                            .background(RoundedRectangle(cornerRadius: 18).fill(cream.opacity(0.07)).stroke(brass.opacity(0.4), lineWidth: 1))
                     }
                 }
                 if let x = Reminders.nextExit(ev) {

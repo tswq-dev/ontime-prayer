@@ -52,6 +52,11 @@ enum Scheduler {
             }
             Alarms.notes()
         }
+        // «سنذكّرك …» goes once its reminder has come
+        center.getDeliveredNotifications { ns in
+            let old = ns.filter { $0.request.identifier.hasPrefix("set:") && (($0.request.content.userInfo["remAt"] as? NSNumber)?.doubleValue ?? 0) < nowMs }.map(\.request.identifier)
+            if !old.isEmpty { center.removeDeliveredNotifications(withIdentifiers: old) }
+        }
     }
 
     static func add(_ id: String, _ c: UNNotificationContent, _ atMs: Double) {
@@ -107,13 +112,15 @@ enum Scheduler {
         let snooze = UNNotificationAction(identifier: "L:10", title: ar ? "ذكّرني بعد \(Fmt.mins(10, e ?? [:]))" : "Remind me in 10 min", options: [])
         let skip = UNNotificationAction(identifier: "S", title: ar ? "تخطَّ هذه المرة" : "Skip this time", options: [])
         let up = UNNotificationAction(identifier: "W", title: ar ? "نعم، استيقظت" : "Yes, I'm up", options: [])
+        let unset = UNNotificationAction(identifier: "X", title: ar ? "إلغاء التذكير" : "Cancel the reminder", options: [.destructive])
         let unsnz = UNNotificationAction(identifier: "U", title: ar ? "إيقاف المنبّه" : "Dismiss", options: [.destructive])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: "ADHAN", actions: acts, intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "REM", actions: [pray, snooze], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "ALSOON", actions: [skip], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "ALWAKE", actions: [up], intentIdentifiers: [], options: []),
-            UNNotificationCategory(identifier: "ALSNZ", actions: [unsnz], intentIdentifiers: [], options: [])])
+            UNNotificationCategory(identifier: "ALSNZ", actions: [unsnz], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "REMSET", actions: [unset], intentIdentifiers: [], options: [])])
     }
 }
 
@@ -174,7 +181,27 @@ enum Reminders {
 
     static func cancel(_ pk: String) {
         Scheduler.center.removePendingNotificationRequests(withIdentifiers: ["rem:\(pk)"])
+        Scheduler.center.removeDeliveredNotifications(withIdentifiers: ["set:\(pk)"])
         store(pk, nil)
+    }
+
+    /// After «ذكّرني بعد» or «ذكّرني قبل خروج الوقت» on a notification (0.28): the prayer's notification leaves the list and a quiet
+    /// «سنذكّرك ٥:٥٦ ص · يخرج وقت الفجر ٦:١٦ ص» takes its place, with «إلغاء التذكير», as on Android.
+    static func confirm(_ e: [String: Any]) {
+        guard let pk = e["pk"] as? String, let at = all()[pk] else { return }
+        let ar = (e["lang"] as? String ?? "ar") != "en"
+        Scheduler.center.getDeliveredNotifications { ns in
+            let ids = ns.filter { Scheduler.event(of: $0.request.content.userInfo)?["pk"] as? String == pk }.map(\.request.identifier)
+            Scheduler.center.removeDeliveredNotifications(withIdentifiers: ids)
+            let c = UNMutableNotificationContent()
+            c.title = (ar ? "سنذكّرك " : "Reminder at ") + Alarms.clock(at, e)
+            c.body = nextExit(e).map { Fmt.ends(e, $0) } ?? (e["title"] as? String ?? "")
+            c.categoryIdentifier = "REMSET"
+            c.threadIdentifier = e["key"] as? String ?? ""
+            c.interruptionLevel = .passive
+            c.userInfo = ["ev": WebViewController.json(e), "remAt": at]
+            Scheduler.center.add(UNNotificationRequest(identifier: "set:\(pk)", content: c, trigger: nil))
+        }
     }
 
     /// «صلّيت»: no reminder for it any more, and its alerts leave the notification list.
