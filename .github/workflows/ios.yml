@@ -68,6 +68,9 @@ jobs:
             CI_PROFILE_APP="$PROFILE_0" CI_PROFILE_WIDGET="$PROFILE_1" CURRENT_PROJECT_VERSION=$BUILD 2>&1 \
             | tee build.log | grep -E "error:|warning: .*(OnTime|OnTimeWidgets|Shared)/|ARCHIVE (SUCCEEDED|FAILED)" || true
           grep -q "ARCHIVE SUCCEEDED" build.log
+          # the versions that go up (App Store Connect wants each build number higher than the last)
+          for p in "$RUNNER_TEMP"/OnTime.xcarchive/Products/Applications/*.app/Info.plist "$RUNNER_TEMP"/OnTime.xcarchive/Products/Applications/*.app/PlugIns/*.appex/Info.plist; do
+            echo "$p: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$p") ($(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$p"))"; done
           cat > "$RUNNER_TEMP/export.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
