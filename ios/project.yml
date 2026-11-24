@@ -49,6 +49,9 @@ targets:
       properties:
         CFBundleDisplayName: الركن الثاني
         CFBundleDevelopmentRegion: ar
+        # XcodeGen writes 1.0 (1) unless told; TestFlight needs each build number higher than the last
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
           UIColorName: LaunchBg
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -95,6 +98,8 @@ targets:
       properties:
         CFBundleDisplayName: الركن الثاني
         CFBundleDevelopmentRegion: ar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
