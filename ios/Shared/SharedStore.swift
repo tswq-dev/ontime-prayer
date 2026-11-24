@@ -26,7 +26,10 @@ enum SharedStore {
 
     /// Saves the JSON; true when it changed (so the app reloads the widgets only then).
     @discardableResult
-    static func write(_ json: String) -> Bool {
+    static func write(_ json: String) -> Bool { write(json, file: file) }
+    /// Another file in the group, e.g. the next alarms for the alarm widget (alarms.json, 0.27).
+    @discardableResult
+    static func write(_ json: String, file: String) -> Bool {
         guard !json.isEmpty, let u = container?.appendingPathComponent(file) else { return false }
         let data = Data(json.utf8)
         if let old = try? Data(contentsOf: u), old == data { return false }
@@ -34,7 +37,8 @@ enum SharedStore {
         return true
     }
 
-    static func read() -> Data? {
+    static func read() -> Data? { read(file: file) }
+    static func read(file: String) -> Data? {
         guard let u = container?.appendingPathComponent(file) else { return nil }
         return try? Data(contentsOf: u)
     }

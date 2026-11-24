@@ -1,5 +1,7 @@
 package com.tswq.ontimeprayer
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -184,8 +186,11 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun alarms(json: String) { runCatching { PrayerAlarms.save(applicationContext, json) } }
         @JavascriptInterface fun alarmUnsnooze(id: Int) { runCatching { PrayerAlarms.unsnooze(applicationContext, id) } }
         @JavascriptInterface fun alarmState(): String = runCatching { PrayerAlarms.state(applicationContext) }.getOrDefault("{}")
-        @JavascriptInterface fun alarmSkip(id: Int, on: Boolean) { runCatching { PrayerAlarms.find(applicationContext, id)?.let { a ->
-            PrayerAlarms.next(applicationContext, a, System.currentTimeMillis() + 1_000)?.let { PrayerAlarms.skip(applicationContext, id, it.first, on) } } } }
+        @JavascriptInterface fun alarmSkip(id: Int, on: Boolean) { runCatching { PrayerAlarms.skipNext(applicationContext, id, on) } }
+        /** «أضف ويدجت المنبّه القادم» in the alarms page: the phone's own "add to home screen" (0.27). */
+        @JavascriptInterface fun pinAlarmWidget() { main.post { runCatching {
+            val m = AppWidgetManager.getInstance(this@MainActivity)
+            if (Build.VERSION.SDK_INT >= 26 && m.isRequestPinAppWidgetSupported) m.requestPinAppWidget(ComponentName(this@MainActivity, WAlarm::class.java), null, null) } } }
         @JavascriptInterface fun alarmTry(json: String) { main.post { runCatching {
             val i = Intent(this@MainActivity, RingService::class.java).putExtra("al", json).putExtra("at", System.currentTimeMillis())
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i) } } }

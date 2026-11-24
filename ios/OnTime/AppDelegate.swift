@@ -44,6 +44,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let a = response.actionIdentifier
         let info = response.notification.request.content.userInfo
         if a == "S", let al = (info["al"] as? NSNumber)?.intValue, let at = (info["at"] as? NSNumber)?.doubleValue { Alarms.skip(al, at: at) }   // "skip this time"
+        else if a == "W", let al = (info["al"] as? NSNumber)?.intValue, let base = (info["base"] as? NSNumber)?.doubleValue { Alarms.awake(al, base: base) }   // «نعم، استيقظت»
+        else if a == "U", let al = (info["al"] as? NSNumber)?.intValue { Alarms.unsnooze(info["u"] as? String ?? "", al: al) }   // «إيقاف المنبّه»
         else if a == "P" { Reminders.prayed(ev) }
         else if a.hasPrefix("B:"), let m = Int(a.dropFirst(2)) { Reminders.before(ev, mins: m) }
         else if a.hasPrefix("L:"), let m = Int(a.dropFirst(2)) { Reminders.later(ev, mins: m) }

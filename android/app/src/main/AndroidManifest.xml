@@ -52,6 +52,11 @@
         </receiver>
 
         <!-- Home screen widgets: each one is a picture drawn by the app, refreshed every minute while on the screen. -->
+        <!-- the next alarm (0.27) -->
+        <receiver android:name=".WAlarm" android:exported="true" android:label="@string/w_alarm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_alarm" />
+        </receiver>
         <receiver android:name=".WPano" android:exported="true" android:label="@string/w_pano">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_pano" />

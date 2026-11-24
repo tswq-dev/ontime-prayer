@@ -24,6 +24,8 @@
     <string name="w_actions">بأزرار</string>
     <string name="wd_actions">صلّيت، وكتم الأذان القادم، وذكّرني قبل الخروج</string>
     <string name="w_line">سطر واحد</string>
+    <string name="w_alarm">المنبّه القادم</string>
+    <string name="wd_alarm">وقت منبّهك القادم واسمه، والضغط يفتح المنبّهات.</string>
     <string name="wd_line">الصلاة القادمة في سطر</string>
     <string name="w_prayed">صلواتي اليوم</string>
     <string name="wd_prayed">دائرة لكل صلاة تمتلئ مع «صلّيت»، والأيام المتتالية</string>

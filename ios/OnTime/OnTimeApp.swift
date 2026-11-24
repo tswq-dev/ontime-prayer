@@ -15,7 +15,7 @@ struct OnTimeApp: App {
         }
         .onChange(of: phase) { _, p in
             if p == .background { AppDelegate.planRefresh() }
-            if p == .active { Scheduler.rebuild(); Alarms.sync(); Alarms.openPending() }
+            if p == .active { Alarms.openedAwake(); Scheduler.rebuild(); Alarms.sync(); Alarms.openPending() }
         }
     }
 }

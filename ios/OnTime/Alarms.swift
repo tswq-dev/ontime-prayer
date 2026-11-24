@@ -5,6 +5,7 @@ import UserNotifications
 import AppIntents
 import ActivityKit
 import AlarmKit
+import WidgetKit
 
 /// Real alarms on iOS 26+ (AlarmKit, 0.26): the prayer alarms the page keeps (the same list as Android's PrayerAlarms),
 /// and the adhan of the prayers set to «ينبهك حتى لو كان الجوال صامتاً». They sound through silent mode and Focus and show
@@ -60,15 +61,25 @@ enum Alarms {
         }
         return num(d[k])
     }
-    /// Every time an alarm goes off between [after] and [until] (ms), on its days.
-    static func rings(_ a: [String: Any], after: Double, until: Double) -> [Double] {
+    /// One time an alarm goes off: when, the series it belongs to (its first ring), and its place in it.
+    struct Ring { let at: Double; let base: Double; let idx: Int }
+    static func rep(_ a: [String: Any]) -> Int { min(10, max(1, (a["rep"] as? NSNumber)?.intValue ?? 1)) }
+    static func gap(_ a: [String: Any]) -> Double { Double(min(60, max(1, (a["gap"] as? NSNumber)?.intValue ?? 5))) * 60_000 }
+    /// Every time an alarm goes off between [after] and [until] (ms), on its days (0.27: with the rest of its series every few
+    /// minutes). A skipped day goes whole (`alSkip_` holds its first ring), and so does the rest of a series ended with «استيقظت».
+    static func rings(_ a: [String: Any], after: Double, until: Double, skipped: Bool = true) -> [Ring] {
         let ds = days(), on = (a["days"] as? [NSNumber])?.map { $0.intValue } ?? []
         let set = Set(on.isEmpty ? Array(0...6) : on)
         let off = num(a["off"]) * 60_000, k = a["k"] as? String ?? "fajr", end = (a["end"] as? NSNumber)?.boolValue ?? false
-        var out: [Double] = []
+        let n = rep(a), g = gap(a), skip = skipped ? ud.double(forKey: "alSkip_\(id(a))") : 0, cut = ud.double(forKey: "alCut_\(id(a))")
+        var out: [Ring] = []
         for i in 0..<ds.count where set.contains(weekday(ds[i]["d"] as? String ?? "")) {
             let t0 = anchor(ds, i, k, end); if t0 <= 0 { continue }
-            let t = t0 + off; if t > after && t <= until { out.append(t) }
+            let base = t0 + off; if base == skip { continue }
+            for j in 0..<n {
+                if j > 0 && base == cut { break }
+                let t = base + Double(j) * g; if t > after && t <= until { out.append(Ring(at: t, base: base, idx: j)) }
+            }
         }
         return out
     }
@@ -90,10 +101,10 @@ enum Alarms {
     static func state() -> [String: Any] {
         let now = Scheduler.nowMs; var o: [String: Any] = [:]
         for a in list() {
-            let r = rings(a, after: now + 1_000, until: now + 40 * day); guard let first = r.first else { continue }
-            let skip = ud.double(forKey: "alSkip_\(id(a))") == first
-            var j: [String: Any] = ["at": first, "skip": skip]
-            if skip, r.count > 1 { j["then"] = r[1] }
+            guard let first = rings(a, after: now + 1_000, until: now + 40 * day, skipped: false).first else { continue }
+            let skip = ud.double(forKey: "alSkip_\(id(a))") == first.base
+            var j: [String: Any] = ["at": first.at, "skip": skip]
+            if skip, let then = rings(a, after: now + 1_000, until: now + 40 * day).first { j["then"] = then.at }
             o["\(id(a))"] = j
         }
         return o
@@ -101,15 +112,28 @@ enum Alarms {
     /// "Skip the next one only" (from the page, or from the notice half an hour before), and "undo".
     static func skip(_ alarm: Int, _ on: Bool) {
         let now = Scheduler.nowMs
-        guard let a = list().first(where: { id($0) == alarm }), let t = rings(a, after: now + 1_000, until: now + 40 * day).first else { return }
-        if on { ud.set(t, forKey: "alSkip_\(alarm)") } else { ud.removeObject(forKey: "alSkip_\(alarm)") }
+        if !on { ud.removeObject(forKey: "alSkip_\(alarm)"); sync(); return }
+        guard let a = list().first(where: { id($0) == alarm }), let r = rings(a, after: now + 1_000, until: now + 40 * day, skipped: false).first else { return }
+        ud.set(r.base, forKey: "alSkip_\(alarm)")
         sync()
+    }
+    /// «نعم، استيقظت» (or the app opened while it goes on): no check, and the rest of the series goes.
+    static func awake(_ alarm: Int, base: Double) { ud.set(base, forKey: "alCut_\(alarm)"); sync() }
+    /// Opening the app once a series or its check is under way counts as awake.
+    static func openedAwake() {
+        let now = Scheduler.nowMs
+        for a in list() where rep(a) > 1 || (a["wake"] as? NSNumber)?.boolValue == true {
+            let span = Double(rep(a) - 1) * gap(a) + ((a["wake"] as? NSNumber)?.boolValue == true ? Double((a["wakeIn"] as? NSNumber)?.intValue ?? 3) * 60_000 : 0)
+            if let r = rings(a, after: now - span - 60_000, until: now, skipped: false).last, r.base <= now, now <= r.base + span + 30_000,
+               ud.double(forKey: "alCut_\(id(a))") != r.base { awake(id(a), base: r.base) }
+        }
     }
     static func skip(_ alarm: Int, at: Double) { ud.set(at, forKey: "alSkip_\(alarm)"); sync() }
 
     // ---------- the alarms to set ----------
     struct Want { let at: Double; let kind: String; let key: String; let title: String; let snooze: Int; let sound: String
-        var sig: String { "\(Int(at))|\(kind)|\(key)|\(title)|\(snooze)|\(sound)" } }
+        var al = 0; var base: Double = 0; var idx = 0; var snN = 0
+        var sig: String { "\(Int(at))|\(kind)|\(key)|\(title)|\(snooze)|\(snN)|\(sound)" } }
 
     static func alarmSound(_ a: [String: Any]) -> String {
         guard let s = a["snd"] as? String, s != "tone", !s.isEmpty else { return "" }
@@ -121,11 +145,17 @@ enum Alarms {
     static func wanted() -> [Want] {
         let now = Scheduler.nowMs, until = now + 30 * day
         var w: [Want] = []
+        let ar = Fmt.ar(fmt())
         for a in list() where (a["on"] as? NSNumber)?.boolValue ?? true {
-            let skip = ud.double(forKey: "alSkip_\(id(a))")
-            let snz = (a["snz"] as? NSNumber)?.intValue ?? 10
-            for t in rings(a, after: now + 5_000, until: until) where t != skip {
-                w.append(Want(at: t, kind: "alarm", key: "\(id(a))", title: title(a), snooze: snz, sound: alarmSound(a)))
+            let snz = (a["snz"] as? NSNumber)?.intValue ?? 10, snN = (a["snN"] as? NSNumber)?.intValue ?? 3, t = title(a), snd = alarmSound(a)
+            let wake = (a["wake"] as? NSNumber)?.boolValue == true, wakeIn = Double(min(15, max(1, (a["wakeIn"] as? NSNumber)?.intValue ?? 3))) * 60_000
+            let cut = ud.double(forKey: "alCut_\(id(a))")
+            for r in rings(a, after: now + 5_000, until: until) {
+                w.append(Want(at: r.at, kind: "alarm", key: "\(id(a))|\(Int(r.base))|\(r.idx)", title: t, snooze: snz, sound: snd, al: id(a), base: r.base, idx: r.idx, snN: snN))
+                // the wake-up check: after the last of the series, unless «نعم، استيقظت» comes first
+                if wake && r.idx == rep(a) - 1 && r.base != cut {
+                    w.append(Want(at: r.at + wakeIn, kind: "check", key: "\(id(a))|\(Int(r.base))", title: ar ? "هل استيقظت؟" : "Are you up?", snooze: 0, sound: snd, al: id(a), base: r.base, idx: r.idx))
+                }
             }
         }
         for e in Scheduler.events() where e["kind"] as? String == "adhan" && (e["ring"] as? NSNumber)?.intValue == 1 {
@@ -153,7 +183,8 @@ enum Alarms {
     /// "Try the alarm now": the same alarm in five seconds.
     static func tryNow(_ json: String) {
         guard #available(iOS 26.0, *), let d = json.data(using: .utf8), let a = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return }
-        let w = Want(at: Scheduler.nowMs + 5_000, kind: "alarm", key: "try", title: title(a), snooze: (a["snz"] as? NSNumber)?.intValue ?? 10, sound: alarmSound(a))
+        let w = Want(at: Scheduler.nowMs + 5_000, kind: "alarm", key: "try", title: title(a), snooze: (a["snz"] as? NSNumber)?.intValue ?? 10, sound: alarmSound(a),
+                     al: -1, base: 0, idx: 0, snN: (a["snN"] as? NSNumber)?.intValue ?? 3)
         Task { await AK.once(w) }
     }
 
@@ -167,16 +198,26 @@ enum Alarms {
             c.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { $0.hasPrefix("al:") })
             guard supported, auth() == "on" else { return }
             let now = Scheduler.nowMs, e = fmt(), ar = Fmt.ar(e)
-            for a in list() where (a["on"] as? NSNumber)?.boolValue ?? true {
-                let skip = ud.double(forKey: "alSkip_\(id(a))")
-                guard let t = rings(a, after: now + 31 * 60_000, until: now + 40 * day).first(where: { $0 != skip }) else { continue }
+                for a in list() where (a["on"] as? NSNumber)?.boolValue ?? true {
+                guard let r = rings(a, after: now + 31 * 60_000, until: now + 40 * day).first(where: { $0.idx == 0 }) else { continue }
                 let n = UNMutableNotificationContent()
-                n.title = (ar ? "منبّه " : "Alarm at ") + clock(t, e)
+                n.title = (ar ? "منبّه " : "Alarm at ") + clock(r.at, e)
                 n.body = title(a)
                 n.categoryIdentifier = "ALSOON"
-                n.userInfo = ["al": id(a), "at": t]
+                n.userInfo = ["al": id(a), "at": r.base]
                 n.interruptionLevel = .passive
-                Scheduler.add("al:soon:\(id(a))", n, t - 30 * 60_000)
+                Scheduler.add("al:soon:\(id(a))", n, r.at - 30 * 60_000)
+                // «هل استيقظت؟» after the last ring of that day, with «نعم، استيقظت»
+                if (a["wake"] as? NSNumber)?.boolValue == true {
+                    let last = r.base + Double(rep(a) - 1) * gap(a), again = last + Double((a["wakeIn"] as? NSNumber)?.intValue ?? 3) * 60_000
+                    let q = UNMutableNotificationContent()
+                    q.title = ar ? "هل استيقظت؟" : "Are you up?"
+                    q.body = ar ? "يعمل المنبّه مرة أخرى \(clock(again, e)) إن لم تؤكد." : "The alarm goes off again at \(clock(again, e)) unless you confirm."
+                    q.categoryIdentifier = "ALWAKE"
+                    q.userInfo = ["al": id(a), "base": r.base]
+                    q.interruptionLevel = .timeSensitive
+                    Scheduler.add("al:wake:\(id(a))", q, last + 20_000)
+                }
             }
             let last = ud.double(forKey: "akLast")
             if last > now + 3 * day {
@@ -197,6 +238,30 @@ enum Alarms {
         var h = c.hour ?? 0; let m = c.minute ?? 0; var mer = ""
         if f12 { mer = h < 12 ? (ar ? " ص" : " AM") : (ar ? " م" : " PM"); h = h % 12 == 0 ? 12 : h % 12 }
         return Fmt.digits("\(h):" + String(format: "%02d", m), e) + mer
+    }
+
+    /// While snoozed: «غفوة حتى ٥:٠٥» with «إيقاف المنبّه».
+    static func snoozed(_ al: Int, at: Double, title: String, uuid: String) {
+        let e = fmt(), ar = Fmt.ar(e), n = UNMutableNotificationContent()
+        n.title = (ar ? "غفوة حتى " : "Snoozed until ") + clock(at, e)
+        n.body = title
+        n.categoryIdentifier = "ALSNZ"
+        n.userInfo = ["al": al, "u": uuid]
+        n.interruptionLevel = .passive
+        Scheduler.center.add(UNNotificationRequest(identifier: "alsnz:\(al)", content: n, trigger: nil))
+    }
+    /// «إيقاف المنبّه» on that notice: the snooze goes.
+    static func unsnooze(_ uuid: String, al: Int) {
+        Scheduler.center.removeDeliveredNotifications(withIdentifiers: ["alsnz:\(al)"])
+        if #available(iOS 26.0, *), let u = UUID(uuidString: uuid) { try? AlarmManager.shared.cancel(id: u) }
+    }
+
+    /// The next alarms for the «المنبّه القادم» widget (in the App Group): when and what, in the user's language and digits.
+    static func widget(_ done: [Want]) {
+        let w = widget(), items = done.filter { $0.kind == "alarm" }.prefix(12).map { ["at": $0.at, "title": $0.title] as [String: Any] }
+        let o: [String: Any] = ["lang": w["lang"] ?? "ar", "dg": w["dg"] ?? 0, "f12": w["f12"] ?? 1,
+                                "count": list().filter { ($0["on"] as? NSNumber)?.boolValue ?? true }.count, "any": !list().isEmpty, "next": items]
+        if SharedStore.write(WebViewController.json(o), file: "alarms.json") { WidgetCenter.shared.reloadTimelines(ofKind: "alarm") }
     }
 
     /// "The full adhan" on an adhan alarm opens the app on the adhan screen.
@@ -225,11 +290,11 @@ enum AK {
 
     static func config(_ w: Alarms.Want, _ id: UUID) -> AlarmManager.AlarmConfiguration<OnTimeAlarm> {
         let ar = Fmt.ar(Alarms.fmt())
-        let snooze = w.kind != "adhan" && w.snooze > 0
+        let snooze = (w.kind == "alarm" || w.kind == "snooze") && w.snooze > 0
         let adhan = w.kind == "adhan"
         var second: AlarmButton? = nil
         var behavior: AlarmPresentation.Alert.SecondaryButtonBehavior? = nil
-        if snooze { second = AlarmButton(text: L(ar ? "غفوة" : "Snooze"), textColor: .white, systemImageName: "zzz"); behavior = .countdown }
+        if snooze { second = AlarmButton(text: L(ar ? "غفوة" : "Snooze"), textColor: .white, systemImageName: "zzz"); behavior = .custom }
         else if adhan { second = AlarmButton(text: L(ar ? "الأذان كاملاً" : "Full adhan"), textColor: .white, systemImageName: "speaker.wave.2.fill"); behavior = .custom }
         let title = L(w.title)
         let alert: AlarmPresentation.Alert
@@ -239,16 +304,14 @@ enum AK {
             alert = AlarmPresentation.Alert(title: title, stopButton: AlarmButton(text: L(ar ? "إيقاف" : "Stop"), textColor: .white, systemImageName: "stop.circle"),
                                             secondaryButton: second, secondaryButtonBehavior: behavior)
         }
-        let presentation: AlarmPresentation = snooze
-            ? AlarmPresentation(alert: alert, countdown: AlarmPresentation.Countdown(title: title),
-                                paused: AlarmPresentation.Paused(title: title, resumeButton: AlarmButton(text: L(ar ? "متابعة" : "Resume"), textColor: .white, systemImageName: "play.fill")))
-            : AlarmPresentation(alert: alert)
+        let presentation = AlarmPresentation(alert: alert)
         let attributes = AlarmAttributes<OnTimeAlarm>(presentation: presentation, metadata: OnTimeAlarm(kind: w.kind, key: w.key, title: w.title),
                                                       tintColor: Color(red: 0.91, green: 0.80, blue: 0.54))
         let sound: AlertConfiguration.AlertSound = w.sound.isEmpty ? .default : .named(w.sound)
-        let intent: (any LiveActivityIntent)? = adhan ? OpenAdhanIntent(alarmID: id.uuidString, key: w.key) : nil
+        let intent: (any LiveActivityIntent)? = adhan ? OpenAdhanIntent(alarmID: id.uuidString, key: w.key)
+            : snooze ? SnoozeIntent(alarmID: id.uuidString, info: "\(w.al)|\(Int(w.base))|\(w.idx)|\(w.snooze)|\(w.snN)", title: w.title, sound: w.sound) : nil
         return AlarmManager.AlarmConfiguration<OnTimeAlarm>(
-            countdownDuration: snooze ? Alarm.CountdownDuration(preAlert: nil, postAlert: TimeInterval(w.snooze * 60)) : nil,
+            countdownDuration: nil,
             schedule: .fixed(Date(timeIntervalSince1970: w.at / 1000)),
             attributes: attributes, stopIntent: nil, secondaryIntent: intent, sound: sound)
     }
@@ -261,7 +324,7 @@ enum AK {
         if !want.isEmpty && m.authorizationState == .notDetermined { _ = try? await m.requestAuthorization() }
         ud.set(authText(), forKey: "alarmAuth")
         let have = (try? m.alarms) ?? []
-        let tries = Set(ud.stringArray(forKey: "akTry") ?? [])
+        let tries = Set(ud.stringArray(forKey: "akKeep") ?? [])   // "try now" and snoozes are left alone
         var map = (ud.dictionary(forKey: "akMap") as? [String: String] ?? [:]).filter { u in have.contains { $0.id.uuidString == u.key } }
         guard m.authorizationState == .authorized else {
             for a in have where a.state == .scheduled && !tries.contains(a.id.uuidString) { try? m.cancel(id: a.id) }
@@ -290,10 +353,16 @@ enum AK {
         if m.authorizationState == .notDetermined { _ = try? await m.requestAuthorization() }
         UserDefaults.standard.set(authText(), forKey: "alarmAuth")
         guard m.authorizationState == .authorized else { DispatchQueue.main.async { WebViewController.shared.pushState() }; return }
+        _ = await keep(w)
+    }
+    /// An alarm outside the list ("try now", a snooze): set, and kept out of the sync's reach.
+    @discardableResult
+    static func keep(_ w: Alarms.Want) async -> UUID {
         let id = UUID()
-        var t = UserDefaults.standard.stringArray(forKey: "akTry") ?? []; t = Array((t + [id.uuidString]).suffix(5))
-        UserDefaults.standard.set(t, forKey: "akTry")
+        var t = UserDefaults.standard.stringArray(forKey: "akKeep") ?? []; t = Array((t + [id.uuidString]).suffix(20))
+        UserDefaults.standard.set(t, forKey: "akKeep")
         _ = try? await m.schedule(id: id, configuration: config(w, id))
+        return id
     }
 
     /// Which adhans are now alarms (their notifications then come without a sound), and the last day set.
@@ -303,10 +372,39 @@ enum AK {
         let old = ud.stringArray(forKey: "akAdhan") ?? []
         ud.set(adhan, forKey: "akAdhan")
         ud.set(done.last?.at ?? 0, forKey: "akLast")
+        Alarms.widget(done)
         DispatchQueue.main.async {
             if Set(old) != Set(adhan) { Scheduler.rebuild() } else { Alarms.notes() }
             WebViewController.shared.pushState()
         }
+    }
+}
+
+/// «غفوة» (0.27): stops the alarm and sets it again in a few minutes, counting; the last snooze allowed comes without «غفوة».
+/// A quiet notice «غفوة حتى ٥:٠٥» has «إيقاف المنبّه».
+@available(iOS 26.0, *)
+struct SnoozeIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Snooze"
+    static var isDiscoverable: Bool = false
+    @Parameter(title: "alarmID") var alarmID: String
+    @Parameter(title: "info") var info: String
+    @Parameter(title: "title") var name: String
+    @Parameter(title: "sound") var sound: String
+    init() { alarmID = ""; info = ""; name = ""; sound = "" }
+    init(alarmID: String, info: String, title: String, sound: String) { self.alarmID = alarmID; self.info = info; self.name = title; self.sound = sound }
+    func perform() async throws -> some IntentResult {
+        if let u = UUID(uuidString: alarmID) { try? AlarmManager.shared.stop(id: u) }
+        let p = info.split(separator: "|").map(String.init)
+        guard p.count >= 5 else { return .result() }
+        let al = Int(p[0]) ?? 0, base = Double(p[1]) ?? 0, idx = Int(p[2]) ?? 0, snz = max(1, Int(p[3]) ?? 10), snN = Int(p[4]) ?? 3
+        let key = "alSnzN_\(al)_\(Int(base))", n = UserDefaults.standard.integer(forKey: key) + 1
+        UserDefaults.standard.set(n, forKey: key)
+        let at = Scheduler.nowMs + Double(snz) * 60_000
+        let w = Alarms.Want(at: at, kind: "snooze", key: "\(al)|\(Int(base))|\(idx)|s\(n)", title: name, snooze: (snN <= 0 || n < snN) ? snz : 0, sound: sound,
+                            al: al, base: base, idx: idx, snN: snN)
+        let u = await AK.keep(w)
+        Alarms.snoozed(al, at: at, title: name, uuid: u.uuidString)
+        return .result()
     }
 }
 

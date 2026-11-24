@@ -34,7 +34,7 @@ enum Scheduler {
             // the reminders the user set stay, and the alarms' notes (Alarms.notes) keep their room; everything else is put in again
             let keep = reqs.filter { $0.identifier.hasPrefix("rem:") }
             center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { !$0.hasPrefix("rem:") && !$0.hasPrefix("al:") })
-            let room = max(0, 64 - keep.count - 1 - (Alarms.supported ? Alarms.list().count + 1 : 0))
+            let room = max(0, 64 - keep.count - 1 - (Alarms.supported ? Alarms.list().count * 2 + 1 : 0))
             var chosen: [[String: Any]] = []
             for e in evs where chosen.count < room {
                 let kind = e["kind"] as? String ?? ""
@@ -106,10 +106,14 @@ enum Scheduler {
         acts.append(pray)
         let snooze = UNNotificationAction(identifier: "L:10", title: ar ? "ذكّرني بعد \(Fmt.mins(10, e ?? [:]))" : "Remind me in 10 min", options: [])
         let skip = UNNotificationAction(identifier: "S", title: ar ? "تخطَّ هذه المرة" : "Skip this time", options: [])
+        let up = UNNotificationAction(identifier: "W", title: ar ? "نعم، استيقظت" : "Yes, I'm up", options: [])
+        let unsnz = UNNotificationAction(identifier: "U", title: ar ? "إيقاف المنبّه" : "Dismiss", options: [.destructive])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: "ADHAN", actions: acts, intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "REM", actions: [pray, snooze], intentIdentifiers: [], options: []),
-            UNNotificationCategory(identifier: "ALSOON", actions: [skip], intentIdentifiers: [], options: [])])
+            UNNotificationCategory(identifier: "ALSOON", actions: [skip], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "ALWAKE", actions: [up], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "ALSNZ", actions: [unsnz], intentIdentifiers: [], options: [])])
     }
 }
 
