@@ -86,6 +86,8 @@ struct OnTimeWidgets: WidgetBundle {
         NextWidget()
         TableWidget()
         LockWidget()
+        // a snoozed alarm counting down (AlarmKit, iOS 26)
+        if #available(iOS 26.0, *) { AlarmLive() }
     }
 }
 

@@ -33,10 +33,31 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         view.addSubview(web)
         if let start = URL(string: "ontime://app/index.html") { web.load(URLRequest(url: start)) }
         NotificationCenter.default.addObserver(self, selector: #selector(active), name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(textSize), name: UIContentSizeCategory.didChangeNotification, object: nil)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true; pushState() }
-    @objc private func active() { pushState() }
+    @objc private func active() { pushState(); Alarms.openPending() }
+    // iOS may end the page's process in the background (memory): load it again instead of leaving a blank screen
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { loaded = false; webView.reload() }
+
+    /// The text follows the iPhone's text size (Settings › Display › Text Size), as Android's does.
+    static func textPct() -> Int {
+        switch UIApplication.shared.preferredContentSizeCategory {
+        case .extraSmall: return 82
+        case .small: return 88
+        case .medium: return 94
+        case .large: return 100
+        case .extraLarge: return 110
+        case .extraExtraLarge: return 120
+        case .extraExtraExtraLarge: return 130
+        case .accessibilityMedium: return 140
+        case .accessibilityLarge: return 150
+        case .accessibilityExtraLarge, .accessibilityExtraExtraLarge, .accessibilityExtraExtraExtraLarge: return 160
+        default: return 100
+        }
+    }
+    @objc private func textSize() { pushState() }
 
     // Links to the outside open in their own apps; the page itself never goes online.
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
@@ -53,6 +74,8 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         return ["notify": d.string(forKey: "notifyState") ?? "off",
                 "names": Sounds.names(),
                 "reminders": Reminders.all(),
+                "textPct": Self.textPct(),
+                "alarmKit": Alarms.supported, "alarmAuth": Alarms.auth(), "alarmState": Alarms.state(),
                 "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""]
     }
 
@@ -78,12 +101,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let b = message.body as? [String: Any], let cmd = b["cmd"] as? String else { return }
         switch cmd {
-        case "schedule": Scheduler.save(b["json"] as? String ?? "[]")
+        case "schedule": Scheduler.save(b["json"] as? String ?? "[]"); Alarms.sync()
         case "widgetData":
             let j = b["json"] as? String ?? ""
             UserDefaults.standard.set(j, forKey: "widgetData")
             // the widgets read it from the App Group; reload them only when it changed
-            if SharedStore.write(j) { WidgetCenter.shared.reloadAllTimelines() }
+            if SharedStore.write(j) { WidgetCenter.shared.reloadAllTimelines(); Alarms.sync() }
         case "askNotify": askNotify()
         case "preview": Sounds.preview(b["sound"] as? String ?? "")
         case "pickSound": pickSound(b["id"] as? String ?? "file")
@@ -97,6 +120,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         case "remind":
             if let ev = Scheduler.parse(b["json"] as? String ?? "") { Reminders.before(ev, mins: ev["mins"] as? Int ?? 20) { self.pushState() } }
         case "cancelRemind": Reminders.cancel(b["pk"] as? String ?? ""); pushState()
+        // the prayer alarms (iOS 26, AlarmKit)
+        case "alarms": Alarms.save(b["json"] as? String ?? "[]"); pushState()
+        case "alarmSkip": Alarms.skip((b["id"] as? NSNumber)?.intValue ?? 0, (b["on"] as? NSNumber)?.boolValue ?? true); pushState()
+        case "alarmTry": Alarms.tryNow(b["json"] as? String ?? "{}")
+        case "openSettings": if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
+        case "openUrl": if let u = URL(string: b["url"] as? String ?? ""), ["https", "http", "mailto"].contains(u.scheme ?? "") { UIApplication.shared.open(u) }
         default: break
         }
     }
@@ -138,12 +167,13 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
     static let shim = """
     (function(){
       var H = window.webkit.messageHandlers.ontime;
-      var st = window.__ios = Object.assign({ notify: 'off', names: {}, reminders: {}, version: '' }, window.__iosInit || {});
+      var st = window.__ios = Object.assign({ notify: 'off', names: {}, reminders: {}, version: '', textPct: 100, alarmKit: false, alarmAuth: 'ask', alarmState: {} }, window.__iosInit || {});
       var post = function(cmd, o){ var m = o || {}; m.cmd = cmd; H.postMessage(m); };
       window.__host = 'ios';
-      var mark = function(){ document.documentElement.classList.add('ios'); };
+      var size = function(){ try { document.documentElement.style.webkitTextSizeAdjust = (st.textPct || 100) + '%'; } catch(e) {} };
+      var mark = function(){ document.documentElement.classList.add('ios'); if (st.alarmKit) document.documentElement.classList.add('ak'); size(); };
       if (document.documentElement) mark(); else document.addEventListener('readystatechange', mark, { once: true });
-      window.__iosSet = function(o){ Object.assign(st, o); };
+      window.__iosSet = function(o){ Object.assign(st, o); size(); if (window.__onIosState) { try { window.__onIosState(); } catch(e) {} } };
       window.__appVersion = st.version;
       window.Android = {
         schedule: function(j){ post('schedule', { json: j }); },
@@ -160,8 +190,19 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         reminder: function(pk){ return String(st.reminders[pk] || ''); },
         cancelRemind: function(pk){ delete st.reminders[pk]; post('cancelRemind', { pk: pk }); },
         pendingOpen: function(){ return ''; },
-        pendingWidget: function(){ return ''; }
+        pendingWidget: function(){ return ''; },
+        openUrl: function(u){ post('openUrl', { url: u }); },
+        openSettings: function(){ post('openSettings'); }
       };
+      // real alarms from iOS 26 (AlarmKit); before it the page shows no alarms
+      if (st.alarmKit) Object.assign(window.Android, {
+        alarms: function(j){ post('alarms', { json: j }); },
+        alarmState: function(){ return JSON.stringify(st.alarmState || {}); },
+        alarmSkip: function(id, on){ post('alarmSkip', { id: id, on: !!on }); },
+        alarmTry: function(j){ post('alarmTry', { json: j }); },
+        alarmUnsnooze: function(){},
+        alarmAuth: function(){ return st.alarmAuth || 'ask'; }
+      });
     })();
     """
 }

@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.refreshId, using: nil) { task in
             // iOS keeps 64 alerts at most: put the next ones in place, and ask for the next refresh
             Scheduler.rebuild()
+            Alarms.sync()
             Self.planRefresh()
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { task.setTaskCompleted(success: true) }
         }
@@ -41,7 +42,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let ev = Scheduler.event(of: response.notification.request.content.userInfo) ?? [:]
         let a = response.actionIdentifier
-        if a == "P" { Reminders.prayed(ev) }
+        let info = response.notification.request.content.userInfo
+        if a == "S", let al = (info["al"] as? NSNumber)?.intValue, let at = (info["at"] as? NSNumber)?.doubleValue { Alarms.skip(al, at: at) }   // "skip this time"
+        else if a == "P" { Reminders.prayed(ev) }
         else if a.hasPrefix("B:"), let m = Int(a.dropFirst(2)) { Reminders.before(ev, mins: m) }
         else if a.hasPrefix("L:"), let m = Int(a.dropFirst(2)) { Reminders.later(ev, mins: m) }
         else if a == UNNotificationDefaultActionIdentifier, ev["kind"] as? String == "adhan", Sounds.isRecording(ev["sound"] as? String ?? "") {

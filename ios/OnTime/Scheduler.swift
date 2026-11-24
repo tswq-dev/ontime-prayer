@@ -31,10 +31,10 @@ enum Scheduler {
         let evs = events().filter { at($0) > now + 1000 }.sorted { at($0) < at($1) }
         setCategories(evs.first { $0["kind"] as? String == "adhan" })
         center.getPendingNotificationRequests { reqs in
-            // the reminders the user set stay; everything else is put in again
+            // the reminders the user set stay, and the alarms' notes (Alarms.notes) keep their room; everything else is put in again
             let keep = reqs.filter { $0.identifier.hasPrefix("rem:") }
-            center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { !$0.hasPrefix("rem:") })
-            let room = max(0, 64 - keep.count - 1)
+            center.removePendingNotificationRequests(withIdentifiers: reqs.map(\.identifier).filter { !$0.hasPrefix("rem:") && !$0.hasPrefix("al:") })
+            let room = max(0, 64 - keep.count - 1 - (Alarms.supported ? Alarms.list().count + 1 : 0))
             var chosen: [[String: Any]] = []
             for e in evs where chosen.count < room {
                 let kind = e["kind"] as? String ?? ""
@@ -46,10 +46,11 @@ enum Scheduler {
                 let ar = (last["lang"] as? String ?? "ar") != "en"
                 let c = UNMutableNotificationContent()
                 c.title = ar ? "افتح «الركن الثاني»" : "Open On Time"
-                c.body = ar ? "عشان تستمر التنبيهات في وقتها." : "So the alerts keep coming on time."
+                c.body = ar ? "لتستمر التنبيهات في وقتها." : "So the alerts keep coming on time."
                 c.sound = .default
                 add("refresh", c, at(last) + 60_000)
             }
+            Alarms.notes()
         }
     }
 
@@ -74,7 +75,8 @@ enum Scheduler {
         case "adhan":
             let s = e["sound"] as? String ?? "notify"
             if s == "none" { return nil }
-            c.sound = Sounds.notificationSound(s)
+            // an adhan set as an alarm (iOS 26) sounds there; its notification stays, quiet, for its buttons
+            c.sound = (UserDefaults.standard.stringArray(forKey: "akAdhan") ?? []).contains(e["id"] as? String ?? "") ? nil : Sounds.notificationSound(s)
             c.interruptionLevel = .timeSensitive
             if hasEx(e), let x = Reminders.nextExit(e) { c.body += " · " + Fmt.ends(e, x); c.categoryIdentifier = "ADHAN" }
         case "pre", "iqama", "note":
@@ -103,9 +105,11 @@ enum Scheduler {
         let pray = UNNotificationAction(identifier: "P", title: ar ? "صلّيت" : "I prayed", options: [])
         acts.append(pray)
         let snooze = UNNotificationAction(identifier: "L:10", title: ar ? "ذكّرني بعد \(Fmt.mins(10, e ?? [:]))" : "Remind me in 10 min", options: [])
+        let skip = UNNotificationAction(identifier: "S", title: ar ? "تخطَّ هذه المرة" : "Skip this time", options: [])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: "ADHAN", actions: acts, intentIdentifiers: [], options: []),
-            UNNotificationCategory(identifier: "REM", actions: [pray, snooze], intentIdentifiers: [], options: [])])
+            UNNotificationCategory(identifier: "REM", actions: [pray, snooze], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "ALSOON", actions: [skip], intentIdentifiers: [], options: [])])
     }
 }
 
@@ -196,7 +200,7 @@ enum Fmt {
         guard ar(e) else { return "\(n) min" }
         switch n { case 1: return "دقيقة"; case 2: return "دقيقتين"; case 3...10: return digits("\(n)", e) + " دقائق"; default: return digits("\(n)", e) + " دقيقة" }
     }
-    static func leftTitle(_ e: [String: Any], mins n: Int, name: String) -> String { ar(e) ? "باقي \(mins(n, e)) على خروج \(name)" : "\(n) min until \(name) ends" }
+    static func leftTitle(_ e: [String: Any], mins n: Int, name: String) -> String { ar(e) ? "بقي \(mins(n, e)) على خروج \(name)" : "\(n) min until \(name) ends" }
     static func endsAt(_ e: [String: Any], _ x: Reminders.Exit) -> String { ar(e) ? "ينتهي \(x.clock)" : "Ends at \(x.clock)" }
     static func ends(_ e: [String: Any], _ x: Reminders.Exit) -> String { ar(e) ? "يخرج \(x.name) \(x.clock)" : "\(x.name) ends at \(x.clock)" }
 }

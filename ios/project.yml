@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.21.0"
-    CURRENT_PROJECT_VERSION: "32"
+    MARKETING_VERSION: "0.26.0"
+    CURRENT_PROJECT_VERSION: "33"
 targets:
   OnTime:
     type: application
@@ -55,10 +55,15 @@ targets:
         UIBackgroundModes: [audio, fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.itqan.ontime.refresh]
         NSLocationWhenInUseUsageDescription: نحدد مدينتك من موقعك لنحسب أوقات الصلاة بدقة. الموقع يبقى على جوالك.
+        # real alarms (iOS 26, AlarmKit): the user's prayer alarms and the adhan on silent; the snooze counts down as a Live Activity
+        NSAlarmKitUsageDescription: نضبط منبّهات الصلاة التي تختارها والأذان الذي تريده حتى لو كان الجوال صامتاً.
+        NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.itqan.ontime
+        # AlarmKit exists from iOS 26; linked weakly so the app still opens on iOS 17–18
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "AlarmKit"]
         PROVISIONING_PROFILE_SPECIFIER: $(CI_PROFILE_APP)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
@@ -95,6 +100,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.itqan.ontime.widgets
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "AlarmKit"]
         PROVISIONING_PROFILE_SPECIFIER: $(CI_PROFILE_WIDGET)
         TARGETED_DEVICE_FAMILY: "1"
         SKIP_INSTALL: YES
