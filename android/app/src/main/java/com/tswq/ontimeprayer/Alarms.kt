@@ -68,7 +68,6 @@ object PrayerAlarms {
     const val ACTION_UNSNOOZE = "com.tswq.ontimeprayer.ALARM_UNSNOOZE"
     const val CH_ALARM = "alarm"
     const val CH_SOON = "alarm_soon"
-    const val CH_SCREEN = "alarm_screen"
     private const val CODE = 3000
     private const val SOON = 30 * 60_000L
 
@@ -216,8 +215,7 @@ object PrayerAlarms {
         val ar = ctx.resources.configuration.locales[0].language == "ar"
         nm.createNotificationChannel(NotificationChannel(CH_ALARM, if (ar) "المنبّهات" else "Alarms", NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC })
-        nm.createNotificationChannel(NotificationChannel(CH_SCREEN, if (ar) "شاشة المنبّه" else "Alarm screen", NotificationManager.IMPORTANCE_HIGH).apply {
-            setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC })
+        nm.deleteNotificationChannel("alarm_screen")   // the helper notification of 0.25.1 is gone
         nm.createNotificationChannel(NotificationChannel(CH_SOON, if (ar) "منبّه قريب" else "Upcoming alarm", NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null); enableVibration(false) })
     }
@@ -288,9 +286,6 @@ class RingService : Service() {
         }
         als.clear(); als += a; done = false; at = intent.getLongExtra("at", System.currentTimeMillis()); instance = this
         fg()
-        // as with the adhan screen (0.18.6): some phones do not open the screen from the service's own notification when locked,
-        // so a silent helper notification on its own channel opens it, and goes as soon as the screen shows
-        if (locked()) runCatching { screenNote() }
         awake?.let { runCatching { if (it.isHeld) it.release() } }
         runCatching { awake = getSystemService(PowerManager::class.java)?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ontime:alarm")?.apply { acquire(31 * 60_000L) } }
         main.removeCallbacksAndMessages(null)
@@ -304,17 +299,8 @@ class RingService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun locked(): Boolean = getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true ||
-        getSystemService(PowerManager::class.java)?.isInteractive == false
     private fun screenPi() = PendingIntent.getActivity(this, 9101, Intent(this, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    private fun screenNote() {
-        val r = PrayerAlarms.fmt(this); val pi = screenPi()
-        val b = Notification.Builder(this, PrayerAlarms.CH_SCREEN).setSmallIcon(R.drawable.ic_stat).setContentTitle(titles(this)).setContentText(Exits.clock(at, r))
-            .setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setFullScreenIntent(pi, true).setContentIntent(pi)
-            .setOngoing(true).setShowWhen(false).setTimeoutAfter(90_000L)
-        getSystemService(NotificationManager::class.java)?.notify(SCREEN_NOTE, b.build())
-    }
 
     private fun stopAll() { if (done) return; done = true; als.forEach { PrayerAlarms.stopped(this, it.optInt("id")) } }
     /** Snooze (each with its own minutes, while it has snoozes left), or stop when the first one has none left. */
@@ -410,7 +396,6 @@ class RingService : Service() {
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null); unlisten()
-        runCatching { getSystemService(NotificationManager::class.java)?.cancel(SCREEN_NOTE) }
         player?.let { runCatching { it.stop() }; it.release() }; player = null
         runCatching { getSystemService(Vibrator::class.java)?.cancel() }
         awake?.let { runCatching { if (it.isHeld) it.release() } }; awake = null
@@ -424,7 +409,6 @@ class RingService : Service() {
         const val ACTION_STOP = "com.tswq.ontimeprayer.ALARM_STOP"
         const val ACTION_SNOOZE = "com.tswq.ontimeprayer.ALARM_SNOOZE"
         const val NOTE_ID = 9100
-        const val SCREEN_NOTE = 9104
         private var instance: RingService? = null
         fun ringing(): Pair<JSONObject, Long>? = instance?.let { s -> s.als.firstOrNull()?.let { it to s.at } }
         /** The names of all the alarms on now, «عند أذان الفجر · قيام الليل». */
@@ -446,7 +430,6 @@ class RingActivity : Activity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.statusBarColor = Color.parseColor("#1B2C52"); window.navigationBarColor = Color.parseColor("#0B1630")
         current = WeakReference(this)
-        runCatching { getSystemService(NotificationManager::class.java)?.cancel(RingService.SCREEN_NOTE) }   // the helper notification did its job
         show()
     }
 
