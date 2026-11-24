@@ -24,8 +24,8 @@
 • يتوقف الأذان بزر القفل أو زر الصوت أو بقلب الجوال على وجهه.
 
 **المنبّهات**
-• منبّهات مربوطة بالصلاة: «قبل الفجر بـ٢٠ دقيقة» أو «الثلث الأخير من الليل»، يتغيّر وقتها كل يوم مع المواقيت.
-• تعمل مثل منبّه الساعة: أصوات المنبّه في الجوال، والغفوة، والأيام التي تختارها، وحتى لو كان الجوال صامتاً.
+• منبّهات مربوطة بالصلاة: «قبل الفجر بـ٢٠ دقيقة» أو «قبل خروج الوقت» أو «الثلث الأخير من الليل»، يتغيّر وقتها كل يوم مع المواقيت.
+• تعمل مثل منبّه الساعة: أصوات المنبّه في الجوال أو صوت الأذان، والغفوة، والأيام التي تختارها، وحتى لو كان الجوال صامتاً.
 • قبلها بنصف ساعة إشعار هادئ لتخطّي المرة القادمة فقط.
 
 **الشاشة الرئيسية**
@@ -70,8 +70,8 @@ The adhan comes in the first second of its minute, in the voice of the muezzin y
 • Stop the adhan with the power or volume button, or by turning the phone face down.
 
 **Alarms**
-• Alarms tied to a prayer: “20 min before Fajr” or “the last third of the night”, their time moving with the prayer times every day.
-• Like the clock’s alarm: your phone’s alarm sounds, snooze, the days you pick, and even on silent.
+• Alarms tied to a prayer: “20 min before Fajr”, “before the time ends” or “the last third of the night”, their time moving with the prayer times every day.
+• Like the clock’s alarm: your phone’s alarm sounds or an adhan, snooze, the days you pick, and even on silent.
 • Half an hour before, a quiet notice lets you skip just the next one.
 
 **Home screen**

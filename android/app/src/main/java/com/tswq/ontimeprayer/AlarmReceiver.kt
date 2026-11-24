@@ -45,6 +45,7 @@ class AlarmReceiver : BroadcastReceiver() {
             PrayerAlarms.ACTION_RING -> PrayerAlarms.fire(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", System.currentTimeMillis()))
             PrayerAlarms.ACTION_SOON -> PrayerAlarms.soon(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", 0L))
             PrayerAlarms.ACTION_SKIP -> PrayerAlarms.skip(ctx, intent.getIntExtra("id", 0), intent.getLongExtra("at", 0L))
+            PrayerAlarms.ACTION_UNSNOOZE -> PrayerAlarms.unsnooze(ctx, intent.getIntExtra("id", 0))
         }
     }
 

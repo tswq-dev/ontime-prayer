@@ -182,6 +182,7 @@ class MainActivity : ComponentActivity() {
         }
         // the prayer alarms (0.24): the list, when each rings next, skipping one time, trying one now, and the phone's alarm sounds
         @JavascriptInterface fun alarms(json: String) { runCatching { PrayerAlarms.save(applicationContext, json) } }
+        @JavascriptInterface fun alarmUnsnooze(id: Int) { runCatching { PrayerAlarms.unsnooze(applicationContext, id) } }
         @JavascriptInterface fun alarmState(): String = runCatching { PrayerAlarms.state(applicationContext) }.getOrDefault("{}")
         @JavascriptInterface fun alarmSkip(id: Int, on: Boolean) { runCatching { PrayerAlarms.find(applicationContext, id)?.let { a ->
             PrayerAlarms.next(applicationContext, a, System.currentTimeMillis() + 1_000)?.let { PrayerAlarms.skip(applicationContext, id, it.first, on) } } } }

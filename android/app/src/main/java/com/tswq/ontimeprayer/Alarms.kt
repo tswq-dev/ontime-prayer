@@ -7,7 +7,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Canvas
@@ -18,9 +20,16 @@ import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.media.VolumeProvider
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -56,6 +65,7 @@ object PrayerAlarms {
     const val ACTION_RING = "com.tswq.ontimeprayer.ALARM_RING"
     const val ACTION_SOON = "com.tswq.ontimeprayer.ALARM_SOON"
     const val ACTION_SKIP = "com.tswq.ontimeprayer.ALARM_SKIP"
+    const val ACTION_UNSNOOZE = "com.tswq.ontimeprayer.ALARM_UNSNOOZE"
     const val CH_ALARM = "alarm"
     const val CH_SOON = "alarm_soon"
     private const val CODE = 3000
@@ -67,17 +77,26 @@ object PrayerAlarms {
     fun find(ctx: Context, id: Int) = list(ctx).firstOrNull { it.optInt("id") == id }
 
     fun save(ctx: Context, json: String) {
-        JSONArray(json) // validate
+        val arr = JSONArray(json)
+        val old = list(ctx).associateBy { it.optInt("id") }
         val p = Scheduler.prefs(ctx); val e = p.edit().putString("alarms", json)
-        // a changed alarm forgets an old snooze or skip
-        val ids = list(ctx).map { it.optInt("id") }.toSet()
+        val ids = HashSet<Int>()
+        for (i in 0 until arr.length()) { val a = arr.optJSONObject(i) ?: continue; val id = a.optInt("id"); ids += id
+            // a new time, or turned off, is a new alarm: its snooze, the snooze count and a skip go. A new sound or name keeps the snooze.
+            val o = old[id] ?: continue
+            if (timeOf(o) != timeOf(a) || !a.optBoolean("on", true)) { e.remove("alSnz_$id").remove("alSnzN_$id").remove("alSkip_$id"); Alerts.cancel(ctx, noteId(id)) } }
+        // a deleted one leaves nothing behind
         p.all.keys.filter { it.startsWith("alSnz_") || it.startsWith("alSkip_") || it.startsWith("alSnzN_") }.forEach { k -> val n = k.substringAfterLast('_').toIntOrNull(); if (n == null || n !in ids) e.remove(k) }
+        old.keys.filter { it !in ids }.forEach { Alerts.cancel(ctx, noteId(it)); Alerts.cancel(ctx, noteId(it, true)) }
         e.apply(); schedule(ctx)
     }
+    private fun timeOf(a: JSONObject) = a.optString("k", "fajr") + "|" + a.optBoolean("end") + "|" + a.optInt("off")
 
     /** The anchor's time on day [i] of the page's days; the last third runs from that evening's maghrib to the next fajr. */
-    private fun anchor(days: JSONArray, i: Int, k: String): Long {
+    private fun anchor(days: JSONArray, i: Int, k: String, end: Boolean = false): Long {
         val d = days.optJSONObject(i) ?: return 0
+        // "before the time ends": the first end the app shows for that prayer (its chosen time where there is one), sent with the days
+        if (end) return d.optJSONObject("ex")?.optJSONArray(k)?.optJSONObject(0)?.optLong("at") ?: 0
         if (k == "third") { val n = days.optJSONObject(i + 1) ?: return 0; val m = d.optLong("maghrib"); val f = n.optLong("fajr"); return if (m > 0 && f > m) m + (f - m) * 2 / 3 else 0 }
         return d.optLong(k)
     }
@@ -89,10 +108,10 @@ object PrayerAlarms {
     fun next(ctx: Context, a: JSONObject, after: Long): Pair<Long, Long>? {
         val days = WData.load(Scheduler.prefs(ctx))?.o?.optJSONArray("days") ?: return null
         val on = a.optJSONArray("days"); val set = if (on == null || on.length() == 0) (0..6).toSet() else (0 until on.length()).map { on.optInt(it) }.toSet()
-        val off = a.optLong("off") * 60_000L; val k = a.optString("k", "fajr")
+        val off = a.optLong("off") * 60_000L; val k = a.optString("k", "fajr"); val end = a.optBoolean("end")
         for (i in 0 until days.length()) {
             val d = days.getJSONObject(i); if (weekday(d.optString("d")) !in set) continue
-            val t0 = anchor(days, i, k); if (t0 <= 0) continue
+            val t0 = anchor(days, i, k, end); if (t0 <= 0) continue
             val t = t0 + off; if (t > after) return t to t0
         }
         return null
@@ -146,8 +165,10 @@ object PrayerAlarms {
     /** Its time came: ring (unless the phone was off long past it), then set the next. */
     fun fire(ctx: Context, id: Int, at: Long) {
         val p = Scheduler.prefs(ctx); val a = find(ctx, id)
-        p.edit().remove("alSnz_$id").apply()
-        Alerts.cancel(ctx, noteId(id, true))
+        // a snooze coming back keeps its count; the alarm's own time starts it again, so no count carries over to another day
+        val back = p.getLong("alSnz_$id", 0) == at
+        p.edit().remove("alSnz_$id").apply { if (!back) remove("alSnzN_$id") }.apply()
+        Alerts.cancel(ctx, noteId(id, true)); Alerts.cancel(ctx, noteId(id))
         if (a != null && a.optBoolean("on", true) && System.currentTimeMillis() - at < 10 * 60_000L) {
             val i = Intent(ctx, RingService::class.java).putExtra("al", a.toString()).putExtra("at", at)
             runCatching { if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) }
@@ -162,11 +183,26 @@ object PrayerAlarms {
     }
 
     fun snooze(ctx: Context, id: Int, mins: Int) {
-        val p = Scheduler.prefs(ctx)
-        p.edit().putLong("alSnz_$id", System.currentTimeMillis() + mins * 60_000L).putInt("alSnzN_$id", p.getInt("alSnzN_$id", 0) + 1).apply()
-        schedule(ctx)
+        val p = Scheduler.prefs(ctx); val until = System.currentTimeMillis() + mins * 60_000L
+        p.edit().putLong("alSnz_$id", until).putInt("alSnzN_$id", p.getInt("alSnzN_$id", 0) + 1).apply()
+        schedule(ctx); snoozed(ctx, id, until)
     }
-    fun stopped(ctx: Context, id: Int) { Scheduler.prefs(ctx).edit().remove("alSnz_$id").remove("alSnzN_$id").apply(); schedule(ctx) }
+    fun stopped(ctx: Context, id: Int) { Scheduler.prefs(ctx).edit().remove("alSnz_$id").remove("alSnzN_$id").apply(); Alerts.cancel(ctx, noteId(id)); schedule(ctx) }
+    /** "Dismiss" on the snooze notice, or "cancel the snooze" in the app. */
+    fun unsnooze(ctx: Context, id: Int) = stopped(ctx, id)
+
+    /** While snoozed: «غفوة حتى ٥:٠٥» with "Stop the alarm", as the clock app does. */
+    private fun snoozed(ctx: Context, id: Int, until: Long) {
+        val a = find(ctx, id) ?: return; channels(ctx); val r = fmt(ctx); val ar = r.optString("lang") != "en"
+        val stop = PendingIntent.getBroadcast(ctx, CODE + 3000 + id, Intent(ctx, AlarmReceiver::class.java).setAction(ACTION_UNSNOOZE).putExtra("id", id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val n = Notification.Builder(ctx, CH_SOON).setSmallIcon(R.drawable.ic_stat).setContentTitle((if (ar) "غفوة حتى " else "Snoozed until ") + Exits.clock(until, r))
+            .setContentText(title(ctx, a)).setShowWhen(false).setTimeoutAfter(until - System.currentTimeMillis() + 60_000L)
+            .setContentIntent(PendingIntent.getActivity(ctx, CODE + 2500 + id, Intent(ctx, MainActivity::class.java).putExtra("open", "alarms").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+            .addAction(Notification.Action.Builder(null, if (ar) "إيقاف المنبّه" else "Dismiss", stop).build())
+        Alerts.post(ctx, n, noteId(id))
+    }
     fun snoozesLeft(ctx: Context, a: JSONObject): Boolean {
         val m = a.optInt("snz", 10); if (m <= 0) return false
         val n = a.optInt("snN", 3); return n <= 0 || Scheduler.prefs(ctx).getInt("alSnzN_${a.optInt("id")}", 0) < n
@@ -190,6 +226,7 @@ object PrayerAlarms {
         return if (k == "third") (if (ar) "الثلث الأخير" else "Last third") else d?.name(k) ?: k }
     fun title(ctx: Context, a: JSONObject): String { val l = a.optString("label").trim(); if (l.isNotEmpty()) return l
         val ar = fmt(ctx).optString("lang") != "en"; val off = a.optInt("off"); val r = fmt(ctx); val nm = anchorName(ctx, a.optString("k", "fajr"))
+        if (a.optBoolean("end")) { val m = Exits.mins(maxOf(1, -off).toLong(), r); return if (ar) "قبل خروج وقت $nm بـ$m" else "$m before $nm time ends" }
         return when { off == 0 -> (if (ar) "عند " else "At ") + nm; off < 0 -> (if (ar) "قبل $nm بـ" else Exits.mins(-off.toLong(), r) + " before ") + (if (ar) Exits.mins(-off.toLong(), r) else nm)
             else -> (if (ar) "بعد $nm بـ" else Exits.mins(off.toLong(), r) + " after ") + (if (ar) Exits.mins(off.toLong(), r) else nm) } }
 
@@ -216,24 +253,39 @@ object PrayerAlarms {
 class RingService : Service() {
     private var player: MediaPlayer? = null
     private val main = Handler(Looper.getMainLooper())
-    private var al: JSONObject? = null
+    /** The alarms going off now: the first one's sound and length; another that comes while it is on joins it on the same screen. */
+    private val als = ArrayList<JSONObject>()
     private var at = 0L
     private var awake: PowerManager.WakeLock? = null
+    private var screenOn: PowerManager.WakeLock? = null
+    private var startedAt = 0L
+    private var done = false
+    private var screenRx: BroadcastReceiver? = null
+    private var volRx: BroadcastReceiver? = null
+    private var session: MediaSession? = null
+    private var flip: SensorEventListener? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private fun fg() { val n = note()
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(NOTE_ID, n) }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val cur = al
         when (intent?.action) {
-            ACTION_STOP -> { cur?.let { PrayerAlarms.stopped(this, it.optInt("id")) }; stopSelf(); return START_NOT_STICKY }
-            ACTION_SNOOZE -> { cur?.let { PrayerAlarms.snooze(this, it.optInt("id"), it.optInt("snz", 10)) }; stopSelf(); return START_NOT_STICKY }
+            ACTION_STOP -> { stopAll(); stopSelf(); return START_NOT_STICKY }
+            ACTION_SNOOZE -> { hush(); return START_NOT_STICKY }
         }
         val a = intent?.getStringExtra("al")?.let { runCatching { JSONObject(it) }.getOrNull() }
-        if (a == null) { stopSelf(); return START_NOT_STICKY }
-        al = a; at = intent.getLongExtra("at", System.currentTimeMillis()); instance = this
+        if (a == null) { if (als.isEmpty()) stopSelf(); return START_NOT_STICKY }
         PrayerAlarms.channels(this)
-        val n = note()
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(NOTE_ID, n)
+        if (als.isNotEmpty() && !done) {
+            // two alarms at the same time (or one while another is on): one sound, one screen with both names; Stop and Snooze take both
+            if (als.none { it.optInt("id") == a.optInt("id") }) als += a
+            fg(); RingActivity.refresh(); return START_NOT_STICKY
+        }
+        als.clear(); als += a; done = false; at = intent.getLongExtra("at", System.currentTimeMillis()); instance = this
+        fg()
+        awake?.let { runCatching { if (it.isHeld) it.release() } }
         runCatching { awake = getSystemService(PowerManager::class.java)?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ontime:alarm")?.apply { acquire(31 * 60_000L) } }
         main.removeCallbacksAndMessages(null)
         play(a)
@@ -241,11 +293,66 @@ class RingService : Service() {
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()) }
         // rings until stopped, or for the minutes picked (then it counts as missed, and the next day's stays)
         val mins = a.optInt("ring", 0)
-        main.postDelayed({ PrayerAlarms.stopped(this, a.optInt("id")); stopSelf() }, if (mins > 0) mins * 60_000L else 30 * 60_000L)
+        main.postDelayed({ stopAll(); stopSelf() }, if (mins > 0) mins * 60_000L else 30 * 60_000L)
+        listen()
         return START_NOT_STICKY
     }
 
+    private fun stopAll() { if (done) return; done = true; als.forEach { PrayerAlarms.stopped(this, it.optInt("id")) } }
+    /** Snooze (each with its own minutes, while it has snoozes left), or stop when the first one has none left. */
+    private fun hush() {
+        if (done || als.isEmpty()) { stopSelf(); return }
+        val first = als[0]
+        if (!PrayerAlarms.snoozesLeft(this, first)) { stopAll(); stopSelf(); return }
+        done = true
+        als.forEach { x -> val id = x.optInt("id"); if (PrayerAlarms.snoozesLeft(this, x)) PrayerAlarms.snooze(this, id, x.optInt("snz", 10)) else PrayerAlarms.stopped(this, id) }
+        stopSelf()
+    }
+
+    /** The power button, the volume buttons and turning the phone face down snooze it, with nothing to set (as in the clock apps). */
+    private fun listen() {
+        unlisten(); startedAt = System.currentTimeMillis()
+        val pm = getSystemService(PowerManager::class.java); val wasOn = pm?.isInteractive == true
+        // in use: keep the screen on while it goes off, so it is the button that turns it off, not the screen timeout
+        if (wasOn) runCatching { @Suppress("DEPRECATION") screenOn = pm?.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "ontime:alarmscreen")?.apply { acquire(31 * 60_000L) } }
+        val fsOk = Build.VERSION.SDK_INT < 34 || getSystemService(NotificationManager::class.java)?.canUseFullScreenIntent() == true
+        val viaScreen = !wasOn && !fsOk   // screen off and no alarm screen: pressing power turns it on
+        screenRx = object : BroadcastReceiver() { override fun onReceive(c: Context, i: Intent) {
+            if (System.currentTimeMillis() - startedAt < 2_500) return
+            if (i.action == Intent.ACTION_SCREEN_OFF || (viaScreen && i.action == Intent.ACTION_SCREEN_ON)) main.post { hush() } } }
+        val f = IntentFilter(Intent.ACTION_SCREEN_OFF).apply { addAction(Intent.ACTION_SCREEN_ON) }
+        runCatching { if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenRx, f, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(screenRx, f) }
+        session = runCatching { MediaSession(this, "ontime-alarm").apply {
+            setPlaybackToRemote(object : VolumeProvider(VolumeProvider.VOLUME_CONTROL_RELATIVE, 100, 50) {
+                override fun onAdjustVolume(direction: Int) { main.post { hush() } } })
+            setPlaybackState(PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 0, 1f).build())
+            isActive = true } }.getOrNull()
+        volRx = object : BroadcastReceiver() { override fun onReceive(c: Context, i: Intent) { if (System.currentTimeMillis() - startedAt > 1_500) main.post { hush() } } }
+        runCatching { val vf = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            if (Build.VERSION.SDK_INT >= 33) registerReceiver(volRx, vf, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(volRx, vf) }
+        // turned face down (after being face up at some point while it goes off), held for half a second
+        val sm = getSystemService(SensorManager::class.java); val acc = sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (sm != null && acc != null) { var up = false; var downSince = 0L
+            flip = object : SensorEventListener {
+                override fun onSensorChanged(se: SensorEvent) { val z = se.values[2]
+                    if (z > -3f) { up = true; downSince = 0L }
+                    else if (up && z < -8f) { if (downSince == 0L) downSince = System.currentTimeMillis() else if (System.currentTimeMillis() - downSince > 500) main.post { hush() } } }
+                override fun onAccuracyChanged(s: Sensor?, a: Int) {} }
+            sm.registerListener(flip, acc, SensorManager.SENSOR_DELAY_UI) }
+    }
+    private fun unlisten() {
+        screenRx?.let { runCatching { unregisterReceiver(it) } }; screenRx = null
+        volRx?.let { runCatching { unregisterReceiver(it) } }; volRx = null
+        session?.let { runCatching { it.isActive = false; it.release() } }; session = null
+        flip?.let { l -> runCatching { getSystemService(SensorManager::class.java)?.unregisterListener(l) } }; flip = null
+        screenOn?.let { runCatching { if (it.isHeld) it.release() } }; screenOn = null
+    }
+
     private fun soundUri(a: JSONObject): Uri? {
+        // an adhan from the app's voices: Fajr alarms take the voice's own Fajr adhan where it has one
+        val s = a.optString("snd")
+        if (s.isNotEmpty() && s != "tone") { val f = if (a.optString("k") == "fajr" && Alerts.rawId(this, s + "_fajr") != 0) s + "_fajr" else s
+            Alerts.rawId(this, f).takeIf { it != 0 }?.let { return Uri.parse("android.resource://$packageName/$it") } }
         val key = "tone_al" + a.optInt("id")
         return Scheduler.prefs(this).getString("soundUri_$key", null)?.let { Uri.parse(it) }
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
@@ -272,11 +379,11 @@ class RingService : Service() {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
     private fun note(): Notification {
-        val a = al!!; val r = PrayerAlarms.fmt(this); val ar = r.optString("lang") != "en"
+        val a = als[0]; val r = PrayerAlarms.fmt(this); val ar = r.optString("lang") != "en"
         val screen = PendingIntent.getActivity(this, 9101, Intent(this, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val b = Notification.Builder(this, PrayerAlarms.CH_ALARM).setSmallIcon(R.drawable.ic_stat).setCategory(Notification.CATEGORY_ALARM)
-            .setContentTitle(PrayerAlarms.title(this, a)).setContentText(Exits.clock(at, r)).setOngoing(true).setShowWhen(false)
+            .setContentTitle(titles(this)).setContentText(Exits.clock(at, r)).setOngoing(true).setShowWhen(false)
             .setContentIntent(screen).setFullScreenIntent(screen, true)
         if (PrayerAlarms.snoozesLeft(this, a)) b.addAction(Notification.Action.Builder(null, (if (ar) "غفوة " else "Snooze ") + Exits.short(a.optInt("snz", 10).toLong(), r), pi(ACTION_SNOOZE, 9102)).build())
         b.addAction(Notification.Action.Builder(null, if (ar) "إيقاف" else "Stop", pi(ACTION_STOP, 9103)).build())
@@ -285,7 +392,7 @@ class RingService : Service() {
     }
 
     override fun onDestroy() {
-        main.removeCallbacksAndMessages(null)
+        main.removeCallbacksAndMessages(null); unlisten()
         player?.let { runCatching { it.stop() }; it.release() }; player = null
         runCatching { getSystemService(Vibrator::class.java)?.cancel() }
         awake?.let { runCatching { if (it.isHeld) it.release() } }; awake = null
@@ -300,7 +407,9 @@ class RingService : Service() {
         const val ACTION_SNOOZE = "com.tswq.ontimeprayer.ALARM_SNOOZE"
         const val NOTE_ID = 9100
         private var instance: RingService? = null
-        fun ringing(): Pair<JSONObject, Long>? = instance?.let { s -> s.al?.let { it to s.at } }
+        fun ringing(): Pair<JSONObject, Long>? = instance?.let { s -> s.als.firstOrNull()?.let { it to s.at } }
+        /** The names of all the alarms on now, «عند أذان الفجر · قيام الليل». */
+        fun titles(ctx: Context): String = (instance?.als ?: emptyList<JSONObject>()).map { PrayerAlarms.title(ctx, it) }.distinct().joinToString(" · ")
         fun stop(ctx: Context) { ctx.startService(Intent(ctx, RingService::class.java).setAction(ACTION_STOP)) }
         fun snooze(ctx: Context) { ctx.startService(Intent(ctx, RingService::class.java).setAction(ACTION_SNOOZE)) }
     }
@@ -332,7 +441,7 @@ class RingActivity : Activity() {
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL; layoutDirection = if (ar) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR }
         fun tv(s: String, size: Float, tf: Typeface, color: Int) = TextView(this).apply { text = s; textSize = size; typeface = tf; setTextColor(color); gravity = Gravity.CENTER }
         col.addView(View(this), LinearLayout.LayoutParams(1, 0, 1f))
-        col.addView(tv(PrayerAlarms.title(this, a), 18f, f.plex, Color.argb(210, 243, 230, 196)))
+        col.addView(tv(RingService.titles(this), 18f, f.plex, Color.argb(210, 243, 230, 196)))
         val now = System.currentTimeMillis()
         col.addView(tv(Exits.clock(now, r).replace(" ص", "").replace(" م", "").replace(" AM", "").replace(" PM", ""), 76f, f.name("kufi"), gold))
         // where the prayer stands, from the alarm's own anchor
@@ -340,6 +449,7 @@ class RingActivity : Activity() {
         val gap = (anchor - now) / 60_000L
         val where = when {
             k == "third" -> if (ar) "الثلث الأخير من الليل" else "The last third of the night"
+            a.optBoolean("end") -> if (gap >= 1) (if (ar) "يخرج وقت $nm بعد ${Exits.mins(gap, r)}" else "$nm time ends in ${Exits.mins(gap, r)}") else (if (ar) "يخرج وقت $nm الآن" else "$nm time is ending")
             gap >= 1 -> if (ar) "بقي ${Exits.mins(gap, r)} على أذان $nm" else "${Exits.mins(gap, r)} to the $nm adhan"
             gap <= -1 -> if (ar) "أذّن $nm قبل ${Exits.mins(-gap, r)}" else "The $nm adhan was ${Exits.mins(-gap, r)} ago"
             else -> if (ar) "حان وقت $nm" else "It is time for $nm" }
@@ -361,9 +471,7 @@ class RingActivity : Activity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            val a = RingService.ringing()?.first
-            if (a != null && PrayerAlarms.snoozesLeft(this, a)) RingService.snooze(this) else RingService.stop(this)
-            finish(); return true }
+            RingService.snooze(this); finish(); return true }
         return super.onKeyDown(keyCode, event)
     }
 
@@ -385,5 +493,6 @@ class RingActivity : Activity() {
     companion object {
         private var current: WeakReference<RingActivity>? = null
         fun close() { current?.get()?.let { a -> a.runOnUiThread { a.finish() } } }
+        fun refresh() { current?.get()?.let { a -> a.runOnUiThread { a.show() } } }
     }
 }
