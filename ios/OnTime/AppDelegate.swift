@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             // iOS keeps 64 alerts at most: put the next ones in place, and ask for the next refresh
             Scheduler.rebuild()
             Alarms.sync()
+            LiveNext.update()
             Self.planRefresh()
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { task.setTaskCompleted(success: true) }
         }

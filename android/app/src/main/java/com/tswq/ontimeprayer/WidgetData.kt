@@ -124,8 +124,9 @@ class WData(val o: JSONObject) {
     private fun pl(n: Long, one: String, two: String, few: String, many: String) = when { n == 1L -> one; n == 2L -> two; n in 3L..10L -> "$n $few"; else -> "$n $many" }
 
     /** The time left, rounded up to the minute, in the widget's countdown format. */
-    fun dur(ms: Long): String {
-        val m = maxOf(0L, (ms + 59_999) / 60_000); val h = m / 60; val mi = m % 60
+    /** A countdown rounds up (so «بعد ١٠» never hides a longer wait); time since the adhan ([up]) counts whole minutes (0.29). */
+    fun dur(ms: Long, up: Boolean = false): String {
+        val m = maxOf(0L, if (up) ms / 60_000 else (ms + 59_999) / 60_000); val h = m / 60; val mi = m % 60
         return digits(when (cf) {
             // under an hour, minutes alone ("0:30" could read as seconds)
             "clock" -> if (h == 0L) (if (ar) "$mi د" else "$mi min") else "$h:" + mi.toString().padStart(2, '0')
@@ -147,11 +148,13 @@ class WData(val o: JSONObject) {
     fun inTxt(ms: Long) = (if (ar) "بعد " else "in ") + dur(ms)
     fun inTxt(e: Ev, now: Long) = if (e.iqAt > 0) (if (since) sinceTxt(now - e.at) else (if (ar) "الإقامة بعد " else "Iqama in ") + dur(e.iqAt - now)) else inTxt(e.at - now)
     /** after the adhan, next to the prayer's name: «العصر منذ ٥ د», as «الظهر بعد ٥:١٧» before it (0.20) */
-    fun sinceTxt(ms: Long) = if (ar) "منذ " + dur(ms) else dur(ms) + " ago"
+    fun sinceTxt(ms: Long) = if (ms < 60_000) (if (ar) "الآن" else "now") else if (ar) "منذ " + dur(ms, true) else dur(ms, true) + " ago"
     /** on its own (the iqama bar, beside the iqama's time): the adhan named */
-    fun adhanSince(ms: Long) = if (ar) "الأذان منذ " + dur(ms) else "Adhan " + dur(ms) + " ago"
+    fun adhanSince(ms: Long) = if (ms < 60_000) (if (ar) "الأذان الآن" else "Adhan now") else if (ar) "الأذان منذ " + dur(ms, true) else "Adhan " + dur(ms, true) + " ago"
     /** The time a countdown shows: to the iqama or the next prayer, or (the user's pick) the time since the adhan. */
     fun leftMs(e: Ev, now: Long) = if (e.iqAt > 0 && since) now - e.at else e.target - now
+    /** The count beside a prayer: its countdown, or after the adhan «الآن» then the whole minutes since. */
+    fun count(e: Ev, now: Long) = if (e.iqAt > 0 && since) (if (now - e.at < 60_000) (if (ar) "الآن" else "now") else dur(now - e.at, true)) else dur(e.target - now)
     fun leftTxt(ms: Long) = (if (ar) "بقي " else "") + dur(ms) + (if (ar) "" else " left")
 
     companion object {

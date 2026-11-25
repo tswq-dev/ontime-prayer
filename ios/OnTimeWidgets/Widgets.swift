@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: timeline
 
@@ -7,19 +8,53 @@ struct WEntry: TimelineEntry {
     let date: Date
     let cfg: WCfg
     let data: WData?
+    var off = 0   // the table's day, moved with its arrows (0 = today)
+}
+
+/// The table widget's arrows (0.29): which day it shows, for ten minutes after a tap, then back to today. Kept in the App Group.
+enum TableShift {
+    static let life: TimeInterval = 600
+    static func get() -> (off: Int, until: Date) {
+        guard let d = SharedStore.read(file: "table.json"), let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return (0, .distantPast) }
+        let until = Date(timeIntervalSince1970: ((o["at"] as? NSNumber)?.doubleValue ?? 0) + life)
+        return until > Date() ? ((o["off"] as? NSNumber)?.intValue ?? 0, until) : (0, .distantPast)
+    }
+    static func shift(_ n: Int) {
+        let v = n == 0 ? 0 : max(-1, min(6, get().off + n))
+        if let j = try? JSONSerialization.data(withJSONObject: ["off": v, "at": Date().timeIntervalSince1970]), let s = String(data: j, encoding: .utf8) { SharedStore.write(s, file: "table.json") }
+    }
+}
+
+/// ‹ › on the table widget: the day before or after (up to a week ahead); «اليوم» goes back.
+struct TableDayIntent: AppIntent {
+    static var title: LocalizedStringResource = "اليوم"
+    static var isDiscoverable: Bool = false
+    @Parameter(title: "delta") var delta: Int
+    init() { delta = 0 }
+    init(delta: Int) { self.delta = delta }
+    func perform() async throws -> some IntentResult { TableShift.shift(delta); return .result() }
 }
 
 /// Entries at every moment the widget changes (each prayer, iqama, midnight) for the next day and a half;
 /// the countdowns tick on their own in between.
 enum Timelines {
-    static func make(_ cfg: WCfg, now: Date = Date()) -> Timeline<WEntry> {
+    static func make(_ cfg: WCfg, now: Date = Date(), table: Bool = false) -> Timeline<WEntry> {
         WFonts.register()
         guard let d = WData.load(), d.day(now) != nil else {
             return Timeline(entries: [WEntry(date: now, cfg: cfg, data: nil)], policy: .after(now.addingTimeInterval(3600)))
         }
-        let dates = [now] + d.changes(from: now)
-        let entries = dates.map { WEntry(date: $0, cfg: cfg, data: d) }
-        return Timeline(entries: entries, policy: .after(dates.last ?? now.addingTimeInterval(3600)))
+        var set = Set([now] + d.changes(from: now))
+        // the countdown in our words («بعد ١٠ دقائق»): an entry each minute for the next four hours (entries, not reloads)
+        if cfg.count == .words {
+            let base = (now.timeIntervalSince1970 / 60).rounded(.down) * 60
+            for i in 1...240 { set.insert(Date(timeIntervalSince1970: base + Double(i) * 60)) }
+        }
+        let sh = table ? TableShift.get() : (off: 0, until: Date.distantPast)
+        if sh.off != 0 { set.insert(sh.until.addingTimeInterval(1)) }
+        let dates = set.filter { $0 >= now }.sorted()
+        let entries = dates.map { WEntry(date: $0, cfg: cfg, data: d, off: $0 < sh.until ? sh.off : 0) }
+        let last = cfg.count == .words ? now.addingTimeInterval(4 * 3600) : (dates.last ?? now.addingTimeInterval(3600))
+        return Timeline(entries: entries, policy: .after(last))
     }
     static func preview(_ cfg: WCfg) -> WEntry { WFonts.register(); return WEntry(date: Date(), cfg: cfg, data: WData.load() ?? WData.sample()) }
 }
@@ -35,7 +70,14 @@ struct TableProvider: AppIntentTimelineProvider {
     func cfg(_ c: TableConfig) -> WCfg { WCfg(bg: c.bg, font: c.font, count: c.count, sunrise: c.sunrise) }
     func placeholder(in context: Context) -> WEntry { WEntry(date: Date(), cfg: WCfg(), data: WData.sample()) }
     func snapshot(for configuration: TableConfig, in context: Context) async -> WEntry { Timelines.preview(cfg(configuration)) }
-    func timeline(for configuration: TableConfig, in context: Context) async -> Timeline<WEntry> { Timelines.make(cfg(configuration)) }
+    func timeline(for configuration: TableConfig, in context: Context) async -> Timeline<WEntry> { Timelines.make(cfg(configuration), table: true) }
+}
+
+struct DateProvider: AppIntentTimelineProvider {
+    func cfg(_ c: DateConfig) -> WCfg { WCfg(bg: c.bg, font: c.font, count: .off) }
+    func placeholder(in context: Context) -> WEntry { WEntry(date: Date(), cfg: WCfg(bg: .navy), data: WData.sample()) }
+    func snapshot(for configuration: DateConfig, in context: Context) async -> WEntry { Timelines.preview(cfg(configuration)) }
+    func timeline(for configuration: DateConfig, in context: Context) async -> Timeline<WEntry> { Timelines.make(cfg(configuration)) }
 }
 
 struct LockProvider: TimelineProvider {
@@ -68,6 +110,17 @@ struct TableWidget: Widget {
     }
 }
 
+struct DateWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: "date", intent: DateConfig.self, provider: DateProvider()) { e in
+            DateView(e: e)
+        }
+        .configurationDisplayName("التاريخ واليوم")
+        .description("اليوم والتاريخ الهجري والميلادي، بالخط الذي تختاره.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryInline])
+    }
+}
+
 struct LockWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "lock", provider: LockProvider()) { e in
@@ -86,7 +139,9 @@ struct OnTimeWidgets: WidgetBundle {
         NextWidget()
         TableWidget()
         LockWidget()
+        DateWidget()
         AlarmNextWidget()
+        NextLive()
         // a snoozed alarm counting down (AlarmKit, iOS 26)
         if #available(iOS 26.0, *) { AlarmLive() }
     }
@@ -97,10 +152,13 @@ struct OnTimeWidgets: WidgetBundle {
 /// The countdown in the style the user picked; it ticks by itself (no reloads).
 struct Countdown: View {
     let from: Date, to: Date, style: WCount
+    var d: WData? = nil
+    var lead = true   // «بعد» before the words, where nothing else says it
     var body: some View {
         switch style {
         case .timer: Text(timerInterval: from...max(from, to), countsDown: true).monospacedDigit()
-        case .words: Text(to, style: .relative)
+        case .words:
+            if let d { Text((lead ? (d.en ? "in " : "بعد ") : "") + d.words(to.timeIntervalSince(from))) } else { Text(to, style: .relative) }
         case .off: EmptyView()
         }
     }
@@ -126,16 +184,44 @@ struct HomeView: View {
     let kind: Kind
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.widgetRenderingMode) private var mode
+    @Environment(\.displayScale) private var scale
+
+    @ViewBuilder
+    func inner(_ p: Palette) -> some View {
+        if let d = e.data, let h = d.hero(e.date), let day = d.day(e.date) {
+            content(d, h, day, p)
+                .environment(\.layoutDirection, d.en ? .leftToRight : .rightToLeft)
+                .environment(\.locale, d.locale)
+        } else {
+            OpenAppView()
+        }
+    }
+
+    /// With tinted or clear icons (iOS 18+) the system would paint text in its own colour: the widget is drawn as one picture
+    /// (as Android's are) and shown in full colour, so it keeps the app's colours (0.29).
+    @MainActor
+    func picture(_ p: Palette, _ size: CGSize) -> UIImage? {
+        let v = inner(p).padding(12).frame(width: size.width, height: size.height)
+            .background(LinearGradient(colors: [p.top, p.bottom], startPoint: .top, endPoint: .bottom))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        let r = ImageRenderer(content: v); r.scale = scale
+        return r.uiImage
+    }
 
     var body: some View {
         let p = Palette.of(e.cfg.bg, dark: scheme == .dark)
         Group {
-            if let d = e.data, let h = d.hero(e.date), let day = d.day(e.date) {
-                content(d, h, day, p)
-                    .environment(\.layoutDirection, d.en ? .leftToRight : .rightToLeft)
-                    .environment(\.locale, d.locale)
+            if #available(iOS 18.0, *) {
+                if mode == .accented && e.data != nil {
+                    GeometryReader { g in
+                        if let img = picture(p, g.size) { Image(uiImage: img).resizable().widgetAccentedRenderingMode(.fullColor) } else { inner(p) }
+                    }
+                } else {
+                    inner(p)
+                }
             } else {
-                OpenAppView()
+                inner(p)
             }
         }
         .containerBackground(for: .widget) {
@@ -149,8 +235,8 @@ struct HomeView: View {
         switch (kind, family) {
         case (.next, .systemMedium): NextMedium(d: d, h: h, day: day, p: p, cfg: e.cfg, now: e.date)
         case (.next, _): NextSmall(d: d, h: h, day: day, p: p, cfg: e.cfg, now: e.date)
-        case (.table, .systemLarge): TableLarge(d: d, h: h, day: day, p: p, cfg: e.cfg, now: e.date)
-        default: TableMedium(d: d, h: h, day: day, p: p, cfg: e.cfg, now: e.date)
+        case (.table, .systemLarge): TableLarge(d: d, h: h, day: d.day(e.date, e.off) ?? day, p: p, cfg: e.cfg, now: e.date, off: e.off)
+        default: TableMedium(d: d, h: h, day: d.day(e.date, e.off) ?? day, p: p, cfg: e.cfg, now: e.date, off: e.off)
         }
     }
 }
@@ -167,7 +253,7 @@ struct NextSmall: View {
             Text(heroLabel(d, h)).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
             Text(d.name(h.k)).font(.custom(cfg.font.ps, size: 34)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
             Text(d.clock(h.at)).font(.custom(WFonts.plexBold, size: 15)).foregroundStyle(p.acc).widgetAccentable()
-            Countdown(from: now, to: h.target, style: cfg.count).font(.custom(WFonts.plexBold, size: 14)).foregroundStyle(p.ink)
+            Countdown(from: now, to: h.target, style: cfg.count, d: d).font(.custom(WFonts.plexBold, size: 14)).foregroundStyle(p.ink)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 0)
             Text(d.hijri(day)).font(.custom(WFonts.plex, size: 10)).foregroundStyle(p.mute).lineLimit(1).minimumScaleFactor(0.7)
@@ -184,7 +270,7 @@ struct NextMedium: View {
                 Text(heroLabel(d, h)).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
                 Text(d.name(h.k)).font(.custom(cfg.font.ps, size: 40)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
                 Text(d.clock(h.at)).font(.custom(WFonts.plexBold, size: 16)).foregroundStyle(p.acc).widgetAccentable()
-                Countdown(from: now, to: h.target, style: cfg.count).font(.custom(WFonts.plexBold, size: 15)).foregroundStyle(p.ink)
+                Countdown(from: now, to: h.target, style: cfg.count, d: d).font(.custom(WFonts.plexBold, size: 15)).foregroundStyle(p.ink)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -209,18 +295,19 @@ struct NextMedium: View {
 /// The day's times side by side; in Arabic they run right to left (the layout direction does it).
 struct TableMedium: View {
     let d: WData, h: WData.Hero, day: WDay, p: Palette, cfg: WCfg, now: Date
+    var off = 0
     var keys: [String] { cfg.sunrise ? ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] : WData.pray }
     var body: some View {
         VStack(spacing: 8) {
-            HStack {
-                Text(d.digits(day.wd + " · " + d.hijri(day))).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
+            HStack(spacing: 6) {
+                DayArrows(d: d, day: day, p: p, off: off, size: 11)
                 Spacer()
                 Text(d.city).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
             }
             .lineLimit(1)
             HStack(spacing: 4) {
                 ForEach(keys, id: \.self) { k in
-                    let on = k == h.k
+                    let on = off == 0 && k == h.k
                     VStack(spacing: 2) {
                         Text(d.name(k)).font(.custom(cfg.font.ps, size: 15)).lineLimit(1).minimumScaleFactor(0.6)
                         Text(day.t[k].map { d.clock($0, mer: false) } ?? "–").font(.custom(on ? WFonts.plexBold : WFonts.plex, size: 13)).monospacedDigit()
@@ -230,10 +317,10 @@ struct TableMedium: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(on ? p.pill : Color.clear))
                 }
             }
-            if cfg.count != .off {
+            if cfg.count != .off && off == 0 {
                 HStack(spacing: 4) {
                     Text(d.name(h.k) + (h.iqAt != nil ? (d.en ? " · iqama in" : " · الإقامة بعد") : (d.en ? " in" : " بعد")))
-                    Countdown(from: now, to: h.target, style: cfg.count)
+                    Countdown(from: now, to: h.target, style: cfg.count, d: d, lead: false)
                 }
                 .font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute).lineLimit(1)
             }
@@ -244,14 +331,12 @@ struct TableMedium: View {
 
 struct TableLarge: View {
     let d: WData, h: WData.Hero, day: WDay, p: Palette, cfg: WCfg, now: Date
+    var off = 0
     var keys: [String] { cfg.sunrise ? ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] : WData.pray }
     var body: some View {
         VStack(spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(d.digits(day.wd)).font(.custom(WFonts.plexBold, size: 13)).foregroundStyle(p.ink)
-                    Text(d.hijri(day) + (day.hy.isEmpty ? "" : " " + d.digits(day.hy))).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
-                }
+            HStack(alignment: .center) {
+                DayArrows(d: d, day: day, p: p, off: off, size: 13, year: true)
                 Spacer()
                 Text(d.city).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
             }
@@ -259,13 +344,15 @@ struct TableLarge: View {
             VStack(spacing: 0) {
                 Text(heroLabel(d, h)).font(.custom(WFonts.plex, size: 11)).foregroundStyle(p.mute)
                 Text(d.name(h.k)).font(.custom(cfg.font.ps, size: 34)).foregroundStyle(p.ink).lineLimit(1)
-                Countdown(from: now, to: h.target, style: cfg.count).font(.custom(WFonts.plexBold, size: 15)).foregroundStyle(p.acc)
-                    .multilineTextAlignment(.center).widgetAccentable()
+                if off == 0 {
+                    Countdown(from: now, to: h.target, style: cfg.count, d: d).font(.custom(WFonts.plexBold, size: 15)).foregroundStyle(p.acc)
+                        .multilineTextAlignment(.center).widgetAccentable()
+                }
             }
             .padding(.vertical, 2)
             VStack(spacing: 4) {
                 ForEach(keys, id: \.self) { k in
-                    let on = k == h.k
+                    let on = off == 0 && k == h.k
                     HStack(alignment: .firstTextBaseline) {
                         Text(d.name(k)).font(.custom(cfg.font.ps, size: 18))
                         Spacer(minLength: 6)
@@ -282,6 +369,76 @@ struct TableLarge: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// The table's day with ‹ › to move between days, and «اليوم» to come back (interactive, iOS 17).
+struct DayArrows: View {
+    let d: WData, day: WDay, p: Palette, off: Int, size: CGFloat
+    var year = false
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(intent: TableDayIntent(delta: -1)) { Image(systemName: "chevron.backward").font(.system(size: size, weight: .bold)) }.buttonStyle(.plain).foregroundStyle(p.acc)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(d.digits(day.wd + " · " + d.hijri(day) + (year && !day.hy.isEmpty ? " " + day.hy : ""))).font(.custom(off == 0 ? WFonts.plex : WFonts.plexBold, size: size)).foregroundStyle(off == 0 ? p.mute : p.ink)
+            }
+            Button(intent: TableDayIntent(delta: 1)) { Image(systemName: "chevron.forward").font(.system(size: size, weight: .bold)) }.buttonStyle(.plain).foregroundStyle(p.acc)
+            if off != 0 {
+                Button(intent: TableDayIntent(delta: 0)) { Text(d.en ? "Today" : "اليوم").font(.custom(WFonts.plexBold, size: size)) }.buttonStyle(.plain).foregroundStyle(p.acc)
+            }
+        }
+        .lineLimit(1)
+    }
+}
+
+// MARK: the date and the day (0.29), as on Android: the day and the date in the name font
+
+struct DateView: View {
+    let e: WEntry
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let p = Palette.of(e.cfg.bg, dark: scheme == .dark), f = e.cfg.font.ps
+        Group {
+            if let d = e.data, let day = d.day(e.date) {
+                let hj = d.hijri(day) + (day.hy.isEmpty ? "" : " " + d.digits(day.hy))
+                Group {
+                    switch family {
+                    case .accessoryInline: Text(d.digits(day.wd) + " · " + hj)
+                    case .accessoryRectangular:
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(day.wd).font(.custom(f, size: 20)).widgetAccentable().lineLimit(1)
+                            Text(hj).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                            if !day.gr.isEmpty { Text(d.digits(day.gr)).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    case .systemMedium:
+                        VStack(spacing: 6) {
+                            Text(day.wd).font(.custom(f, size: 40)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
+                            Text(hj).font(.custom(f, size: 24)).foregroundStyle(p.acc).lineLimit(1).minimumScaleFactor(0.6)
+                            if !day.gr.isEmpty { Text(d.digits(day.gr)).font(.custom(WFonts.plex, size: 13)).foregroundStyle(p.mute).lineLimit(1) }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    default:
+                        VStack(spacing: 2) {
+                            Text(day.wd).font(.custom(f, size: 24)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
+                            Text(d.digits(day.hd)).font(.custom(f, size: 46)).foregroundStyle(p.acc).lineLimit(1)
+                            Text(day.hm + (day.hy.isEmpty ? "" : " " + d.digits(day.hy))).font(.custom(WFonts.plexBold, size: 12)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.7)
+                            if !day.gr.isEmpty { Text(d.digits(day.gr)).font(.custom(WFonts.plex, size: 10)).foregroundStyle(p.mute).lineLimit(1).minimumScaleFactor(0.7) }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .environment(\.layoutDirection, d.en ? .leftToRight : .rightToLeft)
+                .environment(\.locale, d.locale)
+            } else {
+                OpenAppView()
+            }
+        }
+        .containerBackground(for: .widget) {
+            if family == .accessoryInline || family == .accessoryRectangular { Color.clear }
+            else { LinearGradient(colors: [p.top, p.bottom], startPoint: .top, endPoint: .bottom) }
+        }
     }
 }
 

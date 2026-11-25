@@ -4,10 +4,10 @@ import CoreText
 
 /// The customise screen of each widget (long-press → Edit widget): what the user picks, never what we impose.
 enum WBg: String, AppEnum {
-    case green, light, sky, auto
+    case green, navy, light, sky, auto
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "الخلفية"
     static let caseDisplayRepresentations: [WBg: DisplayRepresentation] = [
-        .green: "أخضر", .light: "فاتح", .sky: "سماء", .auto: "حسب مظهر الجوال"
+        .green: "أخضر", .navy: "كحلي", .light: "فاتح", .sky: "سماء", .auto: "حسب مظهر الجوال"
     ]
 }
 
@@ -21,7 +21,7 @@ enum WFont: String, AppEnum {
 enum WCount: String, AppEnum {
     case timer, words, off
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "العد التنازلي"
-    static let caseDisplayRepresentations: [WCount: DisplayRepresentation] = [.timer: "١:٢٤:٣٠", .words: "بالكلمات", .off: "إخفاء"]
+    static let caseDisplayRepresentations: [WCount: DisplayRepresentation] = [.timer: "١:٢٤:٣٠", .words: "بالكلمات: بعد ١٠ دقائق", .off: "إخفاء"]
 }
 
 struct NextConfig: WidgetConfigurationIntent {
@@ -30,6 +30,13 @@ struct NextConfig: WidgetConfigurationIntent {
     @Parameter(title: "الخلفية", default: .green) var bg: WBg
     @Parameter(title: "الخط", default: .kufi) var font: WFont
     @Parameter(title: "العد التنازلي", default: .timer) var count: WCount
+}
+
+struct DateConfig: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "التاريخ واليوم"
+    static let description = IntentDescription("الخلفية والخط")
+    @Parameter(title: "الخلفية", default: .navy) var bg: WBg
+    @Parameter(title: "الخط", default: .kufi) var font: WFont
 }
 
 struct TableConfig: WidgetConfigurationIntent {
@@ -56,6 +63,7 @@ struct Palette {
         switch bg {
         case .green: return Palette(top: .hex(0x11594A), bottom: .hex(0x0A382C), ink: .hex(0xF4ECDC), mute: Color.hex(0xF4ECDC).opacity(0.72), acc: .hex(0xE2C27A), pill: Color.hex(0xE2C27A).opacity(0.18))
         case .light: return Palette(top: .hex(0xF5EEE1), bottom: .hex(0xEBE1CE), ink: .hex(0x0B3B2E), mute: .hex(0x5B6B5F), acc: .hex(0x0B4D3B), pill: Color.hex(0x0B4D3B).opacity(0.10))
+        case .navy: return Palette(top: .hex(0x1B2C52), bottom: .hex(0x0B1630), ink: .hex(0xF3E6C4), mute: Color.hex(0xF3E6C4).opacity(0.72), acc: .hex(0xE9CD8A), pill: Color.hex(0xE9CD8A).opacity(0.18))
         case .sky: return Palette(top: .hex(0x1E4E86), bottom: .hex(0x4A88CF), ink: .hex(0xFFF8EA), mute: Color.hex(0xFFF8EA).opacity(0.8), acc: .hex(0xFBE3A6), pill: Color.white.opacity(0.18))
         case .auto: return of(dark ? .green : .light, dark: dark)
         }

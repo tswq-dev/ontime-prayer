@@ -9,6 +9,7 @@ struct WDay {
     let t: [String: Date]
     let ex: [String: [WEx]]
     let hd: String, hm: String, hy: String, wd: String
+    var gr: String = ""   // the Gregorian date, as the page writes it
 }
 
 /// What the widgets show, read from the page's month of days. The widgets never compute prayer times.
@@ -42,7 +43,7 @@ struct WData {
                     ex[k] = l.compactMap { i in ms(i["at"]).map { WEx(at: $0, name: str(i["name"]), clock: str(i["clock"])) } }
                 }
             }
-            return WDay(d: str(j["d"]), t: t, ex: ex, hd: str(j["hd"]), hm: str(j["hm"]), hy: str(j["hy"]), wd: str(j["wd"]))
+            return WDay(d: str(j["d"]), t: t, ex: ex, hd: str(j["hd"]), hm: str(j["hm"]), hy: str(j["hy"]), wd: str(j["wd"]), gr: str(j["gr"]))
         }
         var iq: [String: Int] = [:]
         if let q = o["iq"] as? [String: Any] { for (k, v) in q { if let n = int(v) { iq[k] = n } } }
@@ -126,6 +127,18 @@ struct WData {
         return digits(String(format: "%d:%02d", h, m)) + (mer && !tail.isEmpty ? " " + tail : "")
     }
 
+    /// «١٠ دقائق»، «ساعة وربع», as the page says it (0.29): rounded up, as a countdown should be.
+    func words(_ secs: TimeInterval) -> String {
+        let m = max(0, Int((secs / 60).rounded(.up))), h = m / 60, mi = m % 60
+        if en { return [h > 0 ? "\(h) h" : nil, (mi > 0 || h == 0) ? "\(mi) min" : nil].compactMap { $0 }.joined(separator: " ") }
+        func pl(_ n: Int, _ one: String, _ two: String, _ few: String, _ many: String) -> String { n == 1 ? one : n == 2 ? two : digits("\(n)") + " " + (n <= 10 ? few : many) }
+        let hs = h > 0 ? pl(h, "ساعة", "ساعتين", "ساعات", "ساعة") : ""
+        if h > 0 && mi == 15 { return hs + " وربع" }
+        if h > 0 && mi == 30 { return hs + " ونصف" }
+        let ms = mi > 0 ? pl(mi, "دقيقة", "دقيقتين", "دقائق", "دقيقة") : ""
+        return hs.isEmpty ? (ms.isEmpty ? "أقل من دقيقة" : ms) : (ms.isEmpty ? hs : hs + " و" + ms)
+    }
+
     func hijri(_ d: WDay) -> String { digits([d.hd, d.hm].filter { !$0.isEmpty }.joined(separator: " ")) }
 
     /// For the ticking countdowns: the language the user chose in the app, with its digits.
@@ -143,7 +156,7 @@ struct WData {
         let days = (-1...1).map { o -> WDay in
             var t: [String: Date] = [:]
             for (k, h, m) in hm { t[k] = at(o, h, m) }
-            return WDay(d: key(at(o, 12, 0)), t: t, ex: [:], hd: "10", hm: "جمادى الآخرة", hy: "1448", wd: "الجمعة")
+            return WDay(d: key(at(o, 12, 0)), t: t, ex: [:], hd: "10", hm: "جمادى الآخرة", hy: "1448", wd: "الجمعة", gr: "27 نوفمبر 2026")
         }
         return WData(en: false, arabDigits: false, h12: true, iqc: false, city: "مكة المكرمة",
                      names: ["fajr": "الفجر", "sunrise": "الشروق", "duha": "الضحى", "dhuhr": "الظهر", "asr": "العصر", "maghrib": "المغرب", "isha": "العشاء"],

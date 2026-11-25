@@ -107,6 +107,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             UserDefaults.standard.set(j, forKey: "widgetData")
             // the widgets read it from the App Group; reload them only when it changed
             if SharedStore.write(j) { WidgetCenter.shared.reloadAllTimelines(); Alarms.sync() }
+            LiveNext.update()
         case "askNotify": askNotify()
         case "preview": Sounds.preview(b["sound"] as? String ?? "")
         case "pickSound": pickSound(b["id"] as? String ?? "file")

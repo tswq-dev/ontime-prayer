@@ -415,7 +415,7 @@ object WidgetArt {
         val col = if (x.st.kind == "dyn") x.st.acc else c(RC[nx.k] ?: "#E8C15A")
         cv.drawArc(ov, -90f, -360f * prog * x.dir, false, paint(col).apply { style = Paint.Style.STROKE; strokeWidth = sw; strokeCap = Paint.Cap.ROUND })
         val k = s / 170f
-        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.dur(x.d.leftMs(nx, x.now)) else "")
+        val sub = joinDot(if (x.style.has("time")) x.d.clock(nx.at) else "", if (x.style.has("count")) x.d.count(nx, x.now) else "")
         val top = if (nx.iqAt > 0) (if (x.d.since) (if (x.d.ar) "منذ الأذان" else "since the adhan") else if (x.d.ar) "حتى الإقامة" else "until iqama") else if (pv != null) x.d.name(pv.k) + (if (x.rtl) " ← " else " → ") + x.d.name(nx.k) else ""
         if (top.isNotEmpty() && x.style.has("prev")) center(cv, top, cx, cy - 18 * k, tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k })
         val np = tp(x, x.nameTf, 24f, x.st.fg).apply { textSize = 24f * k }; val ny = cy + (if (sub.isEmpty()) 16 else 9) * k; val n0 = x.d.name(nx.k)
@@ -651,7 +651,7 @@ object WidgetArt {
         val nx = x.next ?: return; val k = s / 150f
         val l2 = ArrayList<Pair<String, Paint>>()
         if (x.style.has("time")) l2 += x.d.clock(nx.at) to tp(x, x.plex, 12f, x.st.fg).apply { textSize = 12f * k }
-        if (x.style.has("count")) l2 += x.d.dur(x.d.leftMs(nx, x.now)) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
+        if (x.style.has("count")) l2 += x.d.count(nx, x.now) to tp(x, x.plex, 10.5f, x.st.sub).apply { textSize = 10.5f * k }
         var y = cy + (if (l2.isEmpty()) 7 else if (l2.size == 1) 4 else 2) * k
         val np = tp(x, x.nameTf, 17f, x.st.fg).apply { textSize = 17f * k }; val n0 = x.d.name(nx.k)
         // stretched, it stays inside the dial's inner edge, at the height of its letters
