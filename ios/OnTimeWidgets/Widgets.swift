@@ -116,8 +116,9 @@ struct DateWidget: Widget {
             DateView(e: e)
         }
         .configurationDisplayName("التاريخ واليوم")
-        .description("اليوم والتاريخ الهجري والميلادي، بالخط الذي تختاره.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryInline])
+        .description("اليوم والتاريخ الهجري والميلادي على شاشة القفل.")
+        // on the home screen it is a design of the gallery now (art.date, 0.32); this one stays for the lock screen
+        .supportedFamilies([.accessoryRectangular, .accessoryInline])
     }
 }
 
@@ -140,6 +141,7 @@ struct OnTimeWidgets: WidgetBundle {
         ArtWidgetsA().body
         ArtWidgetsB().body
         LockWidget()
+        LockRingWidget()
         DateWidget()
         AlarmNextWidget()
         NextLive()

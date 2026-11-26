@@ -24,6 +24,12 @@ enum ArtStore {
         if m == nil || m != data.0 { data = (m, KData.load(SharedStore.read())) }
         return data.1
     }
+    /// The next alarm after [now], for «المنبّه القادم» (alarms.json, written by the app).
+    static func alarm(_ now: Int) -> KArt.AlarmInfo {
+        guard let d = SharedStore.read(file: "alarms.json"), let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return KArt.AlarmInfo() }
+        let j = J(o), next = (o["next"] as? [Any] ?? []).compactMap { J($0) }.first { $0.optLong("at") > now }
+        return KArt.AlarmInfo(at: next?.optLong("at") ?? 0, title: next?.optString("title") ?? "", snoozed: false, count: j.optInt("count"), any: j.optBoolean("any"))
+    }
     static func style(_ type: String, _ fam: String) -> KStyle {
         let m = mtime("wstyles.json")
         if m != styles.0 { styles = (m, (SharedStore.read(file: "wstyles.json").flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]) ?? [:]) }
@@ -66,6 +72,7 @@ struct ArtView: View {
         guard size.width > 1, size.height > 1 else { return nil }
         KArt.square = true; KArt.wall = true
         let now = Int(e.date.timeIntervalSince1970 * 1000)
+        if e.type == "alarm" { KArt.alarm = ArtStore.alarm(now) }
         return KArt.record(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, size.width, size.height)
     }
 }
@@ -94,6 +101,8 @@ struct ArtLine: Widget { var body: some WidgetConfiguration { artConfig("line", 
 struct ArtNight: Widget { var body: some WidgetConfiguration { artConfig("night", "الثلث الأخير", "متى يبدأ الثلث الأخير من الليل الليلة وكم بقي عليه.") } }
 struct ArtRamadan: Widget { var body: some WidgetConfiguration { artConfig("ramadan", "رمضان", "الإفطار والإمساك في رمضان، وكم بقي على رمضان.") } }
 struct ArtWhite: Widget { var body: some WidgetConfiguration { artConfig("white", "الأيام البيض", "الشهر الهجري والأيام البيض والاثنين والخميس.") } }
+struct ArtDate: Widget { var body: some WidgetConfiguration { artConfig("date", "التاريخ واليوم", "اليوم والتاريخ الهجري والميلادي بخط الاسم.") } }
+struct ArtAlarm: Widget { var body: some WidgetConfiguration { artConfig("alarm", "المنبّه القادم", "وقت منبّهك القادم واسمه.") } }
 struct ArtColumn: Widget { var body: some WidgetConfiguration { artConfig("column", "العمود", "الصلوات الخمس في عمود، والقادمة بخط كبير.") } }
 
 /// A bundle holds ten at most: the designs come in two.
@@ -101,5 +110,5 @@ struct ArtWidgetsA: WidgetBundle {
     var body: some Widget { ArtPano(); ArtWindow(); ArtRing(); ArtOrbit(); ArtScript(); ArtTable(); ArtClock(); ArtMoon() }
 }
 struct ArtWidgetsB: WidgetBundle {
-    var body: some Widget { ArtColumn(); ArtRibbon(); ArtExit(); ArtLine(); ArtNight(); ArtRamadan(); ArtWhite() }
+    var body: some Widget { ArtColumn(); ArtRibbon(); ArtExit(); ArtLine(); ArtNight(); ArtRamadan(); ArtWhite(); ArtDate(); ArtAlarm() }
 }

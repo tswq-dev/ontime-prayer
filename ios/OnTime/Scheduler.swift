@@ -83,7 +83,7 @@ enum Scheduler {
             // an adhan set as an alarm (iOS 26) sounds there; its notification stays, quiet, for its buttons
             c.sound = (UserDefaults.standard.stringArray(forKey: "akAdhan") ?? []).contains(e["id"] as? String ?? "") ? nil : Sounds.notificationSound(s)
             c.interruptionLevel = .timeSensitive
-            if hasEx(e), let x = Reminders.nextExit(e) { c.body += " · " + Fmt.ends(e, x); c.categoryIdentifier = "ADHAN" }
+            if hasEx(e), let x = Reminders.nextExit(e) { c.body += " · " + Fmt.ends(e, x); c.categoryIdentifier = "ADHAN"; c.body += hint("ADHAN") }
         case "pre", "iqama", "note":
             c.sound = Sounds.reminderSound(rs, spk: e["spk"] as? String)
         case "exit":
@@ -92,11 +92,39 @@ enum Scheduler {
             c.title = Fmt.leftTitle(e, mins: left, name: x.name)
             c.body = Fmt.endsAt(e, x)
             c.sound = Sounds.reminderSound(rs, spk: e["xspk"] as? String)
-            c.categoryIdentifier = "REM"
+            c.categoryIdentifier = "REM"; c.body += hint("REM")
         default:
             return nil
         }
         return c
+    }
+
+    /// The iPhone shows a notification's buttons only on a long press, so those with buttons carry a line saying so, until
+    /// any button has been used once (0.32): then the user knows, and the line goes from the ones set after.
+    static func hint(_ cat: String) -> String {
+        let ud = UserDefaults.standard
+        if ud.bool(forKey: "noteUsed") { return "" }
+        let ar = ud.object(forKey: "noteAr") as? Bool ?? true, btns = (ud.string(forKey: "noteBtns") ?? "exit,later").split(separator: ",").map(String.init)
+        let q = { (s: String) in ar ? "«\(s)»" : "“\(s)”" }
+        var b: [String]
+        switch cat {
+        case "ADHAN": b = (btns.contains("later") ? [ar ? "ذكّرني بعد…" : "Remind me in…"] : []) + (btns.contains("exit") ? [ar ? "ذكّرني قبل الخروج" : "Remind me before it ends"] : []) + [ar ? "صلّيت" : "I prayed"]
+        case "REM": b = [ar ? "صلّيت" : "I prayed", ar ? "ذكّرني بعد ١٠ د" : "Remind me in 10 min"]
+        case "ALSOON": b = [ar ? "تخطَّ هذه المرة" : "Skip this time"]
+        case "ALSNZ": b = [ar ? "إيقاف المنبّه" : "Dismiss"]
+        case "REMSET": b = [ar ? "إلغاء التذكير" : "Cancel the reminder"]
+        default: return ""
+        }
+        let list = b.map(q)
+        let joined = list.count > 1 ? list.dropLast().joined(separator: ar ? "، " : ", ") + (ar ? " و" : " and ") + list.last! : list[0]
+        return "\n" + (ar ? "اضغط مطوّلاً لـ" : "Press and hold for ") + joined
+    }
+    /// A button was used: the hint goes from the notifications set from now on.
+    static func buttonUsed() {
+        let ud = UserDefaults.standard
+        if ud.bool(forKey: "noteUsed") { return }
+        ud.set(true, forKey: "noteUsed")
+        DispatchQueue.main.async { rebuild(); Alarms.notes() }
     }
 
     /// The buttons (on a long press): «ذكّرني قبل خروج الوقت» and «ذكّرني بعد» with the user's durations, and «صلّيت».
@@ -104,6 +132,9 @@ enum Scheduler {
         let ar = (e?["lang"] as? String ?? "ar") != "en"
         let btns = (e?["btns"] as? String ?? "exit,later").split(separator: ",").map(String.init)
         let before = (e?["before"] as? [Int]) ?? [10, 20, 30], later = (e?["later"] as? [Int]) ?? [15, 25, 35]
+        // kept for the hints and the adhan screen's own buttons (0.32)
+        let ud = UserDefaults.standard
+        ud.set(btns.joined(separator: ","), forKey: "noteBtns"); ud.set(before, forKey: "noteBefore"); ud.set(later, forKey: "noteLater"); ud.set(ar, forKey: "noteAr")
         var acts: [UNNotificationAction] = []
         if btns.contains("exit") { for m in before { acts.append(UNNotificationAction(identifier: "B:\(m)", title: ar ? "ذكّرني قبل خروج الوقت بـ\(Fmt.mins(m, e ?? [:]))" : "Remind me \(m) min before it ends", options: [])) } }
         if btns.contains("later") { for m in later { acts.append(UNNotificationAction(identifier: "L:\(m)", title: ar ? "ذكّرني بعد \(Fmt.mins(m, e ?? [:]))" : "Remind me in \(m) min", options: [])) } }
@@ -196,7 +227,7 @@ enum Reminders {
             let c = UNMutableNotificationContent()
             c.title = (ar ? "سنذكّرك " : "Reminder at ") + Alarms.clock(at, e)
             c.body = nextExit(e).map { Fmt.ends(e, $0) } ?? (e["title"] as? String ?? "")
-            c.categoryIdentifier = "REMSET"
+            c.categoryIdentifier = "REMSET"; c.body += Scheduler.hint("REMSET")
             c.threadIdentifier = e["key"] as? String ?? ""
             c.interruptionLevel = .passive
             c.userInfo = ["ev": WebViewController.json(e), "remAt": at]

@@ -49,6 +49,10 @@ import UniformTypeIdentifiers
             for t in KArt.TYPES { for (f, sz) in fam[t] ?? [] {
                 png(KArt.render(t, KArt.iosDefault(t, nil, f), ar, now, sz.w * 3, sz.h * 3, 3), "\(label)_\(t)_\(f)"); n += 1 } }
         }
+        // the iPhone's own two (0.32): the day and the date, and the next alarm
+        KArt.alarm = KArt.AlarmInfo(at: moments[2].1 + 9 * 3_600_000, title: "منبّه الفجر", snoozed: false, count: 3, any: true)
+        for t in ["date", "alarm"] { for f in ["s", "m"] { let sz = f == "s" ? S : M
+            png(KArt.render(t, KArt.iosDefault(t, nil, f), ar, moments[2].1, sz.w * 3, sz.h * 3, 3), "3-asr_\(t)_\(f)"); n += 1 } }
         // the widgets as the iPhone draws them: recorded shapes drawn by SwiftUI (0.31.2), to compare with the pictures
         for t in KArt.TYPES { for (f, sz) in fam[t] ?? [] {
             guard let rec = KArt.record(t, KArt.iosDefault(t, nil, f), ar, moments[2].1, CGFloat(sz.w), CGFloat(sz.h)) else { continue }

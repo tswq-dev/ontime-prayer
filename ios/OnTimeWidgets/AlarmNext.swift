@@ -117,6 +117,7 @@ struct AlarmNextWidget: Widget {
         StaticConfiguration(kind: "alarm", provider: AlarmProvider()) { e in AlarmNextView(e: e) }
             .configurationDisplayName("المنبّه القادم")
             .description("وقت منبّهك القادم واسمه.")
-            .supportedFamilies([.systemSmall, .accessoryInline, .accessoryRectangular])
+            // on the home screen it is a design of the gallery now (art.alarm, 0.32); this one stays for the lock screen
+            .supportedFamilies([.accessoryInline, .accessoryRectangular])
     }
 }

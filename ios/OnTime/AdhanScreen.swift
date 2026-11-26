@@ -10,6 +10,12 @@ struct AdhanScreen: View {
     let adhan: Adhan
     @Environment(\.dismiss) private var dismiss
     @StateObject private var player = AdhanPlayer()
+    @State private var askLater = false
+    @State private var askBefore = false
+    /// The notification's own durations (its buttons, 0.32): the same choices here, for whoever tapped it.
+    private var laterMins: [Int] { (UserDefaults.standard.array(forKey: "noteLater") as? [Int]) ?? [15, 25, 35] }
+    private var beforeMins: [Int] { (UserDefaults.standard.array(forKey: "noteBefore") as? [Int]) ?? [10, 20, 30] }
+    private var btns: [String] { (UserDefaults.standard.string(forKey: "noteBtns") ?? "exit,later").split(separator: ",").map(String.init) }
 
     private var ev: [String: Any] { adhan.ev }
     private var ar: Bool { Fmt.ar(ev) }
@@ -50,6 +56,23 @@ struct AdhanScreen: View {
                             .background(RoundedRectangle(cornerRadius: 18).fill(cream.opacity(0.07)).stroke(brass.opacity(0.4), lineWidth: 1))
                     }
                 }
+                // the notification's «ذكّرني بعد…» and «ذكّرني قبل الخروج», here too: most people tap a notification, few press and hold it
+                if Scheduler.hasEx(ev) {
+                    HStack(spacing: 10) {
+                        if btns.contains("later") { small(ar ? "ذكّرني بعد…" : "Remind me in…") { askLater = true } }
+                        if btns.contains("exit") && Reminders.nextExit(ev) != nil { small(ar ? "ذكّرني قبل الخروج" : "Before it ends") { askBefore = true } }
+                    }
+                    .confirmationDialog(ar ? "ذكّرني بعد" : "Remind me in", isPresented: $askLater, titleVisibility: .visible) {
+                        ForEach(laterMins, id: \.self) { m in
+                            Button(Fmt.mins(m, ev)) { Reminders.later(ev, mins: m); Reminders.confirm(ev); player.stop(); dismiss() }
+                        }
+                    }
+                    .confirmationDialog(ar ? "ذكّرني قبل خروج الوقت بـ" : "Remind me before it ends by", isPresented: $askBefore, titleVisibility: .visible) {
+                        ForEach(beforeMins, id: \.self) { m in
+                            Button(Fmt.mins(m, ev)) { Reminders.before(ev, mins: m); Reminders.confirm(ev); player.stop(); dismiss() }
+                        }
+                    }
+                }
                 if let x = Reminders.nextExit(ev) {
                     Text(Fmt.ends(ev, x)).font(.custom("IBM Plex Sans Arabic", size: 13)).foregroundStyle(cream.opacity(0.65)).padding(.top, 6)
                 }
@@ -60,6 +83,14 @@ struct AdhanScreen: View {
         .environment(\.layoutDirection, ar ? .rightToLeft : .leftToRight)
         .onAppear { player.start(ev, fromStart: adhan.fromStart) { dismiss() } }
         .onDisappear { player.stop() }
+    }
+
+    private func small(_ t: String, _ go: @escaping () -> Void) -> some View {
+        Button(action: go) {
+            Text(t).font(.custom("IBM Plex Sans Arabic", size: 14)).lineLimit(1).minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 46).foregroundStyle(cream)
+                .background(RoundedRectangle(cornerRadius: 16).fill(cream.opacity(0.05)).stroke(brass.opacity(0.3), lineWidth: 1))
+        }
     }
 
     private var clock: String {

@@ -46,7 +46,7 @@ enum KArt {
     /// «صلواتي» wait for buttons that work inside the widget.
     static let IOS: [(String, [String])] = [("pano", ["m", "l"]), ("window", ["s"]), ("ring", ["s"]), ("orbit", ["m"]), ("script", ["m", "s"]),
         ("table", ["m", "l"]), ("clock", ["s"]), ("moon", ["s"]), ("ribbon", ["m"]), ("exit", ["m"]), ("line", ["m"]), ("night", ["s", "m"]),
-        ("ramadan", ["m", "s"]), ("white", ["m", "s"]), ("column", ["l"])]
+        ("ramadan", ["m", "s"]), ("white", ["m", "s"]), ("column", ["l"]), ("date", ["s", "m"]), ("alarm", ["s", "m"])]
     /// A widget's size in points on a 6.1-inch iPhone (for the previews in the app).
     static func iosSize(_ f: String) -> CGSize { f == "s" ? CGSize(width: 158, height: 158) : f == "m" ? CGSize(width: 338, height: 158) : CGSize(width: 338, height: 354) }
     /// The look a widget has until the user picks one on the iPhone: the same as on Android, but no see-through background
@@ -55,6 +55,7 @@ enum KArt {
         var st = KStyle.defaultFor(type, font)
         if st.bg == "clear" { st.bg = "sky" }
         if type == "table" && fam == "l" { st.rows = ["city", "date", "count", "times", "exit", "iqama"] }
+        if type == "date" { st.bg = "navy" }
         return st
     }
 
@@ -322,6 +323,8 @@ enum KArt {
         case "ramadan": ramadan(cv, x)
         case "white": white(cv, x)
         case "column": column(cv, x)
+        case "date": dateW(cv, x)
+        case "alarm": alarmW(cv, x)
         default: break
         }
     }
@@ -1237,5 +1240,70 @@ enum KArt {
             if toWhite > 0 { text(cv, x, (ar ? "تبدأ " : "From ") + wdName(x, whiteWd), startX(x, pad), y, ap(tp(x, x.plex, 11.5, x.st.sub)) { $0.textSize = 11.5 * k }); y -= 18 * k }
             let bp = ap(tp(x, x.plexB, 22, x.st.fg)) { $0.textSize = 22 * k }; fit(bp, bigTxt, x.w - 2 * pad); text(cv, x, bigTxt, startX(x, pad), y, bp)
         }
+    }
+
+    // ---------- the iPhone's own two (0.32): the day and the date, and the next alarm, in the gallery with the others ----------
+    /// The day and both dates, the day in the name's font (stretched like a name), the Hijri date under it, the Gregorian last.
+    static func dateW(_ cv: ACanvas, _ x: X) {
+        card(cv, x); let dd = x.day, ar = x.d.ar
+        let hij = x.d.digits(dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")) + (ar ? "هـ" : " AH")
+        let g0 = dd.optString("gr").isEmpty ? dd.optString("d") : dd.optString("gr"), greg = x.d.digits(g0) + (ar && !g0.isEmpty ? "م" : "")
+        let wide = isWide(x), s = min(x.w, x.h), k = s / 150, pad = max(14 * k, kSafe(x)), room = x.w - 2 * pad
+        var ls: [(String, APaint, Bool)] = []   // text, paint, stretched
+        if x.style.has("wd") { ls.append((dd.optString("wd"), ap(tp(x, x.nameTf, 1, x.st.fg)) { $0.textSize = wide ? x.h * 0.36 : 38 * k }, true)) }
+        if x.style.has("hijri") { ls.append((hij, ap(tp(x, x.nameTf, 1, x.st.light ? c("#0B4D3B") : x.st.acc)) { $0.textSize = wide ? x.h * 0.17 : 17 * k }, false)) }
+        if x.style.has("greg") && !g0.isEmpty { ls.append((greg, ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }
+        if ls.isEmpty { return }
+        for l in ls { fit(l.1, l.0, room) }
+        let gap: CGFloat = 0.28, tot = ls.reduce(CGFloat(0)) { $0 + $1.1.textSize } + CGFloat(ls.count - 1) * ls[0].1.textSize * gap
+        var y = (x.h - tot) / 2
+        for (i, l) in ls.enumerated() {
+            y += l.1.textSize * (i == 0 ? 0.82 : 1)
+            let t = l.2 ? kashName(x, l.1, l.0, room - 2 * kSafe(x)) : l.0
+            center(cv, t, x.w / 2, y, l.1)
+            y += l.1.textSize * (i == 0 ? 0.18 + gap : gap * 0.6)
+        }
+    }
+
+    /// The next alarm, as the app's alarm widget on Android (AlarmWidget.kt): the night navy, its time large in Kufi and gold,
+    /// what it is for, and when. Given before drawing: the next alarm, and how many are on.
+    struct AlarmInfo { var at = 0, title = "", snoozed = false, count = 0, any = false }
+    static var alarm = AlarmInfo()
+    static func alarmW(_ cv: ACanvas, _ x: X) {
+        let w = x.w, h = x.h, r = square ? 0 : x.dp(22), u = min(w, h) / 150, ar = x.d.ar
+        let gold = c("#E9CD8A"), cream = c("#F3E6C4")
+        cv.drawRoundRect(RectF(0, 0, w, h), r, r, ap(paint()) { $0.shader = ALinear(0, 0, w * 0.4, h, c("#1B2C52"), c("#0B1630")) })
+        cv.drawRoundRect(RectF(0, 0, w, h), r, r, ap(paint()) { $0.shader = ARadial(w * 0.5, h * 0.2, w * 0.7, [AColor.argb(36, 233, 205, 138), 0], nil) })
+        let st: [CGFloat] = [0.12, 0.2, 0.3, 0.1, 0.52, 0.16, 0.7, 0.28, 0.86, 0.14, 0.62, 0.08]
+        for i in stride(from: 0, to: st.count, by: 2) { cv.drawCircle(w * (ar ? st[i] : 1 - st[i]), h * st[i + 1], 1.1 * u, paint(AColor.argb(i % 4 == 0 ? 120 : 70, 243, 230, 196))) }
+        let pad = 14 * u
+        // the alarm mark: a gold ring with a bell-clock, on the side away from the text
+        let ic = min(h * 0.34, 30 * u), icx = ar ? pad + ic / 2 : w - pad - ic / 2, icy = pad + ic / 2
+        let sp = ap(paint(gold)) { $0.style = .STROKE; $0.strokeWidth = 1.6 * u; $0.strokeCap = .ROUND }
+        cv.drawCircle(icx, icy + ic * 0.06, ic * 0.36, sp)
+        cv.drawLine(icx, icy + ic * 0.06, icx, icy - ic * 0.16, sp); cv.drawLine(icx, icy + ic * 0.06, icx + ic * 0.14, icy + ic * 0.14, sp)
+        cv.drawLine(icx - ic * 0.42, icy - ic * 0.3, icx - ic * 0.24, icy - ic * 0.44, sp); cv.drawLine(icx + ic * 0.42, icy - ic * 0.3, icx + ic * 0.24, icy - ic * 0.44, sp)
+        let sx = ar ? w - pad : pad, textW = w - pad * 3 - ic
+        let a = alarm
+        if a.at <= x.now {
+            let p1 = ap(tp(x, x.f.plexB, 1, cream, false)) { $0.textSize = min(15 * u, h * 0.2) }, t1 = !a.any ? (ar ? "لا منبّهات بعد" : "No alarms yet") : (ar ? "لا منبّه مفعّل" : "No alarm on")
+            fit(p1, t1, textW); text(cv, x, t1, sx, h / 2 - 2 * u, p1)
+            let p2 = ap(tp(x, x.f.plex, 1, AColor.argb(170, 243, 230, 196), false)) { $0.textSize = min(11.5 * u, h * 0.15) }, t2 = ar ? "اضغط لإضافة منبّه" : "Tap to add one"
+            fit(p2, t2, textW); text(cv, x, t2, sx, h / 2 + 16 * u, p2)
+            return
+        }
+        let time = x.d.clock(a.at), mer = x.d.ampm(a.at)
+        let dk = KData.dateKey(a.at), today = KData.dateKey(x.now), tom = KData.dateKey(x.now + KData.DAY)
+        let dayWord = dk == today ? (ar ? "اليوم" : "Today") : dk == tom ? (ar ? "غداً" : "Tomorrow") : wdName(x, KData.cal().component(.weekday, from: KData.date(a.at)) - 1)
+        let n = a.count, many = n < 2 ? "" : !ar ? " · \(n) alarms on" : n == 2 ? " · منبّهان مفعّلان" : " · " + x.d.digits(String(n)) + (n <= 10 ? " منبّهات مفعّلة" : " منبّهاً مفعّلاً")
+        let sub = (a.snoozed ? (ar ? "غفوة · " : "Snoozed · ") : "") + dayWord + many
+        let tpaint = ap(tp(x, x.f.name("kufi"), 1, gold, false)) { $0.textSize = min(h * 0.36, w * 0.22, 46 * u) }
+        let ty = pad + tpaint.textSize * 0.86 + (isWide(x) ? 0 : ic * 0.25)
+        text(cv, x, time, sx, ty, tpaint)
+        if !mer.isEmpty { text(cv, x, mer, sx - x.dir * (tpaint.measureText(time) + 5 * u), ty, ap(tp(x, x.f.plexB, 1, gold, false)) { $0.textSize = 12 * u }) }
+        let p2 = ap(tp(x, x.f.plexB, 1, cream, false)) { $0.textSize = min(13 * u, h * 0.14) }, y2 = ty + p2.textSize * 1.55
+        fit(p2, a.title, w - pad * 2); text(cv, x, a.title, sx, y2, p2)
+        let p3 = ap(tp(x, x.f.plex, 1, AColor.argb(175, 243, 230, 196), false)) { $0.textSize = min(11.5 * u, h * 0.12) }
+        fit(p3, sub, w - pad * 2); text(cv, x, sub, sx, y2 + p3.textSize * 1.55, p3)
     }
 }

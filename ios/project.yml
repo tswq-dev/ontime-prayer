@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.31.3"
-    CURRENT_PROJECT_VERSION: "41"
+    MARKETING_VERSION: "0.32.0"
+    CURRENT_PROJECT_VERSION: "42"
 targets:
   OnTime:
     type: application

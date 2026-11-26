@@ -77,6 +77,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                 "reminders": Reminders.all(),
                 "textPct": Self.textPct(),
                 "alarmKit": Alarms.supported, "alarmAuth": Alarms.auth(), "alarmState": Alarms.state(),
+                "pendingOpen": d.string(forKey: "pendingOpen") ?? "",
                 "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""]
     }
 
@@ -101,6 +102,12 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
+    /// A notification tapped that belongs to a screen of the app (the alarms, 0.32): open it now, or once the page is there.
+    func openFrom(_ k: String) {
+        if loaded { UserDefaults.standard.removeObject(forKey: "pendingOpen"); js("window.__openFrom && __openFrom('\(k)')") }
+        else { UserDefaults.standard.set(k, forKey: "pendingOpen") }
+    }
+
     /// "Try now" was set for this time (0: it was not); the page counts down to it.
     func tried(_ at: Double) { js("window.__onAlarmTry && __onAlarmTry(\(Int(at)))") }
 
@@ -116,6 +123,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         guard let b = message.body as? [String: Any], let cmd = b["cmd"] as? String else { return }
         switch cmd {
         case "schedule": Scheduler.save(b["json"] as? String ?? "[]"); Alarms.sync()
+        case "pendingDone": UserDefaults.standard.removeObject(forKey: "pendingOpen")
         case "widgetStyle": ArtPreview.save(b["t"] as? String ?? "", b["json"] as? String ?? "")
         case "widgetData":
             let j = b["json"] as? String ?? ""
@@ -206,7 +214,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         remind: function(j){ post('remind', { json: j }); },
         reminder: function(pk){ return String(st.reminders[pk] || ''); },
         cancelRemind: function(pk){ delete st.reminders[pk]; post('cancelRemind', { pk: pk }); },
-        pendingOpen: function(){ return ''; },
+        pendingOpen: function(){ var p = st.pendingOpen || ''; if (p) { st.pendingOpen = ''; post('pendingDone'); } return p; },
         pendingWidget: function(){ return ''; },
         openUrl: function(u){ post('openUrl', { url: u }); },
         // the home screen widgets (0.31): previews drawn by the app, each design's look saved for its widgets

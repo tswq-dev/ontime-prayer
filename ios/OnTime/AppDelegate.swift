@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let ev = Scheduler.event(of: response.notification.request.content.userInfo) ?? [:]
         let a = response.actionIdentifier
         let info = response.notification.request.content.userInfo
+        if a != UNNotificationDefaultActionIdentifier && a != UNNotificationDismissActionIdentifier { Scheduler.buttonUsed() }
         if a == "S", let al = (info["al"] as? NSNumber)?.intValue, let at = (info["at"] as? NSNumber)?.doubleValue { Alarms.skip(al, at: at) }   // "skip this time"
         else if a == "W", let al = (info["al"] as? NSNumber)?.intValue, let base = (info["base"] as? NSNumber)?.doubleValue { Alarms.awake(al, base: base) }   // «نعم، استيقظت»
         else if a == "U", let al = (info["al"] as? NSNumber)?.intValue { Alarms.unsnooze(info["u"] as? String ?? "", al: al) }   // «إيقاف المنبّه»
@@ -51,6 +52,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         else if a.hasPrefix("B:"), let m = Int(a.dropFirst(2)) { Reminders.before(ev, mins: m); Reminders.confirm(ev) }
         else if a.hasPrefix("L:"), let m = Int(a.dropFirst(2)) { Reminders.later(ev, mins: m); Reminders.confirm(ev) }
         else if a == "X", let pk = ev["pk"] as? String { Reminders.cancel(pk) }   // «إلغاء التذكير»
+        else if a == UNNotificationDefaultActionIdentifier, ["ALSOON", "ALSNZ"].contains(response.notification.request.content.categoryIdentifier) {
+            // the alarm half an hour before, or snoozed: the alarms open, with «تخطَّ» or «إلغاء الغفوة» there (0.32)
+            WebViewController.shared.openFrom("alarms")
+        }
         else if a == UNNotificationDefaultActionIdentifier, ev["kind"] as? String == "adhan", Sounds.isRecording(ev["sound"] as? String ?? "") {
             // tapped soon after the adhan: it goes on in full (after the 30 s the notification could play)
             let at = (ev["at"] as? Double ?? 0) / 1000, since = Date().timeIntervalSince1970 - at

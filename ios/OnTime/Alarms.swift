@@ -261,7 +261,7 @@ enum Alarms {
                 guard let r = rings(a, after: now + 31 * 60_000, until: now + 40 * day).first(where: { $0.idx == 0 }) else { continue }
                 let n = UNMutableNotificationContent()
                 n.title = (ar ? "منبّه " : "Alarm at ") + clock(r.at, e)
-                n.body = title(a)
+                n.body = title(a) + Scheduler.hint("ALSOON")
                 n.categoryIdentifier = "ALSOON"
                 n.userInfo = ["al": id(a), "at": r.base]
                 n.interruptionLevel = .passive
@@ -298,7 +298,7 @@ enum Alarms {
         ud.set(at, forKey: "alSnz_\(al)"); ud.set(uuid, forKey: "alSnzU_\(al)")   // the card shows it, with «إلغاء الغفوة»
         let e = fmt(), ar = Fmt.ar(e), n = UNMutableNotificationContent()
         n.title = (ar ? "غفوة حتى " : "Snoozed until ") + clock(at, e)
-        n.body = title
+        n.body = title + Scheduler.hint("ALSNZ")
         n.categoryIdentifier = "ALSNZ"
         n.userInfo = ["al": al, "u": uuid]
         n.interruptionLevel = .passive
@@ -316,7 +316,7 @@ enum Alarms {
         let w = widget(), items = done.filter { $0.kind == "alarm" }.prefix(12).map { ["at": $0.at, "title": $0.title] as [String: Any] }
         let o: [String: Any] = ["lang": w["lang"] ?? "ar", "dg": w["dg"] ?? 0, "f12": w["f12"] ?? 1,
                                 "count": list().filter { ($0["on"] as? NSNumber)?.boolValue ?? true }.count, "any": !list().isEmpty, "next": items]
-        if SharedStore.write(WebViewController.json(o), file: "alarms.json") { WidgetCenter.shared.reloadTimelines(ofKind: "alarm") }
+        if SharedStore.write(WebViewController.json(o), file: "alarms.json") { WidgetCenter.shared.reloadTimelines(ofKind: "alarm"); WidgetCenter.shared.reloadTimelines(ofKind: "art.alarm") }
     }
 
     /// "The full adhan" on an adhan alarm opens the app on the adhan screen.

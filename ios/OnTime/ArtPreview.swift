@@ -33,6 +33,11 @@ enum ArtPreview {
         let sj = (a["s"] as? String).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) } as? [String: Any]
         let d = month(), sz = KArt.iosSize(KArt.IOS.first { $0.0 == t }?.1.first ?? "m"), k: CGFloat = 2
         KArt.square = false; KArt.wall = true
+        if t == "alarm" {   // the next alarm, as the widget has it
+            let o = SharedStore.read(file: "alarms.json").flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any] ?? [:]
+            let now = Int(Date().timeIntervalSince1970 * 1000), n = (o["next"] as? [Any] ?? []).compactMap { J($0) }.first { $0.optLong("at") > now }
+            KArt.alarm = KArt.AlarmInfo(at: n?.optLong("at") ?? 0, title: n?.optString("title") ?? "", snoozed: false, count: J(o).optInt("count"), any: J(o).optBoolean("any"))
+        }
         guard let img = KArt.render(t, style(t, sj, d?.o.optString("font")), d, Int(Date().timeIntervalSince1970 * 1000), Int(sz.width * k), Int(sz.height * k), k),
               let png = UIImage(cgImage: img).pngData() else { return "" }
         return "data:image/png;base64," + png.base64EncodedString()
