@@ -214,7 +214,7 @@ enum Alarms {
         }
         for e in Scheduler.events() where e["kind"] as? String == "adhan" && (e["ring"] as? NSNumber)?.intValue == 1 {
             let t = Scheduler.at(e), s = e["sound"] as? String ?? ""
-            guard t > now + 5_000, t <= until, s != "none" else { continue }
+            guard t > now + 5_000, t <= until, s != "none", !PrayMarks.muted(Int(t)) else { continue }
             w.append(Want(at: t, kind: "adhan", key: e["id"] as? String ?? "", title: e["text"] as? String ?? (e["title"] as? String ?? ""), snooze: 0, sound: adhanSound(s)))
         }
         return w.sorted { $0.at < $1.at }

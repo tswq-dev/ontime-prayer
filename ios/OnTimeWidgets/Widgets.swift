@@ -140,8 +140,11 @@ struct OnTimeWidgets: WidgetBundle {
         // the Android designs, drawn by the same art (0.31); they take the place of «الصلاة القادمة» here
         ArtWidgetsA().body
         ArtWidgetsB().body
+        ArtWidgetsC().body
         LockWidget()
         LockRingWidget()
+        // «الخط»، «قمر الليلة»، «شريط اليوم»، «الصلوات الخمس»، «الثلث الأخير» (0.33)
+        LockMoreWidgets().body
         DateWidget()
         AlarmNextWidget()
         NextLive()
@@ -407,12 +410,14 @@ struct DateView: View {
                 let hj = d.hijri(day) + (day.hy.isEmpty ? "" : " " + d.digits(day.hy))
                 Group {
                     switch family {
-                    case .accessoryInline: Text(d.digits(day.wd) + " · " + hj)
+                    // the city with the date (0.33), as the owner asked
+                    case .accessoryInline: Text(d.digits(day.wd) + " · " + hj + (d.city.isEmpty ? "" : " · " + d.city))
                     case .accessoryRectangular:
                         VStack(alignment: .leading, spacing: 0) {
                             Text(day.wd).font(.custom(f, size: 20)).widgetAccentable().lineLimit(1)
                             Text(hj).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                            if !day.gr.isEmpty { Text(d.digits(day.gr)).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
+                            let g2 = [d.digits(day.gr), d.city].filter { !$0.isEmpty }.joined(separator: " · ")
+                            if !g2.isEmpty { Text(g2).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8) }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     case .systemMedium:

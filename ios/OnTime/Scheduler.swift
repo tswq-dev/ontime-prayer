@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import WidgetKit
 
 /// The page sends a month of alerts (each with its time, kind, text and sound); iOS keeps 64 at most, so the next
 /// two days go in whole and after them the adhan alone, with a last note to open the app. Rebuilt whenever the app
@@ -28,6 +29,8 @@ enum Scheduler {
 
     static func rebuild() {
         let now = nowMs, near = now + 48 * 3600 * 1000
+        // the muted adhan has come and gone
+        if PrayMarks.mute > 0 && Double(PrayMarks.mute) < now - 120_000 { PrayMarks.mute = 0 }
         let evs = events().filter { at($0) > now + 1000 }.sorted { at($0) < at($1) }
         setCategories(evs.first { $0["kind"] as? String == "adhan" })
         center.getPendingNotificationRequests { reqs in
@@ -82,6 +85,8 @@ enum Scheduler {
             if s == "none" { return nil }
             // an adhan set as an alarm (iOS 26) sounds there; its notification stays, quiet, for its buttons
             c.sound = (UserDefaults.standard.stringArray(forKey: "akAdhan") ?? []).contains(e["id"] as? String ?? "") ? nil : Sounds.notificationSound(s)
+            // «كتم الأذان القادم» from the buttons widget (0.33): this one comes quietly
+            if PrayMarks.muted(Int(at(e))) { c.sound = nil }
             c.interruptionLevel = .timeSensitive
             if hasEx(e), let x = Reminders.nextExit(e) { c.body += " · " + Fmt.ends(e, x); c.categoryIdentifier = "ADHAN"; c.body += hint("ADHAN") }
         case "pre", "iqama", "note":
@@ -170,6 +175,8 @@ enum Reminders {
     static func all() -> [String: Double] { (UserDefaults.standard.dictionary(forKey: "reminders") as? [String: Double] ?? [:]).filter { $0.value > Scheduler.nowMs } }
     private static func store(_ pk: String, _ at: Double?) {
         var r = all(); r[pk] = at; UserDefaults.standard.set(r, forKey: "reminders")
+        // the buttons widget shows it (0.33)
+        WidgetActions.mirror(); WidgetPress.reload()
     }
 
     /// «ذكّرني قبل خروج الوقت»: [mins] before the time ends.
@@ -243,6 +250,8 @@ enum Reminders {
         p[pk] = Scheduler.nowMs
         p = p.filter { $0.value > Scheduler.nowMs - 400 * 86_400_000 }
         UserDefaults.standard.set(p, forKey: "prayed")
+        // «صلواتي اليوم» and the buttons widget read the marks from the group (0.33)
+        PrayMarks.set(pk, true); WidgetPress.reload()
         Scheduler.center.getDeliveredNotifications { ns in
             let ids = ns.filter { Scheduler.event(of: $0.request.content.userInfo)?["pk"] as? String == pk }.map(\.request.identifier)
             Scheduler.center.removeDeliveredNotifications(withIdentifiers: ids)

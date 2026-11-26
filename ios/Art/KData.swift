@@ -254,7 +254,7 @@ struct KStyle {
         "white": (["monthu", "days"], ["monthu", "days"]),
         "column": (["count", "time", "sunrise", "duha", "exit", "hijri", "moon"], ["count", "exit", "hijri", "moon"]),
         // the iPhone's own (0.32)
-        "date": (["wd", "hijri", "greg"], ["wd", "hijri", "greg"]),
+        "date": (["city", "wd", "hijri", "greg"], ["city", "wd", "hijri", "greg"]),
         "alarm": ([], [])]
     static let BGS: Set<String> = ["sky", "light", "dark", "navy", "clear", "dyn"]
     static let CFS: Set<String> = ["hm", "clock", "m", "text"]

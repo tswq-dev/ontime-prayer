@@ -42,11 +42,12 @@ enum KArt {
     static var square = false
     /// No wallpaper behind a widget (the iPhone): what Android leaves see-through around the window's arch is filled (0.31.3).
     static var wall = false
-    /// The iPhone's widget sizes for each design ("s" small, "m" medium, "l" large), the first its own (0.31). The buttons and
-    /// «صلواتي» wait for buttons that work inside the widget.
+    /// The iPhone's widget sizes for each design ("s" small, "m" medium, "l" large), the first its own (0.31); the buttons and
+    /// «صلواتي» since 0.33, with buttons that work inside the widget.
     static let IOS: [(String, [String])] = [("pano", ["m", "l"]), ("window", ["s"]), ("ring", ["s"]), ("orbit", ["m"]), ("script", ["m", "s"]),
         ("table", ["m", "l"]), ("clock", ["s"]), ("moon", ["s"]), ("ribbon", ["m"]), ("exit", ["m"]), ("line", ["m"]), ("night", ["s", "m"]),
-        ("ramadan", ["m", "s"]), ("white", ["m", "s"]), ("column", ["l"]), ("date", ["s", "m"]), ("alarm", ["s", "m"])]
+        ("ramadan", ["m", "s"]), ("white", ["m", "s"]), ("column", ["l"]), ("date", ["s", "m"]), ("alarm", ["s", "m"]),
+        ("actions", ["m"]), ("prayed", ["m", "s"])]
     /// A widget's size in points on a 6.1-inch iPhone (for the previews in the app).
     static func iosSize(_ f: String) -> CGSize { f == "s" ? CGSize(width: 158, height: 158) : f == "m" ? CGSize(width: 338, height: 158) : CGSize(width: 338, height: 354) }
     /// The look a widget has until the user picks one on the iPhone: the same as on Android, but no see-through background
@@ -1251,6 +1252,8 @@ enum KArt {
         let g0 = dd.optString("gr").isEmpty ? dd.optString("d") : dd.optString("gr"), greg = x.d.digits(g0) + (ar && !g0.isEmpty ? "م" : "")
         let wide = isWide(x), s = min(x.w, x.h), k = s / 150, pad = max(14 * k, kSafe(x)), room = x.w - 2 * pad
         var ls: [(String, APaint, Bool)] = []   // text, paint, stretched
+        // the city on top, small (0.33)
+        if x.style.has("city") && !x.d.city.isEmpty { ls.append((x.d.city, ap(tp(x, x.plexB, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }
         if x.style.has("wd") { ls.append((dd.optString("wd"), ap(tp(x, x.nameTf, 1, x.st.fg)) { $0.textSize = wide ? x.h * 0.36 : 38 * k }, true)) }
         if x.style.has("hijri") { ls.append((hij, ap(tp(x, x.nameTf, 1, x.st.light ? c("#0B4D3B") : x.st.acc)) { $0.textSize = wide ? x.h * 0.17 : 17 * k }, false)) }
         if x.style.has("greg") && !g0.isEmpty { ls.append((greg, ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }

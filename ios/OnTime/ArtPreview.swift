@@ -38,7 +38,9 @@ enum ArtPreview {
             let now = Int(Date().timeIntervalSince1970 * 1000), n = (o["next"] as? [Any] ?? []).compactMap { J($0) }.first { $0.optLong("at") > now }
             KArt.alarm = KArt.AlarmInfo(at: n?.optLong("at") ?? 0, title: n?.optString("title") ?? "", snoozed: false, count: J(o).optInt("count"), any: J(o).optBoolean("any"))
         }
-        guard let img = KArt.render(t, style(t, sj, d?.o.optString("font")), d, Int(Date().timeIntervalSince1970 * 1000), Int(sz.width * k), Int(sz.height * k), k),
+        let now = Int(Date().timeIntervalSince1970 * 1000)
+        if t == "prayed" { KArt.marks = PrayMarks.marks(d, now) }
+        guard let img = KArt.render(t, style(t, sj, d?.o.optString("font")), d, now, Int(sz.width * k), Int(sz.height * k), k, btns: PrayMarks.btns(d, now)),
               let png = UIImage(cgImage: img).pngData() else { return "" }
         return "data:image/png;base64," + png.base64EncodedString()
     }

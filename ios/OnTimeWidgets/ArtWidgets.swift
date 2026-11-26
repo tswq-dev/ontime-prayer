@@ -62,6 +62,8 @@ struct ArtView: View {
             // drawn as shapes, not a picture (0.31.2): WidgetKit keeps every entry until its minute, and an hour of pictures
             // passed its limits, so only the background showed (all green)
             if let rec = shapes(g.size) { ArtVectorView(rec: rec) }
+            // the buttons of «بأزرار» and the circles of «صلواتي اليوم» work in the widget (0.33)
+            if e.type == "actions" || e.type == "prayed" { ArtButtons(type: e.type, size: g.size, rtl: ArtStore.month()?.ar ?? true) }
         }
         .containerBackground(for: .widget) {
             // the design covers it; seen only behind the arch of «النافذة», in the app's green
@@ -73,7 +75,47 @@ struct ArtView: View {
         KArt.square = true; KArt.wall = true
         let now = Int(e.date.timeIntervalSince1970 * 1000)
         if e.type == "alarm" { KArt.alarm = ArtStore.alarm(now) }
-        return KArt.record(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, size.width, size.height)
+        if e.type == "prayed" { KArt.marks = PrayMarks.marks(ArtStore.month(), now) }
+        return KArt.record(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, size.width, size.height,
+                           btns: e.type == "actions" ? PrayMarks.btns(ArtStore.month(), now) : KArt.Btns())
+    }
+}
+
+/// Where the art draws the buttons, as buttons: the three of «بأزرار» in its bottom part, and the five circles of «صلواتي اليوم»
+/// (in a row when wide, round a ring when square). Laid out as the art lays them out (KArt.actions, KArt.prayed).
+struct ArtButtons: View {
+    let type: String, size: CGSize, rtl: Bool
+    private func hit(_ which: String, _ r: CGRect) -> some View {
+        Button(intent: WidgetPressIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
+            .buttonStyle(.plain)
+            .frame(width: r.width, height: r.height)
+            .position(x: r.midX, y: r.midY)
+    }
+    private var rects: [(String, CGRect)] {
+        let w = size.width, h = size.height
+        if type == "actions" {
+            let s = KArt.fitScale("actions", w, h), pad = 14 * s, gap = 8 * s, top = h * KArt.BTN_TOP
+            let bh = h - top - pad, bw = (w - 2 * pad - 2 * gap) / 3
+            return ["pray", "mute", "remind"].enumerated().map { i, k in
+                let col = CGFloat(rtl ? i : 2 - i), l = w - pad - (col + 1) * bw - col * gap
+                return (k, CGRect(x: l, y: top, width: bw, height: bh))
+            }
+        }
+        if w / h > 1.8 {
+            let left = rtl ? w * KArt.PR_PAD : w * KArt.PR_TITLE, cw = w * KArt.PR_CELL
+            return (0...4).map { i in ("p\(i)", CGRect(x: left + cw * CGFloat(rtl ? 4 - i : i), y: 0, width: cw, height: h)) }
+        }
+        // round: Fajr at the top, counter-clockwise in Arabic
+        let s = min(w, h), R = s * 0.34, t = s * 0.3
+        return (0...4).map { i in
+            let a = (rtl ? -126 - 72 * Double(i) : -54 + 72 * Double(i)) * .pi / 180
+            return ("p\(i)", CGRect(x: w / 2 + R * CGFloat(cos(a)) - t / 2, y: h / 2 + R * CGFloat(sin(a)) - t / 2, width: t, height: t))
+        }
+    }
+    var body: some View {
+        ZStack { ForEach(rects, id: \.0) { r in hit(r.0, r.1) } }
+            .frame(width: size.width, height: size.height)
+            .environment(\.layoutDirection, .leftToRight)
     }
 }
 
@@ -103,6 +145,8 @@ struct ArtRamadan: Widget { var body: some WidgetConfiguration { artConfig("rama
 struct ArtWhite: Widget { var body: some WidgetConfiguration { artConfig("white", "الأيام البيض", "الشهر الهجري والأيام البيض والاثنين والخميس.") } }
 struct ArtDate: Widget { var body: some WidgetConfiguration { artConfig("date", "التاريخ واليوم", "اليوم والتاريخ الهجري والميلادي بخط الاسم.") } }
 struct ArtAlarm: Widget { var body: some WidgetConfiguration { artConfig("alarm", "المنبّه القادم", "وقت منبّهك القادم واسمه.") } }
+struct ArtActions: Widget { var body: some WidgetConfiguration { artConfig("actions", "بأزرار", "الصلاة القادمة وثلاثة أزرار: صلّيت، كتم الأذان القادم، ذكّرني قبل خروج الوقت.") } }
+struct ArtPrayed: Widget { var body: some WidgetConfiguration { artConfig("prayed", "صلواتي اليوم", "دائرة لكل صلاة، اضغطها إذا صلّيت، وأيامك المتتالية.") } }
 struct ArtColumn: Widget { var body: some WidgetConfiguration { artConfig("column", "العمود", "الصلوات الخمس في عمود، والقادمة بخط كبير.") } }
 
 /// A bundle holds ten at most: the designs come in two.
@@ -111,4 +155,8 @@ struct ArtWidgetsA: WidgetBundle {
 }
 struct ArtWidgetsB: WidgetBundle {
     var body: some Widget { ArtColumn(); ArtRibbon(); ArtExit(); ArtLine(); ArtNight(); ArtRamadan(); ArtWhite(); ArtDate(); ArtAlarm() }
+}
+/// The two with buttons (0.33).
+struct ArtWidgetsC: WidgetBundle {
+    var body: some Widget { ArtActions(); ArtPrayed() }
 }

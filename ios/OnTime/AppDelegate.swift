@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Fonts.register()
+        WidgetActions.install()
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.refreshId, using: nil) { task in
             // iOS keeps 64 alerts at most: put the next ones in place, and ask for the next refresh
             Scheduler.rebuild()
