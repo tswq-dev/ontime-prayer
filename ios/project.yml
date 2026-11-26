@@ -20,6 +20,8 @@ targets:
       # Swift, the asset catalog, the notification clips (Sounds/*.caf, at most 30 s) and the full recordings (Full/*.m4a)
       - path: OnTime
       - path: Shared
+      # the widget art (the Android drawing in Swift, 0.31): the app draws the previews with it
+      - path: Art
       - path: ../android/app/src/main/assets/www
         type: folder
         buildPhase: resources
@@ -79,7 +81,19 @@ targets:
     sources:
       - path: OnTimeWidgets
       - path: Shared
+      - path: Art
+      # the widget fonts, every weight the looks can pick (the Android ones)
       - path: ../android/app/src/main/assets/wfonts/kufi.ttf
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts/ruqaa400.ttf
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts/naskh400.ttf
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts/plex300.ttf
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts/plex500.ttf
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/wfonts/plex700.ttf
         buildPhase: resources
       - path: ../android/app/src/main/assets/wfonts/ruqaa.ttf
         buildPhase: resources

@@ -136,7 +136,9 @@ struct LockWidget: Widget {
 struct OnTimeWidgets: WidgetBundle {
     init() { WFonts.register() }
     var body: some Widget {
-        NextWidget()
+        // the Android designs, drawn by the same art (0.31); they take the place of «الصلاة القادمة» here
+        ArtWidgetsA().body
+        ArtWidgetsB().body
         TableWidget()
         LockWidget()
         DateWidget()

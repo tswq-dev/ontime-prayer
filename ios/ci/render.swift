@@ -15,6 +15,7 @@ import UniformTypeIdentifiers
               let arJ = all["ar"] as? [String: Any], let enJ = all["en"] as? [String: Any] else { print("usage: render wdata.json fonts out"); exit(1) }
         NSTimeZone.default = TimeZone(identifier: "Asia/Riyadh")!
         Typeface.dir = URL(fileURLWithPath: args[2])
+        KArt.square = true
         let out = URL(fileURLWithPath: args[3]); try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let ar = KData(arJ), en = KData(enJ)
         let day = J(((arJ["days"] as? [Any]) ?? [])[1])!
@@ -45,7 +46,7 @@ import UniformTypeIdentifiers
         let t0 = Date()
         for (label, now) in moments {
             for t in KArt.TYPES { for (f, sz) in fam[t] ?? [] {
-                png(KArt.render(t, KStyle.defaultFor(t), ar, now, sz.w * 3, sz.h * 3, 3), "\(label)_\(t)_\(f)"); n += 1 } }
+                png(KArt.render(t, KArt.iosDefault(t, nil, f), ar, now, sz.w * 3, sz.h * 3, 3), "\(label)_\(t)_\(f)"); n += 1 } }
         }
         // the other looks, at asr: every background, the fonts, English
         let asr = moments[2].1
@@ -57,13 +58,13 @@ import UniformTypeIdentifiers
         for t in KArt.TYPES { let sz = fam[t]![0].1
             png(KArt.render(t, KStyle.defaultFor(t), en, asr, sz.w * 3, sz.h * 3, 3), "en_\(t)"); n += 1 }
         // a check of text placement: each string on its own baseline (the red line)
-        if let cv = Canvas(1400, 900) {
-            cv.drawRect(0, 0, 1400, 900, Paint(Color.WHITE))
+        if let cv = ACanvas(1400, 900) {
+            cv.drawRect(0, 0, 1400, 900, APaint(AColor.WHITE))
             let ss = ["بعد نحو 80 يوماً", "بعد نحو 80 يوما", "يوماً", "نحو 80", "اللهم بلّغنا رمضان", "In about 80 days"]
             for (i, str) in ss.enumerated() {
                 let y = CGFloat(120 + i * 130)
-                cv.drawLine(0, y, 1400, y, ap(Paint(Color.parseColor("#FF0000"))) { $0.strokeWidth = 2 })
-                let p = Paint(Color.BLACK); p.typeface = Typeface("plex600"); p.textSize = 84; p.textAlign = .RIGHT
+                cv.drawLine(0, y, 1400, y, ap(APaint(AColor.parseColor("#FF0000"))) { $0.strokeWidth = 2 })
+                let p = APaint(AColor.BLACK); p.typeface = Typeface("plex600"); p.textSize = 84; p.textAlign = .RIGHT
                 cv.drawText(str, 1350, y, p)
             }
             if let i = cv.image { png(i, "zz-text_check") }
@@ -71,7 +72,7 @@ import UniformTypeIdentifiers
         print("drew \(n) pictures in \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
         // the sheets: pictures at half their size (1.5×) in rows, each with its name over it, on grey
         let sd = out.appendingPathComponent("sheets"); try? FileManager.default.createDirectory(at: sd, withIntermediateDirectories: true)
-        let label = Paint(Color.parseColor("#333333")); label.typeface = Typeface("plex400"); label.textSize = 22
+        let label = APaint(AColor.parseColor("#333333")); label.typeface = Typeface("plex400"); label.textSize = 22
         for (key, items) in sheets {
             let W = 1600, gap = 24, lh = 30
             var placed: [(String, CGImage, CGRect)] = [], x = gap, y = gap, rowH = 0
@@ -81,8 +82,8 @@ import UniformTypeIdentifiers
                 placed.append((nm, im, CGRect(x: x, y: y + lh, width: w, height: h))); x += w + gap; rowH = max(rowH, h + lh)
             }
             let H = y + rowH + gap
-            guard let cv = Canvas(W, H) else { continue }
-            cv.drawRect(0, 0, CGFloat(W), CGFloat(H), Paint(Color.parseColor("#C9CCD1")))
+            guard let cv = ACanvas(W, H) else { continue }
+            cv.drawRect(0, 0, CGFloat(W), CGFloat(H), APaint(AColor.parseColor("#C9CCD1")))
             for (nm, im, r) in placed {
                 cv.drawText(nm, r.minX, r.minY - 8, label)
                 // the canvas is y down: draw the picture flipped back

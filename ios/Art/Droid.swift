@@ -2,14 +2,14 @@ import Foundation
 import CoreGraphics
 import CoreText
 
-// The small part of Android's drawing API that the widget art uses (Canvas, Paint, Path, the gradients), over CoreGraphics
+// The small part of Android's drawing API that the widget art uses (ACanvas, APaint, APath, the gradients), over CoreGraphics
 // and CoreText, so the art itself (KArt.swift) reads line for line like WidgetArt.kt and the iPhone widgets come out as the
 // Android ones do. Coordinates are Android's: pixels, y down, angles in degrees clockwise from 3 o'clock.
 // No UIKit here: the same files build for macOS, where CI draws every widget to a picture for review.
 
 typealias AInt = Int   // a colour as Android has it: 0xAARRGGBB
 
-enum Color {
+enum AColor {
     static let WHITE: AInt = 0xFFFFFFFF
     static let BLACK: AInt = 0xFF000000
     static let TRANSPARENT: AInt = 0
@@ -76,23 +76,23 @@ final class Typeface {
     }
 }
 
-enum Shader {
+enum AShader {
     case linear(CGFloat, CGFloat, CGFloat, CGFloat, [AInt], [CGFloat]?)
     case radial(CGFloat, CGFloat, CGFloat, [AInt], [CGFloat]?)
     case sweep(CGFloat, CGFloat, [AInt], [CGFloat]?, CGFloat, Bool)   // its rotation in degrees, then mirrored (Android's local matrix)
 }
-func LinearGradient(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ c0: AInt, _ c1: AInt) -> Shader { .linear(x0, y0, x1, y1, [c0, c1], nil) }
-func LinearGradient(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?) -> Shader { .linear(x0, y0, x1, y1, cs, ps) }
-func RadialGradient(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?) -> Shader { .radial(cx, cy, r, cs, ps) }
-func RadialGradient(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ c0: AInt, _ c1: AInt) -> Shader { .radial(cx, cy, r, [c0, c1], nil) }
-func SweepGradient(_ cx: CGFloat, _ cy: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?, rotate: CGFloat = 0, mirror: Bool = false) -> Shader { .sweep(cx, cy, cs, ps, rotate, mirror) }
+func ALinear(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ c0: AInt, _ c1: AInt) -> AShader { .linear(x0, y0, x1, y1, [c0, c1], nil) }
+func ALinear(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?) -> AShader { .linear(x0, y0, x1, y1, cs, ps) }
+func ARadial(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?) -> AShader { .radial(cx, cy, r, cs, ps) }
+func ARadial(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ c0: AInt, _ c1: AInt) -> AShader { .radial(cx, cy, r, [c0, c1], nil) }
+func ASweep(_ cx: CGFloat, _ cy: CGFloat, _ cs: [AInt], _ ps: [CGFloat]?, rotate: CGFloat = 0, mirror: Bool = false) -> AShader { .sweep(cx, cy, cs, ps, rotate, mirror) }
 
-final class Paint {
+final class APaint {
     enum Style { case FILL, STROKE, FILL_AND_STROKE }
     enum Align { case LEFT, CENTER, RIGHT }
     enum Cap { case BUTT, ROUND, SQUARE }
     enum Join { case MITER, ROUND, BEVEL }
-    var color: AInt = Color.BLACK
+    var color: AInt = AColor.BLACK
     var style: Style = .FILL
     var strokeWidth: CGFloat = 0
     var strokeCap: Cap = .BUTT
@@ -100,14 +100,14 @@ final class Paint {
     var textAlign: Align = .LEFT
     var textSize: CGFloat = 12
     var typeface: Typeface? = nil
-    var shader: Shader? = nil
+    var shader: AShader? = nil
     var dash: [CGFloat]? = nil   // DashPathEffect(intervals, 0)
     var shadow: (r: CGFloat, dx: CGFloat, dy: CGFloat, c: AInt)? = nil
     /// Ruqaa and Naskh have nothing past Bold: "bold" thickens their strokes (NPaint in WidgetArt.kt).
     var heavy = false
-    var alpha: Int { get { Color.alpha(color) } set { color = (color & 0xFFFFFF) | (max(0, min(255, newValue)) << 24) } }
-    init(_ color: AInt = Color.BLACK) { self.color = color }
-    init(copy p: Paint) {
+    var alpha: Int { get { AColor.alpha(color) } set { color = (color & 0xFFFFFF) | (max(0, min(255, newValue)) << 24) } }
+    init(_ color: AInt = AColor.BLACK) { self.color = color }
+    init(copy p: APaint) {
         color = p.color; style = p.style; strokeWidth = p.strokeWidth; strokeCap = p.strokeCap; strokeJoin = p.strokeJoin
         textAlign = p.textAlign; textSize = p.textSize; typeface = p.typeface; shader = p.shader; dash = p.dash; shadow = p.shadow; heavy = p.heavy
     }
@@ -146,7 +146,7 @@ final class Paint {
     var descent: CGFloat { CTFontGetDescent(font) }
 }
 
-final class Path {
+final class APath {
     enum Direction { case CW, CCW }
     enum Op { case DIFFERENCE, UNION, INTERSECT }
     var cg = CGMutablePath()
@@ -174,8 +174,8 @@ final class Path {
     func addRoundRect(_ o: RectF, _ rx: CGFloat, _ ry: CGFloat, _ d: Direction = .CW) {
         let r = o.cg; cg.addRoundedRect(in: r, cornerWidth: min(rx, r.width / 2), cornerHeight: min(ry, r.height / 2))
     }
-    func addPath(_ p: Path) { cg.addPath(p.cg) }
-    @discardableResult func op(_ other: Path, _ op: Op) -> Bool {
+    func addPath(_ p: APath) { cg.addPath(p.cg) }
+    @discardableResult func op(_ other: APath, _ op: Op) -> Bool {
         let r: CGPath
         switch op {
         case .DIFFERENCE: r = cg.subtracting(other.cg, using: .winding)
@@ -187,7 +187,7 @@ final class Path {
 }
 
 /// A canvas over a bitmap, y down. `image` gives what was drawn.
-final class Canvas {
+final class ACanvas {
     let ctx: CGContext, w: Int, h: Int
     private var layers: [Bool] = []   // per save(): whether it opened a transparency layer
     init?(_ w: Int, _ h: Int) {
@@ -209,14 +209,14 @@ final class Canvas {
     @discardableResult func saveLayerAlpha(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat, _ alpha: Int) -> Int { saveLayerAlpha(RectF(l, t, r, b), alpha) }
     func restore() { guard let l = layers.popLast() else { return }; if l { ctx.endTransparencyLayer() }; ctx.restoreGState() }
     func restoreToCount(_ n: Int) { while layers.count >= n && !layers.isEmpty { restore() } }
-    func clipPath(_ p: Path) { ctx.addPath(p.cg); ctx.clip() }
+    func clipPath(_ p: APath) { ctx.addPath(p.cg); ctx.clip() }
     func clipRect(_ r: RectF) { ctx.clip(to: r.cg) }
     func clipRect(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat) { clipRect(RectF(l, t, r, b)) }
 
-    private func shadowOn(_ p: Paint) {
-        if let s = p.shadow { ctx.setShadow(offset: CGSize(width: s.dx, height: -s.dy), blur: s.r * 1.15, color: Color.cg(s.c)) }
+    private func shadowOn(_ p: APaint) {
+        if let s = p.shadow { ctx.setShadow(offset: CGSize(width: s.dx, height: -s.dy), blur: s.r * 1.15, color: AColor.cg(s.c)) }
     }
-    private func strokeSet(_ p: Paint) {
+    private func strokeSet(_ p: APaint) {
         ctx.setLineWidth(max(p.strokeWidth, 0.0001))
         ctx.setLineCap(p.strokeCap == .ROUND ? .round : p.strokeCap == .SQUARE ? .square : .butt)
         ctx.setLineJoin(p.strokeJoin == .ROUND ? .round : p.strokeJoin == .BEVEL ? .bevel : .miter)
@@ -224,10 +224,10 @@ final class Canvas {
     }
     private func gradient(_ cs: [AInt], _ ps: [CGFloat]?) -> CGGradient? {
         let locs: [CGFloat] = ps ?? (cs.count > 1 ? (0..<cs.count).map { CGFloat($0) / CGFloat(cs.count - 1) } : [0])
-        return CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!, colors: cs.map(Color.cg) as CFArray, locations: locs)
+        return CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!, colors: cs.map(AColor.cg) as CFArray, locations: locs)
     }
     /// Fills the current clip with the paint's shader (its alpha as the paint's).
-    private func fillShader(_ s: Shader, _ p: Paint) {
+    private func fillShader(_ s: AShader, _ p: APaint) {
         ctx.setAlpha(CGFloat(p.alpha) / 255)
         let opts: CGGradientDrawingOptions = [.drawsBeforeStartLocation, .drawsAfterEndLocation]
         switch s {
@@ -246,7 +246,7 @@ final class Canvas {
                 for i in 1..<cs.count where f <= stops[i] {
                     let k = (f - stops[i - 1]) / max(0.0001, stops[i] - stops[i - 1]), x = cs[i - 1], y = cs[i]
                     func m(_ a: Int, _ b: Int) -> Int { Int(CGFloat(a) + CGFloat(b - a) * k) }
-                    return Color.argb(m(Color.alpha(x), Color.alpha(y)), m(Color.red(x), Color.red(y)), m(Color.green(x), Color.green(y)), m(Color.blue(x), Color.blue(y)))
+                    return AColor.argb(m(AColor.alpha(x), AColor.alpha(y)), m(AColor.red(x), AColor.red(y)), m(AColor.green(x), AColor.green(y)), m(AColor.blue(x), AColor.blue(y)))
                 }
                 return cs[cs.count - 1]
             }
@@ -255,12 +255,12 @@ final class Canvas {
                 let a0 = r0 + 2 * .pi * CGFloat(i) / CGFloat(n), a1 = r0 + 2 * .pi * CGFloat(i + 1) / CGFloat(n) + 0.004
                 let wedge = CGMutablePath(); wedge.move(to: CGPoint(x: cx, y: cy))
                 wedge.addLine(to: CGPoint(x: cx + big * cos(a0), y: cy + big * sin(a0))); wedge.addLine(to: CGPoint(x: cx + big * cos(a1), y: cy + big * sin(a1))); wedge.closeSubpath()
-                ctx.setFillColor(Color.cg(colorAt((CGFloat(i) + 0.5) / CGFloat(n)))); ctx.addPath(wedge); ctx.fillPath()
+                ctx.setFillColor(AColor.cg(colorAt((CGFloat(i) + 0.5) / CGFloat(n)))); ctx.addPath(wedge); ctx.fillPath()
             }
         }
     }
     /// Draws a shape: filled, stroked or both, with the paint's colour or shader and shadow.
-    private func shape(_ path: CGPath, _ p: Paint, forceStroke: Bool = false) {
+    private func shape(_ path: CGPath, _ p: APaint, forceStroke: Bool = false) {
         let fill = !forceStroke && (p.style == .FILL || p.style == .FILL_AND_STROKE)
         let stroke = forceStroke || p.style == .STROKE || p.style == .FILL_AND_STROKE
         ctx.saveGState(); shadowOn(p)
@@ -276,36 +276,36 @@ final class Canvas {
             ctx.saveGState(); ctx.addPath(area); ctx.clip(); fillShader(s, p); ctx.restoreGState()
             if p.shadow != nil { ctx.endTransparencyLayer() }
         } else {
-            ctx.setFillColor(Color.cg(p.color)); ctx.setStrokeColor(Color.cg(p.color)); strokeSet(p)
+            ctx.setFillColor(AColor.cg(p.color)); ctx.setStrokeColor(AColor.cg(p.color)); strokeSet(p)
             ctx.addPath(path)
             ctx.drawPath(using: fill && stroke ? .fillStroke : fill ? .fill : .stroke)
         }
         ctx.restoreGState()
     }
 
-    func drawPath(_ path: Path, _ p: Paint) { shape(path.cg, p) }
-    func drawCircle(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ p: Paint) {
+    func drawPath(_ path: APath, _ p: APaint) { shape(path.cg, p) }
+    func drawCircle(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ p: APaint) {
         guard r > 0 else { return }
         shape(CGPath(ellipseIn: CGRect(x: cx - r, y: cy - r, width: 2 * r, height: 2 * r), transform: nil), p)
     }
-    func drawOval(_ o: RectF, _ p: Paint) { shape(CGPath(ellipseIn: o.cg, transform: nil), p) }
-    func drawRect(_ o: RectF, _ p: Paint) { shape(CGPath(rect: o.cg, transform: nil), p) }
-    func drawRect(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat, _ p: Paint) { drawRect(RectF(l, t, r, b), p) }
-    func drawRoundRect(_ o: RectF, _ rx: CGFloat, _ ry: CGFloat, _ p: Paint) {
+    func drawOval(_ o: RectF, _ p: APaint) { shape(CGPath(ellipseIn: o.cg, transform: nil), p) }
+    func drawRect(_ o: RectF, _ p: APaint) { shape(CGPath(rect: o.cg, transform: nil), p) }
+    func drawRect(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat, _ p: APaint) { drawRect(RectF(l, t, r, b), p) }
+    func drawRoundRect(_ o: RectF, _ rx: CGFloat, _ ry: CGFloat, _ p: APaint) {
         let r = o.cg; guard r.width > 0, r.height > 0 else { return }
         shape(CGPath(roundedRect: r, cornerWidth: max(0, min(rx, r.width / 2)), cornerHeight: max(0, min(ry, r.height / 2)), transform: nil), p)
     }
-    func drawLine(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ p: Paint) {
+    func drawLine(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat, _ p: APaint) {
         let m = CGMutablePath(); m.move(to: CGPoint(x: x0, y: y0)); m.addLine(to: CGPoint(x: x1, y: y1)); shape(m, p, forceStroke: true)
     }
-    func drawArc(_ o: RectF, _ start: CGFloat, _ sweep: CGFloat, _ useCenter: Bool, _ p: Paint) {
-        let path = Path()
+    func drawArc(_ o: RectF, _ start: CGFloat, _ sweep: CGFloat, _ useCenter: Bool, _ p: APaint) {
+        let path = APath()
         if useCenter { path.moveTo(o.centerX(), o.centerY()); path.arcTo(o, start, sweep, false); path.close() } else { path.addArc(o, start, sweep) }
         shape(path.cg, p)
     }
     /// Text on baseline [y], placed by the paint's alignment, drawn as its outlines like any shape (heavy names filled and
     /// stroked, shaders and shadows as for shapes).
-    func drawText(_ s: String, _ x: CGFloat, _ y: CGFloat, _ p: Paint) {
+    func drawText(_ s: String, _ x: CGFloat, _ y: CGFloat, _ p: APaint) {
         guard !s.isEmpty else { return }
         let w = p.measureText(s)
         let x0 = p.textAlign == .LEFT ? x : p.textAlign == .CENTER ? x - w / 2 : x - w

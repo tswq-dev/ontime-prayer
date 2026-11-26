@@ -38,6 +38,23 @@ enum KArt {
 
     /// The phone's own colours (Android 12+ only): none on the iPhone.
     static var dyn: [AInt]? = nil
+    /// On the iPhone the system rounds the widget's corners itself: the cards are drawn square, edge to edge.
+    static var square = false
+    /// The iPhone's widget sizes for each design ("s" small, "m" medium, "l" large), the first its own (0.31). The buttons and
+    /// «صلواتي» wait for buttons that work inside the widget.
+    static let IOS: [(String, [String])] = [("pano", ["m", "l"]), ("window", ["s"]), ("ring", ["s"]), ("orbit", ["m"]), ("script", ["m", "s"]),
+        ("table", ["m", "l"]), ("clock", ["s"]), ("moon", ["s"]), ("ribbon", ["m"]), ("exit", ["m"]), ("line", ["m"]), ("night", ["s", "m"]),
+        ("ramadan", ["m", "s"]), ("white", ["m", "s"]), ("column", ["l"])]
+    /// A widget's size in points on a 6.1-inch iPhone (for the previews in the app).
+    static func iosSize(_ f: String) -> CGSize { f == "s" ? CGSize(width: 158, height: 158) : f == "m" ? CGSize(width: 338, height: 158) : CGSize(width: 338, height: 354) }
+    /// The look a widget has until the user picks one on the iPhone: the same as on Android, but no see-through background
+    /// (the iPhone shows no wallpaper behind a widget), and the large table with more of its rows.
+    static func iosDefault(_ type: String, _ font: String?, _ fam: String = "") -> KStyle {
+        var st = KStyle.defaultFor(type, font)
+        if st.bg == "clear" { st.bg = "sky" }
+        if type == "table" && fam == "l" { st.rows = ["city", "date", "count", "times", "exit", "iqama"] }
+        return st
+    }
 
     struct Sty { let kind: String, fg: AInt, sub: AInt, acc: AInt, line: AInt, shadow: Bool
         var clear: Bool { kind == "clear" }
@@ -65,12 +82,12 @@ enum KArt {
         var dir: CGFloat { rtl ? 1 : -1 }
     }
 
-    static func c(_ hex: String) -> AInt { Color.parseColor(hex) }
-    static func a(_ alpha: CGFloat, _ rgb: AInt) -> AInt { Color.argb(Int(alpha * 255).coerceIn(0, 255), Color.red(rgb), Color.green(rgb), Color.blue(rgb)) }
+    static func c(_ hex: String) -> AInt { AColor.parseColor(hex) }
+    static func a(_ alpha: CGFloat, _ rgb: AInt) -> AInt { AColor.argb(Int(alpha * 255).coerceIn(0, 255), AColor.red(rgb), AColor.green(rgb), AColor.blue(rgb)) }
     static func mix(_ x: AInt, _ y: AInt, _ f: CGFloat) -> AInt {
         let k = f.coerceIn(0, 1)
-        return Color.rgb(Int(CGFloat(Color.red(x)) + CGFloat(Color.red(y) - Color.red(x)) * k), Int(CGFloat(Color.green(x)) + CGFloat(Color.green(y) - Color.green(x)) * k),
-                         Int(CGFloat(Color.blue(x)) + CGFloat(Color.blue(y) - Color.blue(x)) * k))
+        return AColor.rgb(Int(CGFloat(AColor.red(x)) + CGFloat(AColor.red(y) - AColor.red(x)) * k), Int(CGFloat(AColor.green(x)) + CGFloat(AColor.green(y) - AColor.green(x)) * k),
+                         Int(CGFloat(AColor.blue(x)) + CGFloat(AColor.blue(y) - AColor.blue(x)) * k))
     }
 
     static let GOLD = c("#E2C27A"), GOLD_L = c("#C99A4B"), INK = c("#0B3B2E"), AMBER = c("#E8963A")
@@ -79,11 +96,11 @@ enum KArt {
         switch kind {
         case "light": return Sty(kind: kind, fg: c("#0B3B2E"), sub: c("#5B6B5F"), acc: c("#0B4D3B"), line: a(0.14, c("#0B4D3B")), shadow: false)
         case "dark": return Sty(kind: kind, fg: c("#F4ECDC"), sub: a(0.74, c("#F4ECDC")), acc: c("#E2C27A"), line: a(0.28, c("#E2C27A")), shadow: false)
-        case "clear": return Sty(kind: kind, fg: Color.WHITE, sub: a(0.85, Color.WHITE), acc: c("#F3D58C"), line: a(0.28, Color.WHITE), shadow: true)
+        case "clear": return Sty(kind: kind, fg: AColor.WHITE, sub: a(0.85, AColor.WHITE), acc: c("#F3D58C"), line: a(0.28, AColor.WHITE), shadow: true)
         // «ليلي»: the sky half an hour after Isha, navy; the writing white and only what is next in gold (0.30)
         case "navy": return Sty(kind: kind, fg: c("#FFF8EA"), sub: a(0.74, c("#FFF8EA")), acc: c("#E9CD8A"), line: a(0.26, c("#E2C27A")), shadow: false)
         case "dyn": if let d = dyn { return Sty(kind: kind, fg: d[2], sub: d[3], acc: d[4], line: a(0.16, d[2]), shadow: false) }; return sty("dark")
-        default: return Sty(kind: "sky", fg: c("#FFF8EA"), sub: a(0.8, c("#FFF8EA")), acc: c("#FBE3A6"), line: a(0.22, Color.WHITE), shadow: true)
+        default: return Sty(kind: "sky", fg: c("#FFF8EA"), sub: a(0.8, c("#FFF8EA")), acc: c("#FBE3A6"), line: a(0.22, AColor.WHITE), shadow: true)
         }
     }
 
@@ -130,28 +147,28 @@ enum KArt {
     static func moonAge(_ now: Int) -> Double { let jd = Double(now) / 86_400_000.0 + 2440587.5, s = 29.530588853; return ((jd - 2451550.1).truncatingRemainder(dividingBy: s) + s).truncatingRemainder(dividingBy: s) }
 
     // ---------- small drawing helpers ----------
-    static func paint(_ color: AInt = Color.WHITE) -> Paint { Paint(color) }
-    static func thicken(_ p: Paint) { if p.heavy { p.style = .FILL_AND_STROKE; p.strokeWidth = p.textSize * 0.035; p.strokeJoin = .ROUND } }
-    static func tp(_ x: X, _ tf: Typeface, _ sizeDp: CGFloat, _ color: AInt, _ shadow: Bool? = nil) -> Paint {
-        let p = Paint(color); p.heavy = tf === x.nameTf && x.heavy
+    static func paint(_ color: AInt = AColor.WHITE) -> APaint { APaint(color) }
+    static func thicken(_ p: APaint) { if p.heavy { p.style = .FILL_AND_STROKE; p.strokeWidth = p.textSize * 0.035; p.strokeJoin = .ROUND } }
+    static func tp(_ x: X, _ tf: Typeface, _ sizeDp: CGFloat, _ color: AInt, _ shadow: Bool? = nil) -> APaint {
+        let p = APaint(color); p.heavy = tf === x.nameTf && x.heavy
         p.typeface = tf; p.textSize = x.dp(sizeDp)
         if shadow ?? x.st.shadow { p.setShadowLayer(x.dp(4), 0, x.dp(1), 0x8C000000) }
         return p
     }
-    static func fit(_ p: Paint, _ s: String, _ maxW: CGFloat) { while p.measureText(s) > maxW && p.textSize > 6 { p.textSize *= 0.94 } }
+    static func fit(_ p: APaint, _ s: String, _ maxW: CGFloat) { while p.measureText(s) > maxW && p.textSize > 6 { p.textSize *= 0.94 } }
     /// Draws text so it starts at [x0] in reading order (right edge in Arabic).
-    static func text(_ cv: Canvas, _ x: X, _ s: String, _ x0: CGFloat, _ y: CGFloat, _ p: Paint, _ start: Bool = true) {
+    static func text(_ cv: ACanvas, _ x: X, _ s: String, _ x0: CGFloat, _ y: CGFloat, _ p: APaint, _ start: Bool = true) {
         p.textAlign = start == x.rtl ? .RIGHT : .LEFT
         thicken(p); cv.drawText(s, x0, y, p)
     }
-    static func center(_ cv: Canvas, _ s: String, _ cx: CGFloat, _ y: CGFloat, _ p: Paint) { p.textAlign = .CENTER; thicken(p); cv.drawText(s, cx, y, p) }
+    static func center(_ cv: ACanvas, _ s: String, _ cx: CGFloat, _ y: CGFloat, _ p: APaint) { p.textAlign = .CENTER; thicken(p); cv.drawText(s, cx, y, p) }
 
     /// The prayer's name stretched with kashida (ـ) to fill [target] px, as a calligrapher would:
     /// the elongation goes before the last joining letter («الفجـــر»), never inside lam-alef.
     static let TATWEEL: Character = "\u{0640}"
     static let NONJOIN = Set("اأإآدذرزوؤةءى")
     static func isAr(_ ch: Character) -> Bool { guard let u = ch.unicodeScalars.first?.value, ch.unicodeScalars.count == 1 else { return false }; return u >= 0x0620 && u <= 0x064A }
-    static func stretch(_ p: Paint, _ s: String, _ target: CGFloat, _ level: Int = 7) -> String {
+    static func stretch(_ p: APaint, _ s: String, _ target: CGFloat, _ level: Int = 7) -> String {
         let cs = Array(s)
         let spots = cs.count < 2 ? [] : (0..<(cs.count - 1)).filter { i in let a = cs[i], b = cs[i + 1]
             return isAr(a) && isAr(b) && !NONJOIN.contains(a) && !(a == "ل" && "اأإآ".contains(b)) }
@@ -174,12 +191,12 @@ enum KArt {
     /// Room kept clear on each side of a stretched name: at least 4 real dp, even at the smallest fit scale (.8).
     static func kSafe(_ x: X) -> CGFloat { x.dp(5) }
     /// The width [s] really takes, drawn from its start or centred: its advance, twice any ink past it (a swash), and a heavy name's stroke.
-    static func inkW(_ p: Paint, _ s: String) -> CGFloat {
+    static func inkW(_ p: APaint, _ s: String) -> CGFloat {
         var b = Rect(); p.getTextBounds(s, 0, s.count, &b); let adv = p.measureText(s)
         return adv + 2 * max(0, max(-CGFloat(b.left), CGFloat(b.right) - adv)) + (p.heavy ? p.textSize * 0.035 : 0)
     }
     /// The name stretched toward [room] px at the user's level, then a kashida taken off until it fits. Arabic only.
-    static func kashName(_ x: X, _ p: Paint, _ s: String, _ room: CGFloat) -> String {
+    static func kashName(_ x: X, _ p: APaint, _ s: String, _ room: CGFloat) -> String {
         if !x.d.ar || x.style.kl <= 0 || room <= 0 { return s }
         var out = Array(stretch(p, s, room - (inkW(p, s) - p.measureText(s)), x.style.kl)); let sc = Array(s)
         while out.count > sc.count && inkW(p, String(out)) > room {
@@ -188,7 +205,7 @@ enum KArt {
         return out.count > sc.count && inkW(p, String(out)) <= room ? String(out) : s
     }
     /// The width of an ellipse centred at [cy] at the top or bottom of [s] on baseline [y], whichever is narrower.
-    static func chord(_ p: Paint, _ s: String, _ y: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat) -> CGFloat {
+    static func chord(_ p: APaint, _ s: String, _ y: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat) -> CGFloat {
         var b = Rect(), t = Rect(); p.getTextBounds(s, 0, s.count, &b); p.getTextBounds(String(TATWEEL), 0, 1, &t)
         let dy = max(abs(y + CGFloat(min(b.top, t.top)) - cy), abs(y + CGFloat(max(b.bottom, t.bottom)) - cy))
         return 2 * rx * sqrt(max(0, 1 - (dy / ry) * (dy / ry)))
@@ -196,15 +213,15 @@ enum KArt {
     static func startX(_ x: X, _ pad: CGFloat) -> CGFloat { x.rtl ? x.w - pad : pad }
     static func endX(_ x: X, _ pad: CGFloat) -> CGFloat { x.rtl ? pad : x.w - pad }
 
-    static func card(_ cv: Canvas, _ x: X, _ r0: CGFloat? = nil, _ kind0: String? = nil) {
-        let r = r0 ?? x.dp(22), kind = kind0 ?? x.st.kind
+    static func card(_ cv: ACanvas, _ x: X, _ r0: CGFloat? = nil, _ kind0: String? = nil) {
+        let r = square ? 0 : (r0 ?? x.dp(22)), kind = kind0 ?? x.st.kind
         let rect = RectF(0, 0, x.w, x.h)
         switch kind {
         case "clear": return
-        case "light": cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, 0, x.h, c("#F5EEE1"), c("#EBE1CE")) })
-        case "dark": cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, x.w * 0.35, x.h, c("#11594A"), c("#0A382C")) })
+        case "light": cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = ALinear(0, 0, 0, x.h, c("#F5EEE1"), c("#EBE1CE")) })
+        case "dark": cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = ALinear(0, 0, x.w * 0.35, x.h, c("#11594A"), c("#0A382C")) })
         case "navy":
-            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, x.w * 0.35, x.h, c("#1B2C52"), c("#0B1630")) })
+            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = ALinear(0, 0, x.w * 0.35, x.h, c("#1B2C52"), c("#0B1630")) })
             // a few faint stars, kept off the edges
             let m = x.dp(10)
             for i in stride(from: 0, to: STARS.count, by: 2) {
@@ -212,51 +229,51 @@ enum KArt {
             }
         case "dyn":
             let dy = dyn ?? [c("#11594A"), c("#0A382C")]
-            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, x.w * 0.35, x.h, dy[0], dy[1]) })
+            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = ALinear(0, 0, x.w * 0.35, x.h, dy[0], dy[1]) })
         default:
             let (t, b) = skyAt(x, x.sky)
-            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, 0, x.h, t, b) })
+            cv.drawRoundRect(rect, r, r, ap(paint()) { $0.shader = ALinear(0, 0, 0, x.h, t, b) })
             cv.drawRoundRect(rect, r, r, paint(a(0.34, c("#0A101E"))))
         }
     }
-    static func pill(_ cv: Canvas, _ x: X, _ s: String, _ cx: CGFloat, _ cy: CGFloat, _ p: Paint, _ bg: AInt) {
+    static func pill(_ cv: ACanvas, _ x: X, _ s: String, _ cx: CGFloat, _ cy: CGFloat, _ p: APaint, _ bg: AInt) {
         let tw = p.measureText(s), ph = p.textSize * 1.55, pw = tw + p.textSize * 1.6
         cv.drawRoundRect(RectF(cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2), ph / 2, ph / 2, paint(bg))
-        center(cv, s, cx, cy + p.textSize * 0.36, ap(Paint(copy: p)) { $0.clearShadowLayer() })
+        center(cv, s, cx, cy + p.textSize * 0.36, ap(APaint(copy: p)) { $0.clearShadowLayer() })
     }
-    static func pillW(_ p: Paint, _ s: String) -> CGFloat { p.measureText(s) + p.textSize * 1.6 }
+    static func pillW(_ p: APaint, _ s: String) -> CGFloat { p.measureText(s) + p.textSize * 1.6 }
     /// "9 Jumada II" and "Asr until 5:01" (the end of the time we are in), for the optional lines.
     static func hijriTxt(_ x: X) -> String { x.d.digits(x.day.optString("hd")) + " " + x.day.optString("hm") }
     static func exitTxt(_ x: X) -> String { guard let cw = x.cur else { return "" }; let b = x.now < cw.first ? cw.first : cw.end
         return x.d.name(cw.k) + (x.d.ar ? " حتى " : " until ") + x.d.clock(b) }
     static func joinDot(_ p: String...) -> String { p.filter { !$0.isEmpty }.joined(separator: "  ·  ") }
-    static func sun(_ cv: Canvas, _ x: X, _ px: CGFloat, _ py: CGFloat, _ rDp: CGFloat) {
+    static func sun(_ cv: ACanvas, _ x: X, _ px: CGFloat, _ py: CGFloat, _ rDp: CGFloat) {
         let g = x.dp(rDp * 2.4)
-        cv.drawCircle(px, py, g, ap(paint()) { $0.shader = RadialGradient(px, py, g, [a(0.75, c("#FFF0C0")), a(0.3, c("#FFE3A0")), 0], [0, 0.4, 1]) })
+        cv.drawCircle(px, py, g, ap(paint()) { $0.shader = ARadial(px, py, g, [a(0.75, c("#FFF0C0")), a(0.3, c("#FFE3A0")), 0], [0, 0.4, 1]) })
         cv.drawCircle(px, py, x.dp(rDp), paint(c("#FFF6D8")))
     }
     /// The moon with tonight's phase (lit side on the right while waxing, as seen from Saudi Arabia).
-    static func moon(_ cv: Canvas, _ x: X, _ px: CGFloat, _ py: CGFloat, _ r: CGFloat) {
+    static func moon(_ cv: ACanvas, _ x: X, _ px: CGFloat, _ py: CGFloat, _ r: CGFloat) {
         let age = moonAge(x.now), k = (1 - cos(2 * .pi * age / 29.530588853)) / 2, waxing = age < 14.765
-        cv.drawCircle(px, py, r * 1.6, ap(paint()) { $0.shader = RadialGradient(px, py, r * 1.6, [a(0.18, c("#F0E8D2")), 0], nil) })
+        cv.drawCircle(px, py, r * 1.6, ap(paint()) { $0.shader = ARadial(px, py, r * 1.6, [a(0.18, c("#F0E8D2")), 0], nil) })
         cv.drawCircle(px, py, r, paint(c("#2A3150")))
-        let lit = Path(), side: CGFloat = waxing ? 1 : -1
+        let lit = APath(), side: CGFloat = waxing ? 1 : -1
         // half disc on the lit side
         lit.addArc(RectF(px - r, py - r, px + r, py + r), -90, 180 * side)
         lit.close()
-        let e = r * CGFloat(abs(1 - 2 * k)), oval = ap(Path()) { $0.addOval(RectF(px - e, py - r, px + e, py + r), .CW) }
+        let e = r * CGFloat(abs(1 - 2 * k)), oval = ap(APath()) { $0.addOval(RectF(px - e, py - r, px + e, py + r), .CW) }
         if k < 0.5 { lit.op(oval, .DIFFERENCE) } else { lit.op(oval, .UNION) }
         cv.drawPath(lit, paint(c("#F4ECD3")))
     }
     static let STARS: [CGFloat] = [0.12, 0.14, 0.28, 0.30, 0.47, 0.10, 0.63, 0.26, 0.79, 0.12, 0.88, 0.34, 0.38, 0.44, 0.70, 0.48, 0.20, 0.52, 0.55, 0.40]
-    static func stars(_ cv: Canvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
+    static func stars(_ cv: ACanvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
         let al = starAlpha(x); if al <= 0 || !x.style.has("sky") { return }
-        let p = paint(a(al, Color.WHITE))
+        let p = paint(a(al, AColor.WHITE))
         for i in stride(from: 0, to: STARS.count, by: 2) { cv.drawCircle(l + w * (x.rtl ? 1 - STARS[i] : STARS[i]), t + h * STARS[i + 1], x.dp(i % 4 == 0 ? 1.4 : 1), p) }
     }
-    static func hills(_ cv: Canvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
+    static func hills(_ cv: ACanvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
         let li = lit(x), far = mix(c("#0F1520"), c("#8A93A0"), li), near = mix(c("#07090D"), c("#6E5A44"), li)
-        func pth(_ pts: [CGFloat]) -> Path { let p = Path(); p.moveTo(l, t + h * pts[0]); var i = 1
+        func pth(_ pts: [CGFloat]) -> APath { let p = APath(); p.moveTo(l, t + h * pts[0]); var i = 1
             while i + 5 < pts.count { p.cubicTo(l + w * pts[i], t + h * pts[i + 1], l + w * pts[i + 2], t + h * pts[i + 3], l + w * pts[i + 4], t + h * pts[i + 5]); i += 6 }
             p.lineTo(l + w, t + h); p.lineTo(l, t + h); p.close(); return p }
         cv.drawPath(pth([0.88, 0.11, 0.78, 0.2, 0.82, 0.31, 0.75, 0.42, 0.69, 0.51, 0.80, 0.62, 0.76, 0.76, 0.72, 0.84, 0.82, 1, 0.74]), paint(far))
@@ -270,7 +287,7 @@ enum KArt {
     static func render(_ type: String, _ style: KStyle, _ d: KData?, _ now: Int, _ wPx: Int, _ hPx: Int, _ dpPx: CGFloat, _ fonts: KFonts = .shared, btns: Btns = Btns()) -> CGImage? {
         if let dd = d { dd.cf = style.cf.isEmpty ? dd.appCf : style.cf
             dd.dhuhrDay = (dd.next(now).flatMap { nx in dd.day(nx.at) } ?? dd.day(now))?.optLong("dhuhr") ?? now }
-        guard let cv = Canvas(wPx, hPx) else { return nil }
+        guard let cv = ACanvas(wPx, hPx) else { return nil }
         let day = d?.day(now)
         guard let dd = d, let dy = day else { empty(cv, CGFloat(wPx), CGFloat(hPx), dpPx, fonts, d?.ar ?? true); return cv.image }
         let st = sty(type == "pano" || type == "window" ? (type == "window" && ["light", "dark", "navy", "dyn"].contains(style.bg) ? style.bg : "sky") : style.bg)
@@ -312,27 +329,27 @@ enum KArt {
         }
         return min(wDp / dw, hDp / dh).coerceIn(0.8, 2.2)
     }
-    static func empty(_ cv: Canvas, _ w: CGFloat, _ h: CGFloat, _ u: CGFloat, _ f: KFonts, _ ar: Bool) {
-        cv.drawRoundRect(RectF(0, 0, w, h), 22 * u, 22 * u, ap(paint()) { $0.shader = LinearGradient(0, 0, w * 0.35, h, c("#11594A"), c("#0A382C")) })
-        let p = Paint(c("#F4ECDC")); p.typeface = f.plexB; p.textSize = 13 * u; p.textAlign = .CENTER
+    static func empty(_ cv: ACanvas, _ w: CGFloat, _ h: CGFloat, _ u: CGFloat, _ f: KFonts, _ ar: Bool) {
+        cv.drawRoundRect(RectF(0, 0, w, h), square ? 0 : 22 * u, square ? 0 : 22 * u, ap(paint()) { $0.shader = ALinear(0, 0, w * 0.35, h, c("#11594A"), c("#0A382C")) })
+        let p = APaint(c("#F4ECDC")); p.typeface = f.plexB; p.textSize = 13 * u; p.textAlign = .CENTER
         let s = ar ? "افتح «الركن الثاني» مرة لتظهر الأوقات" : "Open On Time once to show the times"
         fit(p, s, w - 24 * u); cv.drawText(s, w / 2, h / 2 + p.textSize * 0.35, p)
     }
 
     // ---------- 1. panorama (4×2) and window (2×2): the real sky now ----------
-    static func pano(_ cv: Canvas, _ x: X) {
-        let w = x.w, h = x.h, r = x.dp(22)
+    static func pano(_ cv: ACanvas, _ x: X) {
+        let w = x.w, h = x.h, r = square ? 0 : x.dp(22)
         // light, green or the phone's colours: the sky on top and a strip for the text under it
         let strip = ["light", "dark", "navy", "dyn"].contains(x.style.bg), ss = sty(x.style.bg), sh = strip ? h * 0.64 : h
-        cv.save(); let clip = ap(Path()) { $0.addRoundRect(RectF(0, 0, w, h), r, r, .CW) }; cv.clipPath(clip)
+        cv.save(); let clip = ap(APath()) { $0.addRoundRect(RectF(0, 0, w, h), r, r, .CW) }; cv.clipPath(clip)
         if strip { card(cv, x, r, x.style.bg) }
         cv.save(); cv.clipRect(0, 0, w, sh)
         let (top, bot) = skyAt(x, x.sky)
-        cv.drawRect(0, 0, w, sh, ap(paint()) { $0.shader = LinearGradient(0, 0, 0, sh, top, bot) })
+        cv.drawRect(0, 0, w, sh, ap(paint()) { $0.shader = ALinear(0, 0, 0, sh, top, bot) })
         stars(cv, x, 0, 0, w, sh * 0.6)
         let cx = w / 2, cy = sh * (strip ? 0.80 : 0.576), rx = w * 0.393, ry = sh * (strip ? 0.62 : 0.412)
         func pt(_ q: CGFloat) -> [CGFloat] { [cx + x.dir * rx * cos(.pi * q), cy - ry * sin(.pi * q)] }
-        let arc = Path(); for i in 0...60 { let q = pt(CGFloat(i) / 60); if i == 0 { arc.moveTo(q[0], q[1]) } else { arc.lineTo(q[0], q[1]) } }
+        let arc = APath(); for i in 0...60 { let q = pt(CGFloat(i) / 60); if i == 0 { arc.moveTo(q[0], q[1]) } else { arc.lineTo(q[0], q[1]) } }
         cv.drawPath(arc, ap(paint(a(0.45, c("#FFFAEB")))) { $0.style = .STROKE; $0.strokeWidth = x.dp(1.4); $0.dash = [x.dp(2), x.dp(5)] })
         let span = max(1, x.t("maghrib") - x.t("sunrise"))
         let day = isDay(x)
@@ -349,7 +366,7 @@ enum KArt {
         }
         if day { sun(cv, x, body[0], body[1], 9) } else if x.style.has("sky") { moon(cv, x, body[0], body[1], x.dp(8)) }
         hills(cv, x, 0, sh * 0.7, w, sh * 0.3)
-        if !strip { cv.drawRect(0, sh * 0.54, w, sh, ap(paint()) { $0.shader = LinearGradient(0, sh, 0, sh * 0.54, a(0.42, Color.BLACK), 0) }) }
+        if !strip { cv.drawRect(0, sh * 0.54, w, sh, ap(paint()) { $0.shader = ALinear(0, sh, 0, sh * 0.54, a(0.42, AColor.BLACK), 0) }) }
         cv.restore()
         // small lines in the top corners: the Hijri date and when the time we are in ends
         let cp = tp(x, x.plex, 10.5, c("#FFF8EA"), true), pad = x.dp(14)
@@ -366,28 +383,28 @@ enum KArt {
         name = kashName(x, np, name, w - 2 * pad - (x.style.has("time") ? tpp.measureText(tm) + x.dp(8) : 0) - (x.style.has("count") ? pillW(ip, inS) + x.dp(8) : 0) - 2 * kSafe(x))
         text(cv, x, name, startX(x, pad), base, np)
         if x.style.has("time") { text(cv, x, tm, startX(x, pad) - x.dir * (np.measureText(name) + x.dp(8)), base, tpp) }
-        if x.style.has("count") { let pw = pillW(ip, inS); pill(cv, x, inS, endX(x, pad) + x.dir * pw / 2, base - ip.textSize * 0.45, ip, strip ? ss.line : a(0.3, Color.BLACK)) }
+        if x.style.has("count") { let pw = pillW(ip, inS); pill(cv, x, inS, endX(x, pad) + x.dir * pw / 2, base - ip.textSize * 0.45, ip, strip ? ss.line : a(0.3, AColor.BLACK)) }
         cv.restore()
     }
-    static func window(_ cv: Canvas, _ x: X) {
+    static func window(_ cv: ACanvas, _ x: X) {
         // light, green or the phone's colours: a card behind the arch
         let framed = ["light", "dark", "navy", "dyn"].contains(x.style.bg)
         if framed { card(cv, x, x.dp(22), x.style.bg) }
         let s = min(x.w, x.h) * (framed ? 0.86 : 1), ox = (x.w - s) / 2, oy = (x.h - s) / 2 + (framed ? s * 0.04 : 0), k = s / 170
         func X0(_ v: CGFloat) -> CGFloat { ox + v * k }
         func Y0(_ v: CGFloat) -> CGFloat { oy + v * k }
-        let arch = ap(Path()) { $0.moveTo(X0(8), Y0(170)); $0.lineTo(X0(8), Y0(78)); $0.cubicTo(X0(8), Y0(40), X0(46), Y0(14), X0(85), Y0(4))
+        let arch = ap(APath()) { $0.moveTo(X0(8), Y0(170)); $0.lineTo(X0(8), Y0(78)); $0.cubicTo(X0(8), Y0(40), X0(46), Y0(14), X0(85), Y0(4))
             $0.cubicTo(X0(124), Y0(14), X0(162), Y0(40), X0(162), Y0(78)); $0.lineTo(X0(162), Y0(170)); $0.close() }
         cv.save(); cv.clipPath(arch)
         let (top, bot) = skyAt(x, x.sky)
-        cv.drawRect(X0(0), Y0(0), X0(170), Y0(170), ap(paint()) { $0.shader = LinearGradient(0, Y0(0), 0, Y0(170), top, bot) })
+        cv.drawRect(X0(0), Y0(0), X0(170), Y0(170), ap(paint()) { $0.shader = ALinear(0, Y0(0), 0, Y0(170), top, bot) })
         stars(cv, x, X0(10), Y0(20), 150 * k, 90 * k)
         if isDay(x) { let q = dayFrac(x); sun(cv, x, X0(85 + x.dir * 62 * cos(.pi * q)), Y0(150 - 110 * sin(.pi * q)), 6 * k / x.u) }
         else if x.style.has("sky") { let m = 0.15 + 0.7 * nightFrac(x); moon(cv, x, X0(85 + x.dir * 50 * cos(.pi * m)), Y0(150 - 90 * sin(.pi * m)), 7 * k) }
         hills(cv, x, X0(0), Y0(118), 170 * k, 52 * k)
-        cv.drawRect(X0(0), Y0(95), X0(170), Y0(170), ap(paint()) { $0.shader = LinearGradient(0, Y0(170), 0, Y0(95), a(0.4, Color.BLACK), 0) })
+        cv.drawRect(X0(0), Y0(95), X0(170), Y0(170), ap(paint()) { $0.shader = ALinear(0, Y0(170), 0, Y0(95), a(0.4, AColor.BLACK), 0) })
         cv.restore()
-        let edge = ap(Path()) { $0.moveTo(X0(8), Y0(170)); $0.lineTo(X0(8), Y0(78)); $0.cubicTo(X0(8), Y0(40), X0(46), Y0(14), X0(85), Y0(4)); $0.cubicTo(X0(124), Y0(14), X0(162), Y0(40), X0(162), Y0(78)); $0.lineTo(X0(162), Y0(170)) }
+        let edge = ap(APath()) { $0.moveTo(X0(8), Y0(170)); $0.lineTo(X0(8), Y0(78)); $0.cubicTo(X0(8), Y0(40), X0(46), Y0(14), X0(85), Y0(4)); $0.cubicTo(X0(124), Y0(14), X0(162), Y0(40), X0(162), Y0(78)); $0.lineTo(X0(162), Y0(170)) }
         cv.drawPath(edge, ap(paint(GOLD_L)) { $0.style = .STROKE; $0.strokeWidth = 2.2 * k })
         guard let nx = x.next else { return }
         let lines = joinDot(x.style.has("time") ? x.d.clock(nx.at) : "", x.style.has("count") ? x.d.inTxt(nx, x.now) : "")
@@ -401,7 +418,7 @@ enum KArt {
     }
     // ---------- 2. ring (2×2) ----------
     static let RC = ["fajr": "#8FB3EA", "dhuhr": "#E8C15A", "asr": "#E89A4A", "maghrib": "#EC7F62", "isha": "#9FA2EE"]
-    static func ring(_ cv: Canvas, _ x: X) {
+    static func ring(_ cv: ACanvas, _ x: X) {
         card(cv, x); guard let nx = x.next else { return }; let pv = x.prev
         let s = min(x.w, x.h), cx = x.w / 2, cy = x.h / 2, r = s * 0.353, sw = s * 0.059
         let ov = RectF(cx - r, cy - r, cx + r, cy + r)
@@ -421,7 +438,7 @@ enum KArt {
         if !sub.isEmpty { let p = ap(tp(x, x.plexB, 13, col)) { $0.textSize = 13 * k }; fit(p, sub, r * 1.5); center(cv, sub, cx, cy + 28 * k, p) }
     }
     // ---------- 3. the day's orbit (4×2) ----------
-    static func orbit(_ cv: Canvas, _ x: X) {
+    static func orbit(_ cv: ACanvas, _ x: X) {
         card(cv, x); let w = x.w, h = x.h
         let cx = w / 2, cy = h / 2, rx = w * 0.421, ry = h * 0.365
         let nx0 = x.next
@@ -436,7 +453,7 @@ enum KArt {
         if nx0 == nil { cv.drawLine(w * 0.03, cy, w * 0.97, cy, hp) }
         else { cv.drawLine(w * 0.03, cy, cx - tw / 2 - x.dp(10), cy, hp); cv.drawLine(cx + tw / 2 + x.dp(10), cy, w * 0.97, cy, hp) }
         func at(_ ang: Double) -> [CGFloat] { [cx + x.dir * rx * CGFloat(cos(ang)), cy + ry * CGFloat(sin(ang))] }
-        let upper = Path(), lower = Path()
+        let upper = APath(), lower = APath()
         for i in 0...60 { let p1 = at(-Double.pi * Double(i) / 60), p2 = at(Double.pi * Double(i) / 60)
             if i == 0 { upper.moveTo(p1[0], p1[1]); lower.moveTo(p2[0], p2[1]) } else { upper.lineTo(p1[0], p1[1]); lower.lineTo(p2[0], p2[1]) } }
         cv.drawPath(upper, ap(paint(a(0.55, x.st.sub))) { $0.style = .STROKE; $0.strokeWidth = x.dp(1.6) })
@@ -450,7 +467,7 @@ enum KArt {
             return Double.pi - Double.pi * (Double(t - m0) / Double(max(1, r1 - m0))).coerceIn(0, 1)
         }
         let day = isDay(x), a0 = day ? 0.0 : Double.pi, a1 = angOf(x.now)
-        let trail = Path(); for i in 0...40 { let q = at(a0 + (a1 - a0) * Double(i) / 40); if i == 0 { trail.moveTo(q[0], q[1]) } else { trail.lineTo(q[0], q[1]) } }
+        let trail = APath(); for i in 0...40 { let q = at(a0 + (a1 - a0) * Double(i) / 40); if i == 0 { trail.moveTo(q[0], q[1]) } else { trail.lineTo(q[0], q[1]) } }
         cv.drawPath(trail, ap(paint(day ? (x.st.light ? GOLD_L : c("#F3D58C")) : x.st.sub)) { $0.style = .STROKE; $0.strokeWidth = x.dp(2.6); $0.strokeCap = .ROUND })
         for k in KData.SIX {
             var t = x.t(k); if k == "fajr" && t < x.now && !day && x.now > mg { t = x.d.day(x.now, 1)?.optLong("fajr") ?? t }
@@ -465,16 +482,16 @@ enum KArt {
         text(cv, x, name, xs, y, np); text(cv, x, tm, xs - x.dir * (np.measureText(name) + gap), y, tmP)
         var yy = y + x.dp(20)
         if x.style.has("count") { let ip = tp(x, x.plexB, 12, x.st.light ? c("#0B4D3B") : x.st.fg, false)
-            pill(cv, x, x.d.inTxt(nx, x.now), cx, yy, ip, x.st.light ? a(0.09, c("#0B4D3B")) : a(0.14, Color.WHITE)); yy += x.dp(20) }
+            pill(cv, x, x.d.inTxt(nx, x.now), cx, yy, ip, x.st.light ? a(0.09, c("#0B4D3B")) : a(0.14, AColor.WHITE)); yy += x.dp(20) }
         let extra = joinDot(x.style.has("hijri") ? hijriTxt(x) : "", x.style.has("exit") ? exitTxt(x) : "")
         if !extra.isEmpty { let ep = tp(x, x.plex, 10.5, x.st.sub); fit(ep, extra, x.w * 0.6); center(cv, extra, cx, yy + x.dp(2), ep) }
     }
 
     // ---------- 4. script (4×1, 2×2) and one line (4×1) ----------
-    static func script(_ cv: Canvas, _ x: X) {
+    static func script(_ cv: ACanvas, _ x: X) {
         card(cv, x); guard let nx = x.next else { return }; let w = x.w, h = x.h, pad = x.dp(16)
         // the other side: a stack of the lines the user picked, sized from the widget's height
-        var lines: [(String, Paint)] = []
+        var lines: [(String, APaint)] = []
         if x.style.has("time") { lines.append((x.d.clock(nx.at), ap(tp(x, x.plex, 1, x.st.fg)) { $0.textSize = h * 0.30 })) }
         if x.style.has("count") { lines.append((x.d.inTxt(nx, x.now), ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = h * 0.15 })) }
         if x.style.has("hijri") { lines.append((hijriTxt(x), ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = h * 0.13 })) }
@@ -492,12 +509,12 @@ enum KArt {
         var y = h / 2 - total / 2
         for (t, p) in lines { y += p.textSize * 1.2; text(cv, x, t, endX(x, pad), y - p.textSize * 0.22, p, false) }
     }
-    static func line(_ cv: Canvas, _ x: X) {
+    static func line(_ cv: ACanvas, _ x: X) {
         card(cv, x, x.dp(20))
         if x.style.ln != "pray" { lineText(cv, x); return }
         guard let nx = x.next else { return }
         let np = ap(tp(x, x.nameTf, 1, x.st.fg)) { $0.textSize = x.h * 0.36 }, rp = ap(tp(x, x.plex, 1, x.st.fg)) { $0.textSize = x.h * 0.27 }
-        var parts: [(String, Paint)] = [(x.d.name(nx.k), np)]
+        var parts: [(String, APaint)] = [(x.d.name(nx.k), np)]
         let rest = [x.style.has("time") ? x.d.clock(nx.at) : "", x.style.has("count") ? x.d.inTxt(nx, x.now) : "", x.style.has("hijri") ? hijriTxt(x) : ""].filter { !$0.isEmpty }
         for (i, t) in rest.enumerated() { if i > 0 { parts.append(("·", rp)) }; parts.append((t, rp)) }
         let gap = x.dp(8), total = parts.reduce(CGFloat(0)) { $0 + $1.1.measureText($1.0) } + gap * CGFloat(parts.count - 1)
@@ -511,7 +528,7 @@ enum KArt {
     }
     /// The one-line widget with the day or the date instead of the prayer: one line in the name's font, as large as the
     /// height allows and never past the frame, stretched with kashida like a name when the user picks it.
-    static func lineText(_ cv: Canvas, _ x: X) {
+    static func lineText(_ cv: ACanvas, _ x: X) {
         let dd = x.day, ar = x.d.ar
         let hij = x.d.digits(dd.optString("hd") + " " + dd.optString("hm") + " " + dd.optString("hy")) + (ar ? "هـ" : " AH")
         let g0 = dd.optString("gr").isEmpty ? dd.optString("d") : dd.optString("gr"), greg = x.d.digits(g0) + (ar && !g0.isEmpty ? "م" : "")
@@ -526,7 +543,7 @@ enum KArt {
     }
 
     // ---------- 5. table (4×1 up to 4×4): rows the user picks ----------
-    static func table(_ cv: Canvas, _ x: X) {
+    static func table(_ cv: ACanvas, _ x: X) {
         card(cv, x); guard let nx = x.next else { return }
         let rows = x.style.rows, showT = rows.contains("times") || !rows.contains(where: { ["city", "date", "count", "iqama"].contains($0) })
         let hasHead = rows.contains("city") || rows.contains("date"), hasCount = rows.contains("count"), hasIq = rows.contains("iqama")
@@ -636,7 +653,7 @@ enum KArt {
     }
 
     // ---------- 6. sky clock (2×2) and moon (2×2) ----------
-    static func clock(_ cv: Canvas, _ x: X) {
+    static func clock(_ cv: ACanvas, _ x: X) {
         card(cv, x); let s = min(x.w, x.h), cx = x.w / 2, cy = x.h / 2
         let ro = s * 0.42, ri = ro * 0.62, rm = (ro + ri) / 2, sw = ro - ri
         // the day's sky colours around the dial: midnight at the bottom, noon at the top
@@ -646,17 +663,17 @@ enum KArt {
         pts.sort { $0.0 < $1.0 }
         let night = c("#0E152C")
         let pos: [CGFloat] = [0] + pts.map { $0.0 } + [1], cols: [AInt] = [night] + pts.map { $0.1 } + [night]
-        let sh = SweepGradient(cx, cy, cols, pos, rotate: 90, mirror: x.rtl)
+        let sh = ASweep(cx, cy, cols, pos, rotate: 90, mirror: x.rtl)
         cv.drawCircle(cx, cy, rm, ap(paint()) { $0.style = .STROKE; $0.strokeWidth = sw; $0.shader = sh })
         // midnight at the bottom; Arabic turns counter-clockwise (morning on the right), English clockwise
         func onDial(_ t: Int) -> [CGFloat] { let f = Double(t - midnight) / 60_000.0 / 1440.0, ang = Double.pi / 2 - Double(x.dir) * 2 * Double.pi * f
             return [cx + rm * CGFloat(cos(ang)), cy + rm * CGFloat(sin(ang))] }
         for k in KData.PRAY { let q = onDial(x.t(k)), on = k == x.next?.k
-            cv.drawCircle(q[0], q[1], x.dp(on ? 5.5 : 3.6), paint(a(0.25, Color.BLACK))); cv.drawCircle(q[0], q[1], x.dp(on ? 4.5 : 3), paint(c("#F3D58C"))) }
+            cv.drawCircle(q[0], q[1], x.dp(on ? 5.5 : 3.6), paint(a(0.25, AColor.BLACK))); cv.drawCircle(q[0], q[1], x.dp(on ? 4.5 : 3), paint(c("#F3D58C"))) }
         let q = onDial(x.now)
         if isDay(x) { sun(cv, x, q[0], q[1], 7) } else { moon(cv, x, q[0], q[1], x.dp(6.5)) }
         guard let nx = x.next else { return }; let k = s / 150
-        var l2: [(String, Paint)] = []
+        var l2: [(String, APaint)] = []
         if x.style.has("time") { l2.append((x.d.clock(nx.at), ap(tp(x, x.plex, 12, x.st.fg)) { $0.textSize = 12 * k })) }
         if x.style.has("count") { l2.append((x.d.count(nx, x.now), ap(tp(x, x.plex, 10.5, x.st.sub)) { $0.textSize = 10.5 * k })) }
         var y = cy + (l2.isEmpty ? 7 : l2.count == 1 ? 4 : 2) * k
@@ -666,7 +683,7 @@ enum KArt {
         for (t, p) in l2 { y += 14 * k; center(cv, t, cx, y, p) }
     }
 
-    static func moonW(_ cv: Canvas, _ x: X) {
+    static func moonW(_ cv: ACanvas, _ x: X) {
         card(cv, x); let s = min(x.w, x.h), k = s / 150, pad = 14 * k, dd = x.day
         let big = ap(tp(x, x.plexB, 26, x.st.fg)) { $0.textSize = 26 * k }
         text(cv, x, x.d.digits(dd.optString("hd")), startX(x, pad), pad + 24 * k, big)
@@ -685,7 +702,7 @@ enum KArt {
     }
 
     // ---------- 7. the day ribbon (4×1) ----------
-    static func ribbon(_ cv: Canvas, _ x: X) {
+    static func ribbon(_ cv: ACanvas, _ x: X) {
         card(cv, x); guard let nx = x.next else { return }; let w = x.w, pad = x.dp(14)
         let k = min(1.2, x.h / x.u / 96), u = x.u * k
         let np = ap(tp(x, x.nameTf, 16, x.st.fg)) { $0.textSize = 16 * u }
@@ -698,21 +715,21 @@ enum KArt {
         for kk in skyKeys(x) { let f = CGFloat(kk.0 - midnight) / 60_000 / 1440; if f >= 0 && f <= 1 { keys.append((f, mix(kk.1, kk.2, 0.55))) } }
         let night = c("#0E152C")
         let pos: [CGFloat] = [0] + keys.map { $0.0 } + [1], cols: [AInt] = [night] + keys.map { $0.1 } + [night]
-        let grad = x.rtl ? LinearGradient(r, 0, l, 0, cols, pos) : LinearGradient(l, 0, r, 0, cols, pos)
+        let grad = x.rtl ? ALinear(r, 0, l, 0, cols, pos) : ALinear(l, 0, r, 0, cols, pos)
         cv.drawRoundRect(RectF(l, top, r, top + bh), bh / 2, bh / 2, ap(paint()) { $0.shader = grad })
         let lp = ap(tp(x, x.plex, 9.5, x.st.sub)) { $0.textSize = 9.5 * u }
         for (i, key) in KData.PRAY.enumerated() {
-            let xx = xAt(x.t(key)); cv.drawRect(xx - u, top - 3 * u, xx + u, top + bh + 3 * u, paint(a(0.75, Color.WHITE)))
+            let xx = xAt(x.t(key)); cv.drawRect(xx - u, top - 3 * u, xx + u, top + bh + 3 * u, paint(a(0.75, AColor.WHITE)))
             if !x.style.has("labels") { continue }
             let on = key == nx.k; lp.typeface = on ? x.plexB : x.plex; lp.color = on ? x.st.fg : x.st.sub
             center(cv, x.d.name(key) + " " + x.d.clock(on ? nx.at : x.t(key)), xx, top + bh + (i % 2 == 0 ? 14 : 27) * u, lp)
         }
         let nxp = xAt(x.now)
-        cv.drawCircle(nxp, top + bh / 2, 7 * u, paint(Color.WHITE)); cv.drawCircle(nxp, top + bh / 2, 7 * u, ap(paint(x.st.light ? c("#0B4D3B") : x.st.acc)) { $0.style = .STROKE; $0.strokeWidth = 3 * u })
+        cv.drawCircle(nxp, top + bh / 2, 7 * u, paint(AColor.WHITE)); cv.drawCircle(nxp, top + bh / 2, 7 * u, ap(paint(x.st.light ? c("#0B4D3B") : x.st.acc)) { $0.style = .STROKE; $0.strokeWidth = 3 * u })
     }
 
     // ---------- 8. time left (4×1) ----------
-    static func exit(_ cv: Canvas, _ x: X) {
+    static func exit(_ cv: ACanvas, _ x: X) {
         card(cv, x); let w = x.w, pad = x.dp(16)
         let cw = x.cur, nx = x.next
         let title: String, left: String, frac: CGFloat, until: String, urgent: Bool
@@ -743,7 +760,7 @@ enum KArt {
         var y = (x.h - ch * u2) / 2 + ts * 0.8 * u2
         // stretched, the title fills up to the pill
         text(cv, x, kashName(x, tp1, title, w - 2 * pad - pw - x.dp(8) - 2 * kSafe(x)), startX(x, pad), y, tp1)
-        pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, y - ts * 0.3 * u2, ip, urgent ? AMBER : x.st.light ? c("#E3ECE6") : a(0.16, Color.WHITE))
+        pill(cv, x, left, endX(x, pad) + x.dir * pw / 2, y - ts * 0.3 * u2, ip, urgent ? AMBER : x.st.light ? c("#E3ECE6") : a(0.16, AColor.WHITE))
         if bar {
             let bt = y + 14 * u2, bh = 8 * u2, l = pad, r = w - pad
             cv.drawRoundRect(RectF(l, bt, r, bt + bh), bh / 2, bh / 2, paint(x.st.line))
@@ -758,7 +775,7 @@ enum KArt {
 
     // ---------- 9. with buttons (4×2): the three buttons sit in the bottom 45% ----------
     static let BTN_TOP: CGFloat = 0.55
-    static func actions(_ cv: Canvas, _ x: X, _ b: Btns) {
+    static func actions(_ cv: ACanvas, _ x: X, _ b: Btns) {
         card(cv, x, x.dp(24)); guard let nx = x.next else { return }; let w = x.w, h = x.h, pad = x.dp(14)
         let topH = h * BTN_TOP - pad * 0.6
         let ns = topH * 0.5
@@ -782,12 +799,12 @@ enum KArt {
             let col = x.rtl ? i : 2 - i, l = w - pad - CGFloat(col + 1) * bw - CGFloat(col) * gap
             let rect = RectF(l, top, l + bw, top + bh)
             let sc = cv.saveLayerAlpha(rect.left - 2, rect.top - 2, rect.right + 2, rect.bottom + 2, on[i] ? 255 : 100)
-            cv.drawRoundRect(rect, x.dp(16), x.dp(16), paint(x.st.light ? a(0.07, c("#0B4D3B")) : a(0.1, Color.WHITE)))
+            cv.drawRoundRect(rect, x.dp(16), x.dp(16), paint(x.st.light ? a(0.07, c("#0B4D3B")) : a(0.1, AColor.WHITE)))
             cv.drawRoundRect(rect, x.dp(16), x.dp(16), ap(paint(x.st.line)) { $0.style = .STROKE; $0.strokeWidth = x.dp(1) })
             let ic = ap(paint(x.st.fg)) { $0.style = .STROKE; $0.strokeWidth = x.dp(1.8); $0.strokeCap = .ROUND; $0.strokeJoin = .ROUND }
             let icx = l + bw / 2, icy = top + bh * 0.36, s = x.dp(8)
             switch i {
-            case 0: let p = Path(); p.moveTo(icx - s, icy); p.lineTo(icx - s * 0.25, icy + s * 0.7); p.lineTo(icx + s, icy - s * 0.6); cv.drawPath(p, ic)
+            case 0: let p = APath(); p.moveTo(icx - s, icy); p.lineTo(icx - s * 0.25, icy + s * 0.7); p.lineTo(icx + s, icy - s * 0.6); cv.drawPath(p, ic)
             case 1: cv.drawArc(RectF(icx - s * 0.75, icy - s, icx + s * 0.75, icy + s * 0.5), 180, 180, false, ic); cv.drawLine(icx - s * 0.75, icy - s * 0.25, icx - s * 0.75, icy + s * 0.55, ic)
                 cv.drawLine(icx + s * 0.75, icy - s * 0.25, icx + s * 0.75, icy + s * 0.55, ic); cv.drawLine(icx - s, icy + s * 0.55, icx + s, icy + s * 0.55, ic); cv.drawLine(icx - s, icy - s, icx + s, icy + s, ic)
             default: cv.drawCircle(icx, icy + s * 0.1, s * 0.8, ic); cv.drawLine(icx, icy - s * 0.3, icx, icy + s * 0.15, ic); cv.drawLine(icx, icy + s * 0.15, icx + s * 0.35, icy + s * 0.35, ic)
@@ -807,7 +824,7 @@ enum KArt {
         return keys.contains(cw.k) && rowsDay(x).optLong(cw.k) == cw.start ? cw.k : nil }
     /// Prayer rows between [l] and [r]: the name at the start, the time at the end, the next one on a gold pill, the ones gone dimmed.
     /// With [exitH] > 0 the time we are in gets a second line «حتى 6:50» under its name. Returns the bottom.
-    static func prayerRows(_ cv: Canvas, _ x: X, _ keys: [String], _ top: CGFloat, _ rowH: CGFloat, _ exitH: CGFloat, _ l: CGFloat, _ r: CGFloat, _ ts: CGFloat) -> CGFloat {
+    static func prayerRows(_ cv: ACanvas, _ x: X, _ keys: [String], _ top: CGFloat, _ rowH: CGFloat, _ exitH: CGFloat, _ l: CGFloat, _ r: CGFloat, _ ts: CGFloat) -> CGFloat {
         let tday = rowsDay(x), nx = x.next, cw = x.cur, exK = exitH > 0 ? exitKey(x, keys) : nil
         let inset = min(rowH * 0.5, x.dp(12)); var y = top
         for k in keys {
@@ -832,7 +849,7 @@ enum KArt {
         return y
     }
 
-    static func column(_ cv: Canvas, _ x: X) {
+    static func column(_ cv: ACanvas, _ x: X) {
         card(cv, x); guard let nx = x.next else { return }; let w = x.w, h = x.h, u0 = x.u
         let keys = ["fajr"] + (x.style.has("sunrise") ? ["sunrise"] : []) + (x.style.has("duha") ? ["duha"] : []) + ["dhuhr", "asr", "maghrib", "isha"]
         let cnt = x.style.has("count") ? x.d.inTxt(nx, x.now) : "", tms = x.style.has("time") ? clk(x, nx.at) : ""
@@ -912,28 +929,28 @@ enum KArt {
     /// The time with its ص/م, as one string.
     static func clk(_ x: X, _ t: Int) -> String { (x.d.clock(t) + " " + x.d.ampm(t)).trimmingCharacters(in: .whitespaces) }
     /// A night sky card for the "live sky" look of the night widgets.
-    static func nightCard(_ cv: Canvas, _ x: X) {
-        let r = x.dp(22)
-        cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, ap(paint()) { $0.shader = LinearGradient(0, 0, 0, x.h, [c("#0B1430"), c("#1E2547"), c("#2A2F5A")], [0, 0.7, 1]) })
+    static func nightCard(_ cv: ACanvas, _ x: X) {
+        let r = square ? 0 : x.dp(22)
+        cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, ap(paint()) { $0.shader = ALinear(0, 0, 0, x.h, [c("#0B1430"), c("#1E2547"), c("#2A2F5A")], [0, 0.7, 1]) })
     }
-    static func nightStars(_ cv: Canvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
-        for i in stride(from: 0, to: STARS.count, by: 2) { cv.drawCircle(l + w * (x.rtl ? 1 - STARS[i] : STARS[i]), t + h * STARS[i + 1], x.dp(i % 4 == 0 ? 1.3 : 0.9), paint(a(i % 6 == 0 ? 0.9 : 0.6, Color.WHITE))) }
+    static func nightStars(_ cv: ACanvas, _ x: X, _ l: CGFloat, _ t: CGFloat, _ w: CGFloat, _ h: CGFloat) {
+        for i in stride(from: 0, to: STARS.count, by: 2) { cv.drawCircle(l + w * (x.rtl ? 1 - STARS[i] : STARS[i]), t + h * STARS[i + 1], x.dp(i % 4 == 0 ? 1.3 : 0.9), paint(a(i % 6 == 0 ? 0.9 : 0.6, AColor.WHITE))) }
     }
     /// An eight-pointed star (never six).
-    static func star8(_ cv: Canvas, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ col: AInt) {
-        let p = Path()
+    static func star8(_ cv: ACanvas, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ col: AInt) {
+        let p = APath()
         for i in 0..<16 { let rr = i % 2 == 0 ? r : r * 0.62, an = -Double.pi / 2 + Double(i) * Double.pi / 8
             let px = cx + rr * CGFloat(cos(an)), py = cy + rr * CGFloat(sin(an)); if i == 0 { p.moveTo(px, py) } else { p.lineTo(px, py) } }
         p.close(); cv.drawPath(p, paint(col))
     }
-    static func crescent(_ cv: Canvas, _ x: X, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ col: AInt) {
-        let p = ap(Path()) { $0.addCircle(cx, cy, r, .CW) }
+    static func crescent(_ cv: ACanvas, _ x: X, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ col: AInt) {
+        let p = ap(APath()) { $0.addCircle(cx, cy, r, .CW) }
         // the hollow faces the end side, as the young moon of Ramadan
-        p.op(ap(Path()) { $0.addCircle(cx - x.dir * r * 0.42, cy - r * 0.18, r * 0.84, .CW) }, .DIFFERENCE)
+        p.op(ap(APath()) { $0.addCircle(cx - x.dir * r * 0.42, cy - r * 0.18, r * 0.84, .CW) }, .DIFFERENCE)
         cv.drawPath(p, paint(col))
     }
     /// Text made of a big part and a small one ("٢" + " من ٥"), centred together, in reading order.
-    static func pair(_ cv: Canvas, _ x: X, _ big: String, _ small: String, _ cx: CGFloat, _ y: CGFloat, _ pb: Paint, _ ps: Paint) {
+    static func pair(_ cv: ACanvas, _ x: X, _ big: String, _ small: String, _ cx: CGFloat, _ y: CGFloat, _ pb: APaint, _ ps: APaint) {
         thicken(pb); let wb = pb.measureText(big), ws = ps.measureText(small), l = cx - (wb + ws) / 2
         pb.textAlign = .LEFT; ps.textAlign = .LEFT
         if x.rtl { cv.drawText(big, l + ws, y, pb); cv.drawText(small, l, y, ps) } else { cv.drawText(big, l, y, pb); cv.drawText(small, l + wb, y, ps) }
@@ -951,7 +968,7 @@ enum KArt {
         if x.d.ar { return n == 1 ? "يوم كامل" : n == 2 ? "يومين متتاليين" : n <= 10 ? "\(v) أيام متتالية" : "\(v) يوماً متتالياً" }
         return n == 1 ? "1 full day" : "\(v) days in a row"
     }
-    static func prayed(_ cv: Canvas, _ x: X) {
+    static func prayed(_ cv: ACanvas, _ x: X) {
         card(cv, x)
         let pd = x.d.prayerDay(x.now) ?? x.day, m = marks, cur = x.cur?.k
         let n = (0...4).filter { m.done & (1 << $0) != 0 }.count
@@ -962,12 +979,12 @@ enum KArt {
             if t >= 1 && t <= x.now { return 3 }
             return 0 }
         let doneC = x.st.light ? GOLD_L : x.st.acc, nowC = x.st.light ? c("#0B4D3B") : x.st.acc
-        let chkC = x.st.light ? Color.WHITE : INK, goldT = x.st.light ? GOLD_L : GOLD
+        let chkC = x.st.light ? AColor.WHITE : INK, goldT = x.st.light ? GOLD_L : GOLD
         let countTxt = x.d.digits("\(n)") + (x.d.ar ? " من " : " of ") + x.d.digits("5")
         func circle(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ st: Int) {
             switch st {
             case 2: cv.drawCircle(cx, cy, r, paint(doneC))
-                let p = Path(); p.moveTo(cx - r * 0.42, cy + r * 0.02); p.lineTo(cx - r * 0.1, cy + r * 0.34); p.lineTo(cx + r * 0.44, cy - r * 0.3)
+                let p = APath(); p.moveTo(cx - r * 0.42, cy + r * 0.02); p.lineTo(cx - r * 0.1, cy + r * 0.34); p.lineTo(cx + r * 0.44, cy - r * 0.3)
                 cv.drawPath(p, ap(paint(chkC)) { $0.style = .STROKE; $0.strokeWidth = r * 0.16; $0.strokeCap = .ROUND; $0.strokeJoin = .ROUND })
             case 1: cv.drawCircle(cx, cy, r * 1.13, ap(paint(a(0.18, nowC))) { $0.style = .STROKE; $0.strokeWidth = r * 0.3 })
                 cv.drawCircle(cx, cy, r * 0.94, ap(paint(nowC)) { $0.style = .STROKE; $0.strokeWidth = r * 0.13 })
@@ -1003,7 +1020,7 @@ enum KArt {
                 let col = st == 2 ? doneC : st == 1 ? (x.st.light ? c("#0B4D3B") : x.st.fg) : st == 3 ? a(0.4, x.st.fg) : x.st.line
                 cv.drawArc(oval, start, x.rtl ? -sweep : sweep, false, ap(paint(col)) { $0.style = .STROKE; $0.strokeCap = .ROUND; $0.strokeWidth = st == 0 || st == 3 ? sw * 0.72 : sw })
             }
-            var lines: [(String, Paint)] = []
+            var lines: [(String, APaint)] = []
             if x.style.has("now"), let cu = cur, KData.PRAY.contains(cu) { lines.append((x.d.name(cu) + (x.d.ar ? " الآن" : " now"), ap(tp(x, x.plex, 11, x.st.sub)) { $0.textSize = 11 * k })) }
             if x.style.has("streak") && m.streak > 0 { lines.append((streakTxt(x, m.streak), ap(tp(x, x.plexB, 10.5, goldT)) { $0.textSize = 10.5 * k })) }
             var y = cy + (10 - 7 * CGFloat(lines.count)) * k
@@ -1013,13 +1030,13 @@ enum KArt {
     }
 
     // ---------- 14. the last third of the night (2×2 and 4×1) ----------
-    static func nightW(_ cv: Canvas, _ x: X) {
+    static func nightW(_ cv: ACanvas, _ x: X) {
         let sky = x.st.kind == "sky"
         if sky { nightCard(cv, x) } else { card(cv, x) }
         guard let nt = x.d.night(x.now) else { return }; let (m, f) = nt
         let third = m + (f - m) * 2 / 3, mid = m + (f - m) / 2, inThird = x.now >= third && x.now < f
         let fg = x.st.fg, sub = x.st.sub, gold = x.st.light ? GOLD_L : GOLD
-        let track = x.st.light ? a(0.14, c("#0B4D3B")) : a(0.2, Color.WHITE)
+        let track = x.st.light ? a(0.14, c("#0B4D3B")) : a(0.2, AColor.WHITE)
         let cnt = inThird ? (x.d.ar ? "الآن · بقي " + x.d.dur(f - x.now) + " للفجر" : "Now · " + x.d.dur(f - x.now) + " to Fajr") : x.d.inTxt(third - x.now)
         if isWide(x) {
             let u = x.u, pad = 16 * u, l = pad, r = x.w - pad, bw = r - l
@@ -1033,7 +1050,7 @@ enum KArt {
             let g0 = px(third), g1 = px(f)
             cv.drawRoundRect(RectF(min(g0, g1), bt, max(g0, g1), bt + bh), bh / 2, bh / 2, paint(gold))
             if x.style.has("mid") { let mx = px(mid); cv.drawRect(mx - u, bt - 5 * u, mx + u, bt + bh + 5 * u, paint(a(0.6, fg))) }
-            if x.now >= m && x.now <= f { let nx = px(x.now); cv.drawCircle(nx, bt + bh / 2, 9.5 * u, paint(a(0.25, fg))); cv.drawCircle(nx, bt + bh / 2, 7 * u, paint(x.st.light ? c("#0B4D3B") : Color.WHITE)) }
+            if x.now >= m && x.now <= f { let nx = px(x.now); cv.drawCircle(nx, bt + bh / 2, 9.5 * u, paint(a(0.25, fg))); cv.drawCircle(nx, bt + bh / 2, 7 * u, paint(x.st.light ? c("#0B4D3B") : AColor.WHITE)) }
             let lp = tp(x, x.plex, 10, sub), ly = bt + bh + 19 * u
             text(cv, x, x.d.name("maghrib") + " " + x.d.clock(m), startX(x, pad), ly, lp)
             text(cv, x, x.d.name("fajr") + " " + x.d.clock(f), endX(x, pad), ly, lp, false)
@@ -1046,11 +1063,11 @@ enum KArt {
             for i in 0...2 { let col = x.rtl ? i : 2 - i, l0 = x.w - pad - CGFloat(col + 1) * sw3 - CGFloat(col) * gap
                 cv.drawRoundRect(RectF(l0, bottom - segH, l0 + sw3, bottom), segH / 2, segH / 2, paint(i == 2 ? gold : track)) }
             if x.now >= m && x.now <= f { let q = CGFloat(x.now - m) / CGFloat(f - m), nx = x.rtl ? x.w - pad - q * (x.w - 2 * pad) : pad + q * (x.w - 2 * pad)
-                cv.drawCircle(nx, bottom - segH / 2, 3.6 * k, paint(x.st.light ? c("#0B4D3B") : Color.WHITE)) }
+                cv.drawCircle(nx, bottom - segH / 2, 3.6 * k, paint(x.st.light ? c("#0B4D3B") : AColor.WHITE)) }
             var y = bottom - segH - 7 * k
             if x.style.has("count") { let cp = ap(tp(x, x.plexB, 11.5, x.st.light ? c("#0B4D3B") : fg, false)) { $0.textSize = 11.5 * k }; fit(cp, cnt, x.w - 2 * pad - 2 * cp.textSize)
                 let pw = pillW(cp, cnt), ph = cp.textSize * 1.55
-                pill(cv, x, cnt, startX(x, pad) - x.dir * pw / 2, y - ph / 2, cp, x.st.light ? c("#E3ECE6") : a(0.14, Color.WHITE)); y -= ph + 9 * k }
+                pill(cv, x, cnt, startX(x, pad) - x.dir * pw / 2, y - ph / 2, cp, x.st.light ? c("#E3ECE6") : a(0.14, AColor.WHITE)); y -= ph + 9 * k }
             let tb = ap(tp(x, x.plexB, 30, fg)) { $0.textSize = 30 * k }, tm = x.d.clock(third), am = x.d.ampm(third)
             text(cv, x, tm, startX(x, pad), y, tb)
             if !am.isEmpty { text(cv, x, am, startX(x, pad) - x.dir * (tb.measureText(tm) + 5 * k), y, ap(tp(x, x.plex, 14, fg)) { $0.textSize = 14 * k }) }
@@ -1061,7 +1078,7 @@ enum KArt {
     }
 
     // ---------- 15. Ramadan (4×2 and 2×2): iftar before maghrib, imsak after it; outside Ramadan, how far it is ----------
-    static func ramadan(_ cv: Canvas, _ x: X) {
+    static func ramadan(_ cv: ACanvas, _ x: X) {
         card(cv, x)
         let d = x.d, now = x.now, today = x.day, tom = d.day(now, 1)
         let ramT = d.hmn(today) == 9, ramN = tom != nil && d.hmn(tom!) == 9, ims = d.imsak * 60_000
@@ -1139,7 +1156,7 @@ enum KArt {
     }
 
     // ---------- 16. the white days (4×2 and 2×2): the Hijri month with the 13th–15th lit like the full moon ----------
-    static func white(_ cv: Canvas, _ x: X) {
+    static func white(_ cv: ACanvas, _ x: X) {
         card(cv, x)
         let d = x.d, ar = d.ar, h0 = d.hd(x.day).coerceAtLeast(1), len = d.monthLen(x.now), w0 = d.wdi(x.day)
         let wd1 = ((w0 - (h0 - 1)) % 7 + 7) % 7
@@ -1170,7 +1187,7 @@ enum KArt {
             for n in 1...max(1, len) {
                 let idx = wd1 + n - 1, cx = colX(idx % 7), cy = pad + head + rowH * (CGFloat(idx / 7) + 0.5)
                 let isW = (13...15).contains(n), today = n == h0
-                if isW { cv.drawCircle(cx, cy, dd * 0.78, ap(paint()) { $0.shader = RadialGradient(cx, cy, dd * 0.78, [a(0.55, c("#FFF0C0")), 0], nil) })
+                if isW { cv.drawCircle(cx, cy, dd * 0.78, ap(paint()) { $0.shader = ARadial(cx, cy, dd * 0.78, [a(0.55, c("#FFF0C0")), 0], nil) })
                     cv.drawCircle(cx, cy, dd / 2, paint(c("#FFF6D8"))); if x.st.light { cv.drawCircle(cx, cy, dd / 2, ap(paint(a(0.7, GOLD_L))) { $0.style = .STROKE; $0.strokeWidth = u }) } }
                 if today { cv.drawCircle(cx, cy, dd / 2, paint(acc)) }
                 np.typeface = today || isW ? x.plexB : x.plex
@@ -1193,7 +1210,7 @@ enum KArt {
         } else {
             let s = min(x.w, x.h), k = s / 150, pad = 14 * k
             let mx = endX(x, pad) + x.dir * 17 * k, my = pad + 17 * k
-            cv.drawCircle(mx, my, 30 * k, ap(paint()) { $0.shader = RadialGradient(mx, my, 30 * k, [a(0.5, c("#FFF0C0")), 0], nil) })
+            cv.drawCircle(mx, my, 30 * k, ap(paint()) { $0.shader = ARadial(mx, my, 30 * k, [a(0.5, c("#FFF0C0")), 0], nil) })
             cv.drawCircle(mx, my, 15 * k, paint(c("#FFF6D8")))
             text(cv, x, ar ? "الأيام البيض" : "White days", startX(x, pad), pad + 13 * k, ap(tp(x, x.nameTf, 15, x.st.fg)) { $0.textSize = 15 * k })
             if !special.isEmpty { let sp = ap(tp(x, x.plexB, 10.5, gold)) { $0.textSize = 10.5 * k }; fit(sp, special, x.w - 2 * pad - 34 * k); text(cv, x, special, startX(x, pad), pad + 30 * k, sp) }

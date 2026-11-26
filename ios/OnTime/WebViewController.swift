@@ -6,7 +6,7 @@ import UserNotifications
 
 /// The same page as on Android, from the app bundle under its own scheme (ontime://app/…), with a `window.Android`
 /// made for the iPhone: calls that return a value read a small state the app keeps up to date (`__iosSet`).
-final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, UIDocumentPickerDelegate {
+final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, UIDocumentPickerDelegate {
     static let shared = WebViewController()
     private var web: WKWebView!
     private var loaded = false
@@ -30,6 +30,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         web.scrollView.contentInsetAdjustmentBehavior = .never
         web.scrollView.bounces = false
         web.navigationDelegate = self
+        web.uiDelegate = self   // prompt(): the page's few calls that need an answer at once (the widget previews, 0.31)
         view.addSubview(web)
         if let start = URL(string: "ontime://app/index.html") { web.load(URLRequest(url: start)) }
         NotificationCenter.default.addObserver(self, selector: #selector(active), name: UIApplication.didBecomeActiveNotification, object: nil)
@@ -90,6 +91,16 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
+    /// The page's calls that return a value at once: prompt(name, argument) answered here, while the page waits.
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        switch prompt {
+        case "wpv": completionHandler(ArtPreview.preview(defaultText ?? ""))
+        case "wget": completionHandler(ArtPreview.info())
+        default: completionHandler(nil)
+        }
+    }
+
     /// "Try now" was set for this time (0: it was not); the page counts down to it.
     func tried(_ at: Double) { js("window.__onAlarmTry && __onAlarmTry(\(Int(at)))") }
 
@@ -105,6 +116,7 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         guard let b = message.body as? [String: Any], let cmd = b["cmd"] as? String else { return }
         switch cmd {
         case "schedule": Scheduler.save(b["json"] as? String ?? "[]"); Alarms.sync()
+        case "widgetStyle": ArtPreview.save(b["t"] as? String ?? "", b["json"] as? String ?? "")
         case "widgetData":
             let j = b["json"] as? String ?? ""
             UserDefaults.standard.set(j, forKey: "widgetData")
@@ -197,6 +209,10 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         pendingOpen: function(){ return ''; },
         pendingWidget: function(){ return ''; },
         openUrl: function(u){ post('openUrl', { url: u }); },
+        // the home screen widgets (0.31): previews drawn by the app, each design's look saved for its widgets
+        widgetPreview: function(t, j){ try { return prompt('wpv', JSON.stringify({ t: t, s: j })) || ''; } catch(e) { return ''; } },
+        widgets: function(){ try { return prompt('wget', '') || ''; } catch(e) { return ''; } },
+        widgetStyle: function(t, id, j){ post('widgetStyle', { t: t, json: j }); },
         openSettings: function(){ post('openSettings'); }
       };
       // real alarms from iOS 26 (AlarmKit); before it the page shows no alarms
