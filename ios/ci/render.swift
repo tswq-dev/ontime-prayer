@@ -65,17 +65,6 @@ import UniformTypeIdentifiers
                 cv.drawLine(0, y, 1400, y, ap(Paint(Color.parseColor("#FF0000"))) { $0.strokeWidth = 2 })
                 let p = Paint(Color.BLACK); p.typeface = Typeface("plex600"); p.textSize = 84; p.textAlign = .RIGHT
                 cv.drawText(str, 1350, y, p)
-                for ch: UInt16 in [0x064B, 0x0651] { var g: CGGlyph = 0; var c = ch; let has = CTFontGetGlyphsForCharacters(p.font, &c, &g, 1); print("plex600 has", String(ch, radix: 16), has) }
-                for run in CTLineGetGlyphRuns(p.line(str)) as! [CTRun] {
-                    let nG = CTRunGetGlyphCount(run); var pos = [CGPoint](repeating: .zero, count: nG); CTRunGetPositions(run, CFRange(location: 0, length: 0), &pos)
-                    var tm = CTRunGetTextMatrix(run)
-                    print(str, "pos:", pos.map { "(\(Int($0.x)),\(Int($0.y)))" }.joined(separator: " "), "status:", CTRunGetStatus(run).rawValue, "tm:", tm.ty, tm.d)
-                    _ = tm
-                }
-                var asc: CGFloat = 0, des: CGFloat = 0, lead: CGFloat = 0
-                let tw = CTLineGetTypographicBounds(p.line(str), &asc, &des, &lead)
-                print(str, "typo:", Int(tw), Int(asc), Int(des), Int(lead), "img:", CTLineGetBoundsWithOptions(p.line(str), []))
-                print(str, "runs:", (CTLineGetGlyphRuns(p.line(str)) as! [CTRun]).map { (CTRunGetAttributes($0) as NSDictionary)[kCTFontAttributeName] as! CTFont }.map { CTFontCopyPostScriptName($0) as String })
             }
             if let i = cv.image { png(i, "zz-text_check") }
         }

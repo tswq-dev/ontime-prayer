@@ -122,9 +122,25 @@ final class Paint {
     }
     func measureText(_ s: String) -> CGFloat { s.isEmpty ? 0 : CGFloat(CTLineGetTypographicBounds(line(s), nil, nil, nil)) }
     func getTextBounds(_ s: String, _ start: Int, _ end: Int, _ r: inout Rect) {
-        let b = CTLineGetBoundsWithOptions(line(s), .useGlyphPathBounds)
+        let b = textPath(s, 0, 0).boundingBoxOfPath
         if b.isNull || b.isEmpty { r = Rect(); return }
-        r = Rect(left: Int(floor(b.minX)), top: Int(floor(-b.maxY)), right: Int(ceil(b.maxX)), bottom: Int(ceil(-b.minY)))
+        r = Rect(left: Int(floor(b.minX)), top: Int(floor(b.minY)), right: Int(ceil(b.maxX)), bottom: Int(ceil(b.maxY)))
+    }
+    /// The text as outlines, starting at [x0] on baseline [y] (y down). Drawn from the glyphs and their positions rather than
+    /// with CTLineDraw, which shifts a whole line when its first glyph is a raised mark (the tanween of «يوماً») in a flipped context.
+    func textPath(_ s: String, _ x0: CGFloat, _ y: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        for run in CTLineGetGlyphRuns(line(s)) as! [CTRun] {
+            let f = (CTRunGetAttributes(run) as NSDictionary)[kCTFontAttributeName] as! CTFont
+            let n = CTRunGetGlyphCount(run); if n == 0 { continue }
+            var gs = [CGGlyph](repeating: 0, count: n), ps = [CGPoint](repeating: .zero, count: n)
+            CTRunGetGlyphs(run, CFRange(location: 0, length: 0), &gs); CTRunGetPositions(run, CFRange(location: 0, length: 0), &ps)
+            for i in 0..<n {
+                var t = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: x0 + ps[i].x, ty: y - ps[i].y)
+                if let g = CTFontCreatePathForGlyph(f, gs[i], &t) { path.addPath(g) }
+            }
+        }
+        return path
     }
     var ascent: CGFloat { CTFontGetAscent(font) }
     var descent: CGFloat { CTFontGetDescent(font) }
@@ -287,25 +303,13 @@ final class Canvas {
         if useCenter { path.moveTo(o.centerX(), o.centerY()); path.arcTo(o, start, sweep, false); path.close() } else { path.addArc(o, start, sweep) }
         shape(path.cg, p)
     }
-    /// Text on baseline [y], placed by the paint's alignment; heavy names drawn filled and stroked.
+    /// Text on baseline [y], placed by the paint's alignment, drawn as its outlines like any shape (heavy names filled and
+    /// stroked, shaders and shadows as for shapes).
     func drawText(_ s: String, _ x: CGFloat, _ y: CGFloat, _ p: Paint) {
         guard !s.isEmpty else { return }
-        let line = p.line(s), w = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        let w = p.measureText(s)
         let x0 = p.textAlign == .LEFT ? x : p.textAlign == .CENTER ? x - w / 2 : x - w
-        ctx.saveGState(); shadowOn(p)
-        let stroke = p.style == .STROKE || p.style == .FILL_AND_STROKE
-        if let sh = p.shader {
-            if p.shadow != nil { ctx.beginTransparencyLayer(auxiliaryInfo: nil) }
-            ctx.saveGState(); ctx.setTextDrawingMode(.clip); ctx.textPosition = CGPoint(x: x0, y: y); CTLineDraw(line, ctx)
-            fillShader(sh, p); ctx.restoreGState()
-            if p.shadow != nil { ctx.endTransparencyLayer() }
-        } else {
-            ctx.setFillColor(Color.cg(p.color)); ctx.setStrokeColor(Color.cg(p.color))
-            if stroke { ctx.setLineWidth(p.strokeWidth); ctx.setLineJoin(p.strokeJoin == .ROUND ? .round : .miter) }
-            ctx.setTextDrawingMode(p.style == .FILL_AND_STROKE ? .fillStroke : p.style == .STROKE ? .stroke : .fill)
-            ctx.textPosition = CGPoint(x: x0, y: y); CTLineDraw(line, ctx)
-        }
-        ctx.restoreGState()
+        shape(p.textPath(s, x0, y), p)
     }
 }
 
