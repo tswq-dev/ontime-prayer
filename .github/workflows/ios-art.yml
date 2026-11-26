@@ -1,0 +1,35 @@
+name: iPhone widget pictures
+
+# The iPhone's port of the widget art (ios/Art) drawn on macOS for every widget, size and look, uploaded as pictures
+# for review. No Xcode project and no signing: just the Swift files and the Android tests' sample month. Short, so it
+# can run on its own branch while the art is being worked on, before anything goes into the app.
+on:
+  push:
+    branches: [app, art]
+    paths: ['ios/Art/**', 'ios/ci/render.swift', '.github/workflows/ios-art.yml']
+  workflow_dispatch:
+
+jobs:
+  draw:
+    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_[0-9]*.app | sort -V | tail -1)
+          echo "Using $X"; sudo xcode-select -s "$X"
+      - name: Draw
+        run: |
+          set -o pipefail
+          swiftc -O -parse-as-library ios/Art/*.swift ios/ci/render.swift -o render 2>&1 | tee compile.log
+          TZ=Asia/Riyadh ./render android/app/src/test/resources/wdata.json android/app/src/main/assets/wfonts ios-widgets
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-widgets
+          path: |
+            ios-widgets/
+            compile.log
+          retention-days: 7
