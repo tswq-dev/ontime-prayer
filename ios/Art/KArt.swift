@@ -285,13 +285,23 @@ enum KArt {
     struct Btns { var prayed = false, muted = false, reminded = false, canPray = true, canRemind = true }
 
     static func render(_ type: String, _ style: KStyle, _ d: KData?, _ now: Int, _ wPx: Int, _ hPx: Int, _ dpPx: CGFloat, _ fonts: KFonts = .shared, btns: Btns = Btns()) -> CGImage? {
+        guard let cv = ACanvas(wPx, hPx) else { return nil }
+        draw(cv, type, style, d, now, CGFloat(wPx), CGFloat(hPx), dpPx, fonts, btns)
+        return cv.image
+    }
+    /// The same drawing kept as shapes, [w]×[h] points (a dp is a point), for SwiftUI to draw (the widgets, 0.31.2).
+    static func record(_ type: String, _ style: KStyle, _ d: KData?, _ now: Int, _ w: CGFloat, _ h: CGFloat, _ fonts: KFonts = .shared, btns: Btns = Btns()) -> ARecorder? {
+        guard let cv = ACanvas(vector: w, h) else { return nil }
+        draw(cv, type, style, d, now, w, h, 1, fonts, btns)
+        return cv.rec
+    }
+    static func draw(_ cv: ACanvas, _ type: String, _ style: KStyle, _ d: KData?, _ now: Int, _ wPx: CGFloat, _ hPx: CGFloat, _ dpPx: CGFloat, _ fonts: KFonts, _ btns: Btns) {
         if let dd = d { dd.cf = style.cf.isEmpty ? dd.appCf : style.cf
             dd.dhuhrDay = (dd.next(now).flatMap { nx in dd.day(nx.at) } ?? dd.day(now))?.optLong("dhuhr") ?? now }
-        guard let cv = ACanvas(wPx, hPx) else { return nil }
         let day = d?.day(now)
-        guard let dd = d, let dy = day else { empty(cv, CGFloat(wPx), CGFloat(hPx), dpPx, fonts, d?.ar ?? true); return cv.image }
+        guard let dd = d, let dy = day else { empty(cv, wPx, hPx, dpPx, fonts, d?.ar ?? true); return }
         let st = sty(type == "pano" || type == "window" ? (type == "window" && ["light", "dark", "navy", "dyn"].contains(style.bg) ? style.bg : "sky") : style.bg)
-        let x = X(dd, dy, now, st, fonts, dpPx * fitScale(type, CGFloat(wPx) / dpPx, CGFloat(hPx) / dpPx), dd.ar, style, CGFloat(wPx), CGFloat(hPx))
+        let x = X(dd, dy, now, st, fonts, dpPx * fitScale(type, wPx / dpPx, hPx / dpPx), dd.ar, style, wPx, hPx)
         switch type {
         case "pano": pano(cv, x)
         case "window": window(cv, x)
@@ -312,7 +322,6 @@ enum KArt {
         case "column": column(cv, x)
         default: break
         }
-        return cv.image
     }
     /// Widgets laid out in dp grow with the space they get (a 4×2 made taller, a big phone), keeping their balance.
     static func fitScale(_ type: String, _ wDp: CGFloat, _ hDp: CGFloat) -> CGFloat {

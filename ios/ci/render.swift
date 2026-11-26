@@ -5,10 +5,11 @@ import Foundation
 import CoreGraphics
 import ImageIO
 import CoreText
+import SwiftUI
 import UniformTypeIdentifiers
 
 @main struct Render {
-    static func main() {
+    @MainActor static func main() {
         let args = CommandLine.arguments
         guard args.count >= 4, let raw = try? Data(contentsOf: URL(fileURLWithPath: args[1])),
               let all = (try? JSONSerialization.jsonObject(with: raw)) as? [String: Any],
@@ -48,6 +49,11 @@ import UniformTypeIdentifiers
             for t in KArt.TYPES { for (f, sz) in fam[t] ?? [] {
                 png(KArt.render(t, KArt.iosDefault(t, nil, f), ar, now, sz.w * 3, sz.h * 3, 3), "\(label)_\(t)_\(f)"); n += 1 } }
         }
+        // the widgets as the iPhone draws them: recorded shapes drawn by SwiftUI (0.31.2), to compare with the pictures
+        for t in KArt.TYPES { for (f, sz) in fam[t] ?? [] {
+            guard let rec = KArt.record(t, KArt.iosDefault(t, nil, f), ar, moments[2].1, CGFloat(sz.w), CGFloat(sz.h)) else { continue }
+            let r = ImageRenderer(content: ArtVectorView(rec: rec)); r.scale = 3
+            png(r.cgImage, "vec_\(t)_\(f)"); n += 1 } }
         // the other looks, at asr: every background, the fonts, English
         let asr = moments[2].1
         for bg in ["light", "dark", "navy", "clear"] { for t in ["pano", "table", "ring", "column", "orbit"] { for (f, sz) in fam[t] ?? [] {

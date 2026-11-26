@@ -51,32 +51,24 @@ struct ArtProvider: TimelineProvider {
 
 struct ArtView: View {
     let e: ArtEntry
-    @Environment(\.displayScale) private var scale
     var body: some View {
         GeometryReader { g in
-            if let img = picture(g.size) {
-                // its colours kept on a tinted or clear home screen (iOS 18+), as the other widgets
-                if #available(iOS 18.0, *) { Image(decorative: img, scale: px).resizable().widgetAccentedRenderingMode(.fullColor) }
-                else { Image(decorative: img, scale: px).resizable() }
-            }
+            // drawn as shapes, not a picture (0.31.2): WidgetKit keeps every entry until its minute, and an hour of pictures
+            // passed its limits, so only the background showed (all green)
+            if let rec = shapes(g.size) { ArtVectorView(rec: rec) }
         }
         .containerBackground(for: .widget) {
             // the design covers it; seen only behind the arch of «النافذة», in the app's green
             LinearGradient(colors: [Color(red: 0.067, green: 0.349, blue: 0.290), Color(red: 0.039, green: 0.220, blue: 0.173)], startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }
-    /// Pixels per point for the picture: under the screen's. WidgetKit drops a picture with more than about two thirds of the
-    /// widget's own pixels («Widget archival failed due to image being too large»), leaving only the background (0.31.1:
-    /// every widget was green); 0.78² is 0.61 of them.
-    private var px: CGFloat { min(scale, 3) * 0.78 }
-    private func picture(_ size: CGSize) -> CGImage? {
+    private func shapes(_ size: CGSize) -> ARecorder? {
         guard size.width > 1, size.height > 1 else { return nil }
         KArt.square = true
         let now = Int(e.date.timeIntervalSince1970 * 1000)
-        return KArt.render(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, Int(size.width * px), Int(size.height * px), px)
+        return KArt.record(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, size.width, size.height)
     }
 }
-
 
 /// One design as a widget: its name and line in the gallery, and its sizes.
 func artConfig(_ type: String, _ name: String, _ desc: String) -> some WidgetConfiguration {

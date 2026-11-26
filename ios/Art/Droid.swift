@@ -186,7 +186,37 @@ final class APath {
     }
 }
 
-/// A canvas over a bitmap, y down. `image` gives what was drawn.
+// ---------- recording (0.31.2): the drawing kept as shapes, for the widgets ----------
+// WidgetKit keeps every entry of a timeline until its minute; as pictures, an hour of them passed its 30 MB and the widgets
+// showed only their background. Recorded, each entry is a few hundred filled outlines (text included) that SwiftUI draws
+// (ArtVector.swift), sharp at any size and small to keep.
+enum AFill {
+    case color(AInt)
+    case linear(CGPoint, CGPoint, [AInt], [CGFloat], CGFloat)          // from, to, colours, stops, alpha
+    case radial(CGPoint, CGFloat, [AInt], [CGFloat], CGFloat)          // centre, radius
+    case sweep(CGPoint, [AInt], [CGFloat], CGFloat, Bool, CGFloat)     // centre, rotation in degrees, mirrored
+}
+indirect enum ANode {
+    case shape(CGPath, AFill, (r: CGFloat, dx: CGFloat, dy: CGFloat, c: AInt)?)
+    case group(AGroup)
+}
+final class AGroup { var clip: CGPath?; var alpha: CGFloat = 1; var kids: [ANode] = [] }
+final class ARecorder {
+    let w: CGFloat, h: CGFloat
+    let root = AGroup()
+    private var stack: [AGroup]
+    private var frames: [Int] = []   // per save(): the groups it opened
+    init(_ w: CGFloat, _ h: CGFloat) { self.w = w; self.h = h; stack = [root] }
+    func add(_ n: ANode) { stack[stack.count - 1].kids.append(n) }
+    func push(clip: CGPath?, alpha: CGFloat) {
+        let g = AGroup(); g.clip = clip; g.alpha = alpha; add(.group(g)); stack.append(g)
+        if !frames.isEmpty { frames[frames.count - 1] += 1 }
+    }
+    func save() { frames.append(0) }
+    func restore() { guard let n = frames.popLast() else { return }; for _ in 0..<n where stack.count > 1 { stack.removeLast() } }
+}
+
+/// A canvas over a bitmap, y down. `image` gives what was drawn. With a recorder, nothing is drawn: the shapes are kept.
 final class ACanvas {
     let ctx: CGContext, w: Int, h: Int
     private var layers: [Bool] = []   // per save(): whether it opened a transparency layer
@@ -201,16 +231,24 @@ final class ACanvas {
         c.setShouldSmoothFonts(false)
     }
     var image: CGImage? { ctx.makeImage() }
+    /// When set, the drawing is recorded rather than drawn.
+    private(set) var rec: ARecorder? = nil
+    /// A canvas that records, [w]×[h] in points.
+    convenience init?(vector w: CGFloat, _ h: CGFloat) {
+        self.init(1, 1); rec = ARecorder(w, h)
+    }
 
-    @discardableResult func save() -> Int { ctx.saveGState(); layers.append(false); return layers.count }
+    @discardableResult func save() -> Int { if let r = rec { r.save(); layers.append(false); return layers.count }
+        ctx.saveGState(); layers.append(false); return layers.count }
     @discardableResult func saveLayerAlpha(_ r: RectF?, _ alpha: Int) -> Int {
+        if let rr = rec { rr.save(); rr.push(clip: nil, alpha: CGFloat(alpha) / 255); layers.append(false); return layers.count }
         ctx.saveGState(); ctx.setAlpha(CGFloat(alpha) / 255); ctx.beginTransparencyLayer(auxiliaryInfo: nil); layers.append(true); return layers.count
     }
     @discardableResult func saveLayerAlpha(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat, _ alpha: Int) -> Int { saveLayerAlpha(RectF(l, t, r, b), alpha) }
-    func restore() { guard let l = layers.popLast() else { return }; if l { ctx.endTransparencyLayer() }; ctx.restoreGState() }
+    func restore() { guard let l = layers.popLast() else { return }; if let r = rec { r.restore(); return }; if l { ctx.endTransparencyLayer() }; ctx.restoreGState() }
     func restoreToCount(_ n: Int) { while layers.count >= n && !layers.isEmpty { restore() } }
-    func clipPath(_ p: APath) { ctx.addPath(p.cg); ctx.clip() }
-    func clipRect(_ r: RectF) { ctx.clip(to: r.cg) }
+    func clipPath(_ p: APath) { if let r = rec { r.push(clip: p.cg.copy(), alpha: 1); return }; ctx.addPath(p.cg); ctx.clip() }
+    func clipRect(_ r: RectF) { if let rr = rec { rr.push(clip: CGPath(rect: r.cg, transform: nil), alpha: 1); return }; ctx.clip(to: r.cg) }
     func clipRect(_ l: CGFloat, _ t: CGFloat, _ r: CGFloat, _ b: CGFloat) { clipRect(RectF(l, t, r, b)) }
 
     private func shadowOn(_ p: APaint) {
@@ -263,6 +301,7 @@ final class ACanvas {
     private func shape(_ path: CGPath, _ p: APaint, forceStroke: Bool = false) {
         let fill = !forceStroke && (p.style == .FILL || p.style == .FILL_AND_STROKE)
         let stroke = forceStroke || p.style == .STROKE || p.style == .FILL_AND_STROKE
+        if let r = rec { record(r, path, p, fill: fill, stroke: stroke); return }
         ctx.saveGState(); shadowOn(p)
         if let s = p.shader {
             var area = CGMutablePath()
@@ -281,6 +320,28 @@ final class ACanvas {
             ctx.drawPath(using: fill && stroke ? .fillStroke : fill ? .fill : .stroke)
         }
         ctx.restoreGState()
+    }
+
+    /// A shape kept as filled outlines: a stroke becomes its outline (dashes included), and the fill its colour or gradient.
+    private func record(_ r: ARecorder, _ path: CGPath, _ p: APaint, fill: Bool, stroke: Bool) {
+        let f: AFill
+        func stops(_ cs: [AInt], _ ps: [CGFloat]?) -> [CGFloat] { ps ?? (cs.count > 1 ? (0..<cs.count).map { CGFloat($0) / CGFloat(cs.count - 1) } : [0]) }
+        let al = CGFloat(p.alpha) / 255
+        switch p.shader {
+        case nil: f = .color(p.color)
+        case let .linear(x0, y0, x1, y1, cs, ps)?: f = .linear(CGPoint(x: x0, y: y0), CGPoint(x: x1, y: y1), cs, stops(cs, ps), al)
+        case let .radial(cx, cy, rr, cs, ps)?: f = .radial(CGPoint(x: cx, y: cy), rr, cs, stops(cs, ps), al)
+        case let .sweep(cx, cy, cs, ps, rot, mirror)?: f = .sweep(CGPoint(x: cx, y: cy), cs, stops(cs, ps), rot, mirror, al)
+        }
+        let sh = p.shadow.map { (r: $0.r, dx: $0.dx, dy: $0.dy, c: $0.c) }
+        if fill { r.add(.shape(path.copy() ?? path, f, sh)) }
+        if stroke {
+            var src: CGPath = path
+            if let d = p.dash, !d.isEmpty { src = path.copy(dashingWithPhase: 0, lengths: d) }
+            let out = src.copy(strokingWithWidth: max(p.strokeWidth, 0.0001), lineCap: p.strokeCap == .ROUND ? .round : p.strokeCap == .SQUARE ? .square : .butt,
+                               lineJoin: p.strokeJoin == .ROUND ? .round : p.strokeJoin == .BEVEL ? .bevel : .miter, miterLimit: 4)
+            r.add(.shape(out, f, fill ? nil : sh))
+        }
     }
 
     func drawPath(_ path: APath, _ p: APaint) { shape(path.cg, p) }
