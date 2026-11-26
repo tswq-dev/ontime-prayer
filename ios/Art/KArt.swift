@@ -405,10 +405,11 @@ enum KArt {
         let framed = ["light", "dark", "navy", "dyn"].contains(x.style.bg)
         if framed { card(cv, x, x.dp(22), x.style.bg) }
         else if wall {
-            // the iPhone: the same sky all round the arch, dimmed, as if seen from inside (it showed the app's green there)
+            // the iPhone: the same sky all round the arch, a little deeper than through it (it showed the app's green there;
+            // dimmed by half it looked like night in the day, 0.32.1)
             let (t0, b0) = skyAt(x, x.sky), r = square ? 0 : x.dp(22)
             cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, ap(paint()) { $0.shader = ALinear(0, 0, 0, x.h, t0, b0) })
-            cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, paint(a(0.5, c("#0A101E"))))
+            cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, paint(a(0.18, c("#0A101E"))))
         }
         let s = min(x.w, x.h) * (framed ? 0.86 : 1), ox = (x.w - s) / 2, oy = (x.h - s) / 2 + (framed ? s * 0.04 : 0), k = s / 170
         func X0(_ v: CGFloat) -> CGFloat { ox + v * k }
