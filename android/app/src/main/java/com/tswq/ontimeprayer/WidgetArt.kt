@@ -106,8 +106,9 @@ object WidgetArt {
         "light" -> Sty(kind, c("#0B3B2E"), c("#5B6B5F"), c("#0B4D3B"), a(.14f, c("#0B4D3B")), false)
         "dark" -> Sty(kind, c("#F4ECDC"), a(.74f, c("#F4ECDC")), c("#E2C27A"), a(.28f, c("#E2C27A")), false)
         "clear" -> Sty(kind, Color.WHITE, a(.85f, Color.WHITE), c("#F3D58C"), a(.28f, Color.WHITE), true)
-        // «ليلي»: the sky half an hour after Isha, navy, with the writing in gold (0.23)
-        "navy" -> Sty(kind, c("#E9CD8A"), a(.8f, c("#F3E6C4")), c("#E2C27A"), a(.26f, c("#E2C27A")), false)
+        // «ليلي»: the sky half an hour after Isha, navy (0.23); the writing white and only what is next in gold, as the sky
+        // has it after Isha (0.30)
+        "navy" -> Sty(kind, c("#FFF8EA"), a(.74f, c("#FFF8EA")), c("#E9CD8A"), a(.26f, c("#E2C27A")), false)
         "dyn" -> dyn?.let { Sty(kind, it[2], it[3], it[4], a(.16f, it[2]), false) } ?: sty("dark")
         else -> Sty("sky", c("#FFF8EA"), a(.8f, c("#FFF8EA")), c("#FBE3A6"), a(.22f, Color.WHITE), true)
     }

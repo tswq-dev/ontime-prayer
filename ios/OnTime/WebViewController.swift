@@ -90,6 +90,9 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
+    /// "Try now" was set for this time (0: it was not); the page counts down to it.
+    func tried(_ at: Double) { js("window.__onAlarmTry && __onAlarmTry(\(Int(at)))") }
+
     private func js(_ s: String) { DispatchQueue.main.async { self.web?.evaluateJavaScript(s, completionHandler: nil) } }
 
     static func json(_ o: Any) -> String {
