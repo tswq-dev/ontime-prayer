@@ -221,10 +221,25 @@ final class Canvas {
             if let g = gradient(cs, ps) { ctx.drawRadialGradient(g, startCenter: CGPoint(x: cx, y: cy), startRadius: 0, endCenter: CGPoint(x: cx, y: cy), endRadius: r, options: opts) }
         case let .sweep(cx, cy, cs, ps, rot, mirror):
             if mirror { ctx.translateBy(x: cx, y: cy); ctx.scaleBy(x: -1, y: 1); ctx.translateBy(x: -cx, y: -cy) }
-            // Android sweeps clockwise from 3 o'clock (y down); the conic turns with a growing angle in user space, which is
-            // y down here too, so it goes the same way (checked on the CI pictures)
-            if let g = gradient(cs, ps) {
-                if #available(iOS 17.0, macOS 14.0, *) { ctx.drawConicGradient(g, center: CGPoint(x: cx, y: cy), angle: rot * .pi / 180) }
+            // CoreGraphics has no sweep: thin wedges round the centre, each in the colour of its angle. Android sweeps clockwise
+            // from 3 o'clock with y down, and so does a growing angle here (y down too); then its rotation
+            let stops = ps ?? (cs.count > 1 ? (0..<cs.count).map { CGFloat($0) / CGFloat(cs.count - 1) } : [0])
+            func colorAt(_ f: CGFloat) -> AInt {
+                guard cs.count > 1 else { return cs.first ?? 0 }
+                if f <= stops[0] { return cs[0] }
+                for i in 1..<cs.count where f <= stops[i] {
+                    let k = (f - stops[i - 1]) / max(0.0001, stops[i] - stops[i - 1]), x = cs[i - 1], y = cs[i]
+                    func m(_ a: Int, _ b: Int) -> Int { Int(CGFloat(a) + CGFloat(b - a) * k) }
+                    return Color.argb(m(Color.alpha(x), Color.alpha(y)), m(Color.red(x), Color.red(y)), m(Color.green(x), Color.green(y)), m(Color.blue(x), Color.blue(y)))
+                }
+                return cs[cs.count - 1]
+            }
+            let n = 360, big = CGFloat(w + h) * 2, r0 = rot * .pi / 180
+            for i in 0..<n {
+                let a0 = r0 + 2 * .pi * CGFloat(i) / CGFloat(n), a1 = r0 + 2 * .pi * CGFloat(i + 1) / CGFloat(n) + 0.004
+                let wedge = CGMutablePath(); wedge.move(to: CGPoint(x: cx, y: cy))
+                wedge.addLine(to: CGPoint(x: cx + big * cos(a0), y: cy + big * sin(a0))); wedge.addLine(to: CGPoint(x: cx + big * cos(a1), y: cy + big * sin(a1))); wedge.closeSubpath()
+                ctx.setFillColor(Color.cg(colorAt((CGFloat(i) + 0.5) / CGFloat(n)))); ctx.addPath(wedge); ctx.fillPath()
             }
         }
     }
