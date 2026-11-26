@@ -199,8 +199,12 @@ body[data-font="naskh"] .hero .name{font-family:"Amiri",serif;font-weight:700;fo
 /* more below (0.19): a soft fade and a small arrow at the bottom of a sheet while it can still scroll */
 /* "more below": a soft fade with an arrow at the bottom of a sheet that scrolls. It covers the sheet's bottom padding too (with the iPhone's
    home-bar area), so no text shows under it; it adds no height of its own and never moves down, so a sheet that fits shows none of it (0.22.2) */
-.sfade{--pb:calc(28px + env(safe-area-inset-bottom, 0px));position:sticky;bottom:calc(-1*var(--pb));height:calc(28px + var(--pb));margin:calc(-28px - var(--pb)) -20px 0;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--sheet) 62%);opacity:0;transition:opacity .25s;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(var(--pb) - 18px);color:var(--mute)}
-.sheet.more .sfade{opacity:1}
+/* 0.33.1: no fade over the text any more (it hid the first city found while typing): a small round button in the middle, which scrolls
+   down; only its circle takes a tap. It shows while much is hidden below, goes once the sheet is scrolled (until it opens again), and
+   never while typing in the sheet. The middle, as the start holds the labels and the end the switches and values */
+.sfade{--pb:calc(28px + env(safe-area-inset-bottom, 0px));position:sticky;bottom:calc(-1*var(--pb));height:calc(28px + var(--pb));margin:calc(-28px - var(--pb)) -20px 0;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(var(--pb) - 22px)}
+.sfade button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line, rgba(0,0,0,.08));background:var(--sheet);color:var(--mute);display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.14);opacity:0;transform:scale(.8);pointer-events:none;transition:opacity .25s,transform .25s;-webkit-tap-highlight-color:transparent}
+.sheet.more .sfade button{opacity:1;transform:none;pointer-events:auto}
 .sfade svg{animation:sfb 1.6s ease-in-out infinite}
 @keyframes sfb{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
 @media (prefers-reduced-motion:reduce){.sfade svg{animation:none}}
@@ -1992,13 +1996,17 @@ new ResizeObserver(() => { setArch(); if (S.bg === 'sky' && !altOn() && band.cli
 /* sheets */
 let alKey = null;
 const hostSheet = v => { try { if (window.Android && Android.sheet) Android.sheet(v); } catch(e) {} };
-function open(id){ $('back').classList.add('show'); $(id).classList.add('show'); hostSheet(true); fadeSoon($(id)); }
-// shows the fade while there is more of the sheet below
-function sheetFade(sh){ if (sh) sh.classList.toggle('more', sh.scrollHeight - sh.clientHeight - sh.scrollTop > 8); }
+function open(id){ $('back').classList.add('show'); $(id).classList.add('show'); hostSheet(true); delete $(id).dataset.seen; $(id)._top = $(id).scrollTop; fadeSoon($(id)); }
+// the «more below» button: while much of the sheet is hidden below, until it is scrolled, and not while typing in it (0.33.1)
+function sheetFade(sh){ if (!sh) return; const a = document.activeElement, typing = a && sh.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName);
+  if (Math.abs(sh.scrollTop - (sh._top || 0)) > 24) sh.dataset.seen = '1';
+  sh.classList.toggle('more', !typing && !sh.dataset.seen && sh.scrollHeight - sh.clientHeight - sh.scrollTop > 48); }
 function fadeSoon(sh){ setTimeout(() => sheetFade(sh), 60); setTimeout(() => sheetFade(sh), 400); }
-document.querySelectorAll('.sheet').forEach(sh => { const f = document.createElement('div'); f.className = 'sfade'; f.setAttribute('aria-hidden', 'true');
-  f.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
-  sh.appendChild(f); sh.addEventListener('scroll', () => sheetFade(sh), { passive: true }); });
+document.querySelectorAll('.sheet').forEach(sh => { const f = document.createElement('div'); f.className = 'sfade';
+  f.innerHTML = '<button type="button" class="smore" aria-label="المزيد في الأسفل"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
+  f.firstChild.onclick = e => { e.stopPropagation(); sh.scrollBy({ top: Math.round(sh.clientHeight * .7), behavior: 'smooth' }); };
+  sh.appendChild(f); sh.addEventListener('scroll', () => sheetFade(sh), { passive: true });
+  sh.addEventListener('focusin', () => sheetFade(sh)); sh.addEventListener('focusout', () => setTimeout(() => sheetFade(sh), 50)); });
 window.addEventListener('resize', () => document.querySelectorAll('.sheet.show').forEach(sheetFade));
 function closeAll(){ $('back').classList.remove('light'); if ($('obSheet').classList.contains('show') && !S.onb) { S.onb = true; save(); }
   if ($('tourSheet').classList.contains('show') && tourThen) { tourThen = false; setTimeout(startOnb, 400); } $('back').classList.remove('show'); document.querySelectorAll('.sheet').forEach(s => { s.classList.remove('show'); s.style.transform = ''; }); hostSheet(false);
@@ -2443,7 +2451,7 @@ function setSum(){ const lbl = (id, v) => { const b = document.querySelector('#'
   Object.keys(SETP).forEach(k => { $('sic_' + k).innerHTML = SIC[k]; $('sT_' + k).textContent = tr(SETP[k]); $('sS_' + k).textContent = sum[k].filter(Boolean).join(' · '); }); }
 function setPage(p){ document.querySelectorAll('#setSheet .spage').forEach(x => x.hidden = x.dataset.p !== p);
   $('setMenu').hidden = !!p; $('setBack').hidden = !p; $('setSub').hidden = !!p; $('setFoot').hidden = !!p;
-  $('setT').textContent = tr(p ? SETP[p] : 'الإعدادات'); $('setSheet').scrollTop = 0; setPage.cur = p || ''; almSel = null; if (!p) setSum(); if (p === 'alm') almDraw(); if (p === 'iw') iwDraw(); fadeSoon($('setSheet')); }
+  $('setT').textContent = tr(p ? SETP[p] : 'الإعدادات'); $('setSheet').scrollTop = 0; delete $('setSheet').dataset.seen; $('setSheet')._top = 0; setPage.cur = p || ''; almSel = null; if (!p) setSum(); if (p === 'alm') almDraw(); if (p === 'iw') iwDraw(); fadeSoon($('setSheet')); }
 document.querySelector('#setMenu .smenu').addEventListener('click', e => { const b = e.target.closest('.srow[data-p]'); if (b) setPage(b.dataset.p); });
 $('setBack').addEventListener('click', () => setPage(''));
 $('count').addEventListener('click', () => { const o = ['hms','hmc','hm','m','text']; S.count = o[(o.indexOf(S.count) + 1) % o.length]; save(); syncSet(); render(); });
