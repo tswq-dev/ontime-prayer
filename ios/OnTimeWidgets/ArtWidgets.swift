@@ -96,21 +96,29 @@ struct ArtButtons: View {
         if type == "actions" {
             let s = KArt.fitScale("actions", w, h), pad = 14 * s, gap = 8 * s, top = h * KArt.BTN_TOP
             let bh = h - top - pad, bw = (w - 2 * pad - 2 * gap) / 3
-            return ["pray", "mute", "remind"].enumerated().map { i, k in
-                let col = CGFloat(rtl ? i : 2 - i), l = w - pad - (col + 1) * bw - col * gap
+            return ["pray", "mute", "remind"].enumerated().map { (i: Int, k: String) -> (String, CGRect) in
+                let col: CGFloat = CGFloat(rtl ? i : 2 - i)
+                let l: CGFloat = w - pad - (col + 1) * bw - col * gap
                 return (k, CGRect(x: l, y: top, width: bw, height: bh))
             }
         }
         if w / h > 1.8 {
             let left = rtl ? w * KArt.PR_PAD : w * KArt.PR_TITLE, cw = w * KArt.PR_CELL
-            return (0...4).map { i in ("p\(i)", CGRect(x: left + cw * CGFloat(rtl ? 4 - i : i), y: 0, width: cw, height: h)) }
+            return (0...4).map { (i: Int) -> (String, CGRect) in
+                let cell: CGFloat = CGFloat(rtl ? 4 - i : i)
+                return ("p\(i)", CGRect(x: left + cw * cell, y: 0, width: cw, height: h))
+            }
         }
         // round: Fajr at the top, counter-clockwise in Arabic
-        let s = min(w, h), R = s * 0.34, t = s * 0.3
-        return (0...4).map { i in
-            let a = (rtl ? -126 - 72 * Double(i) : -54 + 72 * Double(i)) * .pi / 180
-            return ("p\(i)", CGRect(x: w / 2 + R * CGFloat(cos(a)) - t / 2, y: h / 2 + R * CGFloat(sin(a)) - t / 2, width: t, height: t))
+        let s: CGFloat = min(w, h), R: CGFloat = s * 0.34, t: CGFloat = s * 0.3
+        var out: [(String, CGRect)] = []
+        for i in 0...4 {
+            let deg: Double = rtl ? -126.0 - 72.0 * Double(i) : -54.0 + 72.0 * Double(i)
+            let a: Double = deg * Double.pi / 180.0
+            let cx: CGFloat = w / 2 + R * CGFloat(cos(a)), cy: CGFloat = h / 2 + R * CGFloat(sin(a))
+            out.append(("p\(i)", CGRect(x: cx - t / 2, y: cy - t / 2, width: t, height: t)))
         }
+        return out
     }
     var body: some View {
         ZStack { ForEach(rects, id: \.0) { r in hit(r.0, r.1) } }
