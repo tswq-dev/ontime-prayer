@@ -28,9 +28,17 @@ import UniformTypeIdentifiers
             "table": [("m", M), ("l", L)], "clock": [("s", S)], "moon": [("s", S)], "ribbon": [("m", M)], "exit": [("m", M)],
             "actions": [("m", M)], "line": [("m", M)], "prayed": [("m", M), ("s", S)], "night": [("s", S), ("m", M)],
             "ramadan": [("m", M), ("s", S)], "white": [("m", M), ("s", S)], "column": [("l", L)]]
-        func png(_ img: CGImage?, _ name: String) {
-            guard let i = img, let d = CGImageDestinationCreateWithURL(out.appendingPathComponent(name + ".png") as CFURL, UTType.png.identifier as CFString, 1, nil) else { print("failed", name); return }
+        func save(_ i: CGImage, _ url: URL) {
+            guard let d = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else { return }
             CGImageDestinationAddImage(d, i, nil); CGImageDestinationFinalize(d)
+        }
+        // every picture also goes on a sheet (one per moment or look), small enough to review at a glance
+        var sheets: [(String, [(String, CGImage)])] = []
+        func png(_ img: CGImage?, _ name: String) {
+            guard let i = img else { print("failed", name); return }
+            save(i, out.appendingPathComponent(name + ".png"))
+            let key = String(name.split(separator: "_").first ?? "x")
+            if let k = sheets.firstIndex(where: { $0.0 == key }) { sheets[k].1.append((name, i)) } else { sheets.append((key, [(name, i)])) }
         }
         var n = 0
         let t0 = Date()
@@ -48,5 +56,27 @@ import UniformTypeIdentifiers
         for t in KArt.TYPES { let sz = fam[t]![0].1
             png(KArt.render(t, KStyle.defaultFor(t), en, asr, sz.w * 3, sz.h * 3, 3), "en_\(t)"); n += 1 }
         print("drew \(n) pictures in \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
+        // the sheets: pictures at half their size (1.5×) in rows, each with its name over it, on grey
+        let sd = out.appendingPathComponent("sheets"); try? FileManager.default.createDirectory(at: sd, withIntermediateDirectories: true)
+        let label = Paint(Color.parseColor("#333333")); label.typeface = Typeface("plex400"); label.textSize = 22
+        for (key, items) in sheets {
+            let W = 1600, gap = 24, lh = 30
+            var placed: [(String, CGImage, CGRect)] = [], x = gap, y = gap, rowH = 0
+            for (nm, im) in items {
+                let w = im.width / 2, h = im.height / 2
+                if x + w + gap > W { x = gap; y += rowH + gap; rowH = 0 }
+                placed.append((nm, im, CGRect(x: x, y: y + lh, width: w, height: h))); x += w + gap; rowH = max(rowH, h + lh)
+            }
+            let H = y + rowH + gap
+            guard let cv = Canvas(W, H) else { continue }
+            cv.drawRect(0, 0, CGFloat(W), CGFloat(H), Paint(Color.parseColor("#C9CCD1")))
+            for (nm, im, r) in placed {
+                cv.drawText(nm, r.minX, r.minY - 8, label)
+                // the canvas is y down: draw the picture flipped back
+                cv.ctx.saveGState(); cv.ctx.translateBy(x: r.minX, y: r.maxY); cv.ctx.scaleBy(x: 1, y: -1)
+                cv.ctx.draw(im, in: CGRect(x: 0, y: 0, width: r.width, height: r.height)); cv.ctx.restoreGState()
+            }
+            if let i = cv.image { save(i, sd.appendingPathComponent("sheet-\(key).png")) }
+        }
     }
 }

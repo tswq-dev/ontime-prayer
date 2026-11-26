@@ -9,6 +9,9 @@ on:
     paths: ['ios/Art/**', 'ios/ci/render.swift', '.github/workflows/ios-art.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   draw:
     if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
@@ -25,6 +28,13 @@ jobs:
           set -o pipefail
           swiftc -O -parse-as-library ios/Art/*.swift ios/ci/render.swift -o render 2>&1 | tee compile.log
           TZ=Asia/Riyadh ./render android/app/src/test/resources/wdata.json android/app/src/main/assets/wfonts ios-widgets
+      # the sheets on their own branch, where they can be fetched with git (artifact storage is out of reach for review)
+      - name: Sheets to the art-shots branch
+        run: |
+          mkdir shots && cp ios-widgets/sheets/*.png shots/ && cp compile.log shots/ && cd shots
+          git init -q -b art-shots && git config user.name ci && git config user.email ci@example.com
+          git add . && git commit -q -m "widget pictures for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" art-shots
       - uses: actions/upload-artifact@v4
         if: always()
         with:
