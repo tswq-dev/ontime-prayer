@@ -1888,7 +1888,8 @@ function perAr(t){ const d = dayTimes(t), p = periodAr(t);
   return { 'قبل الفجر':'قبل الفجر', 'الفجر':'وقت الفجر', 'الشروق':'الشروق', 'الضحى':'وقت الضحى', 'الظهر':'وقت الظهر', 'العصر':'وقت العصر', 'المغرب':'وقت المغرب', 'العشاء':'وقت العشاء' }[p]; }
 const perLabel = t => tr(perAr(t));
 function periodAr(t){ const d = dayTimes(t); if (t < d.fajr) return 'قبل الفجر'; if (t < d.sunrise) return 'الفجر'; if (t < d.duha) return 'الشروق'; if (t < d.dhuhr) return 'الضحى'; if (t < d.asr) return 'الظهر'; if (t < d.maghrib) return 'العصر'; if (t < d.isha) return 'المغرب'; return 'العشاء'; }
-const dayStart = () => { const a = ymdOf(Date.now()); return Date.UTC(a[0], a[1]-1, a[2]) - KSA; };
+// the day being looked at: another day picked from the month table keeps its own day while dragging (its moon, not today's) (0.31)
+const dayStart = () => { const a = ymdOf(baseNow()); return Date.UTC(a[0], a[1]-1, a[2]) - KSA; };
 const EVK = ['fajr','sunrise','dhuhr','asr','maghrib','isha'];
 let ptr = null, baseH = 0, tickKey = '';
 function rulerX(t, ds, w){ return Math.max(0, Math.min(w, (t - ds)/DAY*w)); }
@@ -2406,7 +2407,7 @@ $('amBody').addEventListener('input', e => { if (e.target.id === 'amLabel' && am
    on the lock screen in the app's colours (a Live Activity: it starts when the app opens and runs up to 8 hours) ---------- */
 function iwDraw(){ const b = $('iwBox'); if (!b) return;
   const steps = ['اضغط مطوّلاً على مكان فارغ في الشاشة الرئيسية حتى تهتز الأيقونات.', 'اضغط «تعديل» في الأعلى ثم «إضافة ويدجت».', 'ابحث عن «الركن الثاني» واختر الشكل والحجم.', 'اضغط «إضافة ويدجت»، ثم اضغط عليها مطوّلاً و«تعديل الويدجت» لتختار اللون والخط.'];
-  const W = [['خمسة عشر تصميماً', 'البانوراما والنافذة والحلقة والجدول والعمود وغيرها، كما في أندرويد'], ['جدول اليوم', 'متوسط وكبير، وبأسهم للأيام'], ['التاريخ واليوم', 'صغير ومتوسط، وسطر لشاشة القفل'], ['المنبّه القادم', 'صغير، وسطر لشاشة القفل'], ['الصلاة القادمة لشاشة القفل', 'دائري ومستطيل وسطر']];
+  const W = [['خمسة عشر تصميماً', 'البانوراما والنافذة والحلقة والجدول والعمود وغيرها، كما في أندرويد'], ['التاريخ واليوم', 'صغير ومتوسط، وسطر لشاشة القفل'], ['المنبّه القادم', 'صغير، وسطر لشاشة القفل'], ['الصلاة القادمة لشاشة القفل', 'دائري ومستطيل وسطر']];
   b.innerHTML = '<div class="grp">' + tr('كيف تضيفها') + '</div><ol class="iwsteps">' + steps.map(t => '<li>' + tr(t) + '</li>').join('') + '</ol>'
     + '<div class="grp">' + tr('ما فيها') + '</div><div class="box">' + W.map(w => '<div class="opt"><span>' + tr(w[0]) + '<small class="optsub">' + tr(w[1]) + '</small></span></div>').join('') + '</div>'
     + (hasW() ? '<button class="flink" id="iwGal">' + tr('خصّص تصاميم الويدجت: الخلفية والخط وما تعرضه') + '</button>' : '')

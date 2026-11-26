@@ -38,12 +38,13 @@ struct ArtProvider: TimelineProvider {
     static func fam(_ f: WidgetFamily) -> String { f == .systemSmall ? "s" : f == .systemLarge || f == .systemExtraLarge ? "l" : "m" }
     func placeholder(in context: Context) -> ArtEntry { ArtEntry(date: Date(), type: type, fam: Self.fam(context.family)) }
     func getSnapshot(in context: Context, completion: @escaping (ArtEntry) -> Void) { completion(placeholder(in: context)) }
-    /// A picture a minute for the next two hours, then a fresh timeline (the countdowns are in the picture).
+    /// A picture a minute for the next hour, then a fresh timeline (the countdowns are in the picture; each picture is kept
+    /// by WidgetKit until its minute, so not too many).
     func getTimeline(in context: Context, completion: @escaping (Timeline<ArtEntry>) -> Void) {
         let f = Self.fam(context.family), now = Date()
         let m0 = Calendar.current.dateInterval(of: .minute, for: now)?.start ?? now
         var es = [ArtEntry(date: now, type: type, fam: f)]
-        for i in 1...120 { es.append(ArtEntry(date: m0.addingTimeInterval(Double(i) * 60), type: type, fam: f)) }
+        for i in 1...60 { es.append(ArtEntry(date: m0.addingTimeInterval(Double(i) * 60), type: type, fam: f)) }
         completion(Timeline(entries: es, policy: .atEnd))
     }
 }
@@ -55,8 +56,8 @@ struct ArtView: View {
         GeometryReader { g in
             if let img = picture(g.size) {
                 // its colours kept on a tinted or clear home screen (iOS 18+), as the other widgets
-                if #available(iOS 18.0, *) { Image(decorative: img, scale: scale).resizable().widgetAccentedRenderingMode(.fullColor) }
-                else { Image(decorative: img, scale: scale).resizable() }
+                if #available(iOS 18.0, *) { Image(decorative: img, scale: px).resizable().widgetAccentedRenderingMode(.fullColor) }
+                else { Image(decorative: img, scale: px).resizable() }
             }
         }
         .containerBackground(for: .widget) {
@@ -64,11 +65,15 @@ struct ArtView: View {
             LinearGradient(colors: [Color(red: 0.067, green: 0.349, blue: 0.290), Color(red: 0.039, green: 0.220, blue: 0.173)], startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }
+    /// Pixels per point for the picture: under the screen's. WidgetKit drops a picture with more than about two thirds of the
+    /// widget's own pixels («Widget archival failed due to image being too large»), leaving only the background (0.31.1:
+    /// every widget was green); 0.78² is 0.61 of them.
+    private var px: CGFloat { min(scale, 3) * 0.78 }
     private func picture(_ size: CGSize) -> CGImage? {
         guard size.width > 1, size.height > 1 else { return nil }
         KArt.square = true
         let now = Int(e.date.timeIntervalSince1970 * 1000)
-        return KArt.render(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, Int(size.width * scale), Int(size.height * scale), scale)
+        return KArt.render(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, Int(size.width * px), Int(size.height * px), px)
     }
 }
 

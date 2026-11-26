@@ -139,7 +139,6 @@ struct OnTimeWidgets: WidgetBundle {
         // the Android designs, drawn by the same art (0.31); they take the place of «الصلاة القادمة» here
         ArtWidgetsA().body
         ArtWidgetsB().body
-        TableWidget()
         LockWidget()
         DateWidget()
         AlarmNextWidget()
