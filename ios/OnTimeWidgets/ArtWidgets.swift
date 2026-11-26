@@ -64,7 +64,7 @@ struct ArtView: View {
     }
     private func shapes(_ size: CGSize) -> ARecorder? {
         guard size.width > 1, size.height > 1 else { return nil }
-        KArt.square = true
+        KArt.square = true; KArt.wall = true
         let now = Int(e.date.timeIntervalSince1970 * 1000)
         return KArt.record(e.type, ArtStore.style(e.type, e.fam), ArtStore.month(), now, size.width, size.height)
     }

@@ -40,6 +40,8 @@ enum KArt {
     static var dyn: [AInt]? = nil
     /// On the iPhone the system rounds the widget's corners itself: the cards are drawn square, edge to edge.
     static var square = false
+    /// No wallpaper behind a widget (the iPhone): what Android leaves see-through around the window's arch is filled (0.31.3).
+    static var wall = false
     /// The iPhone's widget sizes for each design ("s" small, "m" medium, "l" large), the first its own (0.31). The buttons and
     /// «صلواتي» wait for buttons that work inside the widget.
     static let IOS: [(String, [String])] = [("pano", ["m", "l"]), ("window", ["s"]), ("ring", ["s"]), ("orbit", ["m"]), ("script", ["m", "s"]),
@@ -399,6 +401,12 @@ enum KArt {
         // light, green or the phone's colours: a card behind the arch
         let framed = ["light", "dark", "navy", "dyn"].contains(x.style.bg)
         if framed { card(cv, x, x.dp(22), x.style.bg) }
+        else if wall {
+            // the iPhone: the same sky all round the arch, dimmed, as if seen from inside (it showed the app's green there)
+            let (t0, b0) = skyAt(x, x.sky), r = square ? 0 : x.dp(22)
+            cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, ap(paint()) { $0.shader = ALinear(0, 0, 0, x.h, t0, b0) })
+            cv.drawRoundRect(RectF(0, 0, x.w, x.h), r, r, paint(a(0.5, c("#0A101E"))))
+        }
         let s = min(x.w, x.h) * (framed ? 0.86 : 1), ox = (x.w - s) / 2, oy = (x.h - s) / 2 + (framed ? s * 0.04 : 0), k = s / 170
         func X0(_ v: CGFloat) -> CGFloat { ox + v * k }
         func Y0(_ v: CGFloat) -> CGFloat { oy + v * k }

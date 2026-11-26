@@ -16,7 +16,7 @@ import UniformTypeIdentifiers
               let arJ = all["ar"] as? [String: Any], let enJ = all["en"] as? [String: Any] else { print("usage: render wdata.json fonts out"); exit(1) }
         NSTimeZone.default = TimeZone(identifier: "Asia/Riyadh")!
         Typeface.dir = URL(fileURLWithPath: args[2])
-        KArt.square = true
+        KArt.square = true; KArt.wall = true
         let out = URL(fileURLWithPath: args[3]); try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let ar = KData(arJ), en = KData(enJ)
         let day = J(((arJ["days"] as? [Any]) ?? [])[1])!

@@ -32,7 +32,7 @@ enum ArtPreview {
         guard let a = (try? JSONSerialization.jsonObject(with: Data(arg.utf8))) as? [String: Any], let t = a["t"] as? String else { return "" }
         let sj = (a["s"] as? String).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) } as? [String: Any]
         let d = month(), sz = KArt.iosSize(KArt.IOS.first { $0.0 == t }?.1.first ?? "m"), k: CGFloat = 2
-        KArt.square = false
+        KArt.square = false; KArt.wall = true
         guard let img = KArt.render(t, style(t, sj, d?.o.optString("font")), d, Int(Date().timeIntervalSince1970 * 1000), Int(sz.width * k), Int(sz.height * k), k),
               let png = UIImage(cgImage: img).pngData() else { return "" }
         return "data:image/png;base64," + png.base64EncodedString()
