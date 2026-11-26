@@ -4,6 +4,7 @@
 import Foundation
 import CoreGraphics
 import ImageIO
+import CoreText
 import UniformTypeIdentifiers
 
 @main struct Render {
@@ -55,6 +56,20 @@ import UniformTypeIdentifiers
             png(KArt.render(t, KStyle.defaultFor(t, font), ar, asr, sz.w * 3, sz.h * 3, 3), "font-\(font)_\(t)"); n += 1 } }
         for t in KArt.TYPES { let sz = fam[t]![0].1
             png(KArt.render(t, KStyle.defaultFor(t), en, asr, sz.w * 3, sz.h * 3, 3), "en_\(t)"); n += 1 }
+        // a check of text placement: each string on its own baseline (the red line)
+        if let cv = Canvas(1400, 900) {
+            cv.drawRect(0, 0, 1400, 900, Paint(Color.WHITE))
+            let ss = ["بعد نحو 80 يوماً", "بعد نحو 80 يوما", "يوماً", "نحو 80", "اللهم بلّغنا رمضان", "In about 80 days"]
+            for (i, str) in ss.enumerated() {
+                let y = CGFloat(120 + i * 130)
+                cv.drawLine(0, y, 1400, y, ap(Paint(Color.parseColor("#FF0000"))) { $0.strokeWidth = 2 })
+                let p = Paint(Color.BLACK); p.typeface = Typeface("plex600"); p.textSize = 84; p.textAlign = .RIGHT
+                cv.drawText(str, 1350, y, p)
+                for ch: UInt16 in [0x064B, 0x0651] { var g: CGGlyph = 0; var c = ch; let has = CTFontGetGlyphsForCharacters(p.font, &c, &g, 1); print("plex600 has", String(ch, radix: 16), has) }
+                print(str, "runs:", (CTLineGetGlyphRuns(p.line(str)) as! [CTRun]).map { (CTRunGetAttributes($0) as NSDictionary)[kCTFontAttributeName] as! CTFont }.map { CTFontCopyPostScriptName($0) as String })
+            }
+            if let i = cv.image { png(i, "zz-text_check") }
+        }
         print("drew \(n) pictures in \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
         // the sheets: pictures at half their size (1.5×) in rows, each with its name over it, on grey
         let sd = out.appendingPathComponent("sheets"); try? FileManager.default.createDirectory(at: sd, withIntermediateDirectories: true)
