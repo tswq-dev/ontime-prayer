@@ -641,9 +641,11 @@ enum KArt {
         let ro = s * 0.42, ri = ro * 0.62, rm = (ro + ri) / 2, sw = ro - ri
         // the day's sky colours around the dial: midnight at the bottom, noon at the top
         let keys = skyKeys(x), d0 = KData.minuteOfDay(x.now), midnight = x.now - d0 * 60_000
-        let pts = keys.map { (CGFloat(($0.0 - midnight) / 60_000) / 1440, mix($0.1, $0.2, 0.5)) }.filter { $0.0 >= 0 && $0.0 <= 1 }.sorted { $0.0 < $1.0 }
+        var pts: [(CGFloat, AInt)] = []
+        for kk in keys { let f = CGFloat((kk.0 - midnight) / 60_000) / 1440; if f >= 0 && f <= 1 { pts.append((f, mix(kk.1, kk.2, 0.5))) } }
+        pts.sort { $0.0 < $1.0 }
         let night = c("#0E152C")
-        let pos = [CGFloat(0)] + pts.map { $0.0 } + [1], cols = [night] + pts.map { $0.1 } + [night]
+        let pos: [CGFloat] = [0] + pts.map { $0.0 } + [1], cols: [AInt] = [night] + pts.map { $0.1 } + [night]
         let sh = SweepGradient(cx, cy, cols, pos, rotate: 90, mirror: x.rtl)
         cv.drawCircle(cx, cy, rm, ap(paint()) { $0.style = .STROKE; $0.strokeWidth = sw; $0.shader = sh })
         // midnight at the bottom; Arabic turns counter-clockwise (morning on the right), English clockwise
@@ -692,9 +694,10 @@ enum KArt {
         let top = x.style.has("labels") ? 34 * u : 40 * u, bh = 18 * u, l = pad, r = w - pad, bw = r - l
         let midnight = x.now - KData.minuteOfDay(x.now) * 60_000
         func xAt(_ t: Int) -> CGFloat { let f = (CGFloat(t - midnight) / 60_000 / 1440).coerceIn(0, 1); return x.rtl ? r - bw * f : l + bw * f }
-        let keys = skyKeys(x).map { (CGFloat($0.0 - midnight) / 60_000 / 1440, mix($0.1, $0.2, 0.55)) }.filter { $0.0 >= 0 && $0.0 <= 1 }
-        let pos = [CGFloat(0)] + keys.map { $0.0 } + [1], night = c("#0E152C")
-        let cols = [night] + keys.map { $0.1 } + [night]
+        var keys: [(CGFloat, AInt)] = []
+        for kk in skyKeys(x) { let f = CGFloat(kk.0 - midnight) / 60_000 / 1440; if f >= 0 && f <= 1 { keys.append((f, mix(kk.1, kk.2, 0.55))) } }
+        let night = c("#0E152C")
+        let pos: [CGFloat] = [0] + keys.map { $0.0 } + [1], cols: [AInt] = [night] + keys.map { $0.1 } + [night]
         let grad = x.rtl ? LinearGradient(r, 0, l, 0, cols, pos) : LinearGradient(l, 0, r, 0, cols, pos)
         cv.drawRoundRect(RectF(l, top, r, top + bh), bh / 2, bh / 2, ap(paint()) { $0.shader = grad })
         let lp = ap(tp(x, x.plex, 9.5, x.st.sub)) { $0.textSize = 9.5 * u }
