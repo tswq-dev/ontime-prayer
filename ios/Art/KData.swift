@@ -42,7 +42,7 @@ final class KData {
         days = (o.optJSONArray("days") ?? []).compactMap { J($0) }
         fri = o.optInt("fri", 1) == 1
         since = o.optString("ia") == "since"
-        appCf = { switch o.optString("count") { case "hms", "hmc": return "clock"; case "m": return "m"; case "text": return "text"; default: return "hm" } }()
+        switch J(j).optString("count") { case "hms", "hmc": appCf = "clock"; case "m": appCf = "m"; case "text": appCf = "text"; default: appCf = "hm" }
     }
     static func load(_ data: Data?) -> KData? {
         guard let d = data, let j = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return nil }
