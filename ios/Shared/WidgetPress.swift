@@ -111,6 +111,20 @@ struct WidgetPressIntent: LiveActivityIntent {
     }
 }
 
+/// «صلّيت» and the circles of «صلواتي اليوم» (0.33.1): a plain intent, run by the widget itself so the mark shows at once (through
+/// the app it took seconds); the app cancels that prayer's reminders from the waiting list when it next opens.
+struct WidgetMarkIntent: AppIntent {
+    static var title: LocalizedStringResource = "Widget mark"
+    static var isDiscoverable: Bool = false
+    @Parameter(title: "which") var which: String
+    init() { which = "" }
+    init(_ which: String) { self.which = which }
+    func perform() async throws -> some IntentResult {
+        await WidgetPress.run(which)
+        return .result()
+    }
+}
+
 enum WidgetPress {
     /// Set by the app when it starts: what only the app can do after a press ("prayed|<pk>", "remind|<json>", "unremind|<pk>",
     /// "rebuild"). Without it (run in the extension) the step waits in the group for the app to open.

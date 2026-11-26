@@ -86,7 +86,14 @@ struct ArtView: View {
 struct ArtButtons: View {
     let type: String, size: CGSize, rtl: Bool
     private func hit(_ which: String, _ r: CGRect) -> some View {
-        Button(intent: WidgetPressIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
+        Group {
+            // the marks in the widget itself (at once); muting and reminding through the app, where the notifications are
+            if which == "pray" || which.hasPrefix("p") && which.count == 2 {
+                Button(intent: WidgetMarkIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
+            } else {
+                Button(intent: WidgetPressIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
+            }
+        }
             .buttonStyle(.plain)
             .frame(width: r.width, height: r.height)
             .position(x: r.midX, y: r.midY)
