@@ -92,7 +92,7 @@ def page():
     for _ in range(10):
         try:
             tabs = json.loads(urllib.request.urlopen('http://127.0.0.1:9222/json', timeout=5).read())
-            t = [t for t in tabs if t.get('type') == 'page']
+            t = [t for t in tabs if t.get('type') == 'page' and 'about:blank' not in t.get('url', '')]
             if t:
                 _ws = websocket.create_connection(t[0]['webSocketDebuggerUrl'], timeout=20, suppress_origin=True)
                 return _ws
@@ -186,8 +186,12 @@ def main():
         ash('monkey -p %s -c android.intent.category.LAUNCHER 1' % PKG); time.sleep(8)
         if ash('pidof ' + PKG) and PKG in ash('dumpsys window | grep mCurrentFocus'): break
     shot('first-open', 'The app as it first opens.')
-    ok = page() is not None
-    note('- the page reached through DevTools: %s, title: %s' % (ok, js('document.title')))
+    ok, title = False, ''
+    for _ in range(15):
+        ok = page() is not None; title = js('document.title') or ''
+        if ok and title: break
+        time.sleep(3)
+    note('- the page reached through DevTools: %s, title: %s' % (ok, title))
     time.sleep(4)
     seen = set(); seen_txt = {}
     for i in range(40):
