@@ -177,9 +177,11 @@ def main():
     note('- the day: %s, Makkah: %s' % (day, t))
     set_clock(hm('dhuhr') - timedelta(minutes=50))
     adb('install -r -g ' + APK, check=True, timeout=180)
-    note('- installed (all permissions granted by the installer except the ones the app asks for itself)')
-    ash('pm revoke %s android.permission.POST_NOTIFICATIONS' % PKG)
-    ash('pm revoke %s android.permission.ACCESS_FINE_LOCATION' % PKG); ash('pm revoke %s android.permission.ACCESS_COARSE_LOCATION' % PKG)
+    # the system's own permission dialogs are Google's: granted here, as a user who says yes would
+    for pm in ['POST_NOTIFICATIONS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']: ash('pm grant %s android.permission.%s' % (PKG, pm))
+    ash('dumpsys deviceidle whitelist +' + PKG)
+    for op in ['SCHEDULE_EXACT_ALARM', 'USE_FULL_SCREEN_INTENT']: ash('appops set %s %s allow' % (PKG, op))
+    note('- installed, with notifications, location, exact alarms, full-screen and no battery limit allowed')
 
     # 1. first opening, as a new user: through every screen of the welcome and the setup, a picture of each
     for _ in range(5):
@@ -210,9 +212,6 @@ def main():
         if 'منبّه للفجر' in txt and 'alarm' not in seen:
             seen.add('alarm'); click(r'^عند الأذان$'); shot('setup-alarm', 'The Fajr alarm step: chose «عند الأذان».\n\n```\n' + txt[:600] + '\n```')
         # a request to allow something: allow it, as most users do
-        r = click(r'^(اسمح بالتنبيهات|السماح بالعمل في الخلفية|اسمح بالموقع|استخدم موقعي)$', wait=1)
-        if r:
-            shot('setup', 'On screen:\n```\n' + txt[:700] + '\n```\nTapped: ' + r); continue
         r = click(r'^(التالي|ابدأ|متابعة|موافق|تم|سماح|اسمح|السماح|نعم|حسناً|ابدأ الآن|Next|Start|OK|Done|Allow)$', wait=2)
         shot('setup', 'On screen:\n```\n' + txt[:700] + '\n```\nTapped: ' + str(r))
         if not r:
