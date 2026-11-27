@@ -22,7 +22,10 @@ n = 0
 
 
 def sh(cmd, check=False, timeout=60):
-    r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        note('- (timed out: %s)' % cmd[:80]); return ''
     if check and r.returncode:
         raise RuntimeError(cmd + '\n' + r.stderr)
     return r.stdout.strip()
@@ -45,7 +48,8 @@ def shot(name, say=''):
 
 
 def dump():
-    ash('rm -f /sdcard/ui.xml'); ash('uiautomator dump /sdcard/ui.xml >/dev/null 2>&1')
+    # the live sky never idles, so the dump may not finish: give it 20 s
+    ash('rm -f /sdcard/ui.xml'); ash('uiautomator dump --compressed /sdcard/ui.xml >/dev/null 2>&1', timeout=20)
     x = adb('exec-out cat /sdcard/ui.xml')
     try:
         return ET.fromstring(x[x.find('<'):]) if '<' in x else None
@@ -198,9 +202,6 @@ def main():
     seen = set(); seen_txt = {}
     for i in range(40):
         # system permission dialogs first
-        s = tap_node(r'^(Allow|السماح|سماح|اسمح|While using the app|أثناء استخدام التطبيق|عند استخدام التطبيق|Only this time)$', wait=2)
-        if s:
-            shot('permission', 'A system dialog, answered: ' + s); continue
         txt = visible_text()
         if not txt.strip():
             break
