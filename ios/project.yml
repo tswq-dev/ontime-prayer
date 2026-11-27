@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.33.1"
-    CURRENT_PROJECT_VERSION: "45"
+    MARKETING_VERSION: "0.34.0"
+    CURRENT_PROJECT_VERSION: "46"
 targets:
   OnTime:
     type: application
@@ -58,6 +58,9 @@ targets:
           UIColorName: LaunchBg
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [audio, fetch]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.itqan.ontime
+            CFBundleURLSchemes: [ontime]
         BGTaskSchedulerPermittedIdentifiers: [com.itqan.ontime.refresh]
         NSLocationWhenInUseUsageDescription: نحدد مدينتك من موقعك لنحسب أوقات الصلاة بدقة. الموقع يبقى على جوالك.
         # real alarms (iOS 26, AlarmKit): the user's prayer alarms and the adhan on silent; the snooze counts down as a Live Activity

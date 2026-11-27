@@ -12,6 +12,8 @@ struct OnTimeApp: App {
                 .ignoresSafeArea()
                 // the adhan, when its notification is tapped or it comes while the app is open
                 .fullScreenCover(item: $state.adhan) { a in AdhanScreen(adhan: a) }
+                // a widget set to «تعديل هذا الويدجت» (0.34)
+                .onOpenURL { u in if u.scheme == "ontime", u.host == "w", let t = u.pathComponents.last, t != "/" { WebViewController.shared.openFrom("w:" + t) } }
         }
         .onChange(of: phase) { _, p in
             if p == .background { AppDelegate.planRefresh() }

@@ -1,6 +1,7 @@
 import Foundation
 import AppIntents
 import WidgetKit
+import UserNotifications
 
 /// «صلّيت» marks, «كتم الأذان القادم» and the reminders set (0.33), kept in the App Group so the widgets «بأزرار» and
 /// «صلواتي اليوم» show them and their buttons can change them. A mark is a bit per prayer for each day (Fajr = 1), as on Android.
@@ -66,6 +67,12 @@ enum PrayMarks {
         set { var o = load(); o["rem"] = newValue; save(o) }
     }
 
+    /// Whether the widget sees the app's notifications (0.34): then muting and reminding are done by the widget itself, at once.
+    static var extNotes: Bool {
+        get { (load()["ext"] as? Bool) ?? false }
+        set { if extNotes != newValue { var o = load(); o["ext"] = newValue; save(o) } }
+    }
+
     /// The prayer whose time we are in (the five only), for «صلّيت».
     static func current(_ d: KData, _ now: Int) -> String? {
         guard let cur = d.current(now), PRAY.contains(cur.k) else { return nil }
@@ -79,7 +86,7 @@ enum PrayMarks {
         guard let ex = d.day(start)?.optJSONObject("ex")?.optJSONArray(k) as? [[String: Any]],
               ex.contains(where: { (($0["at"] as? NSNumber)?.intValue ?? 0) > now }) else { return nil }
         return ["pk": pk(k, start), "key": k, "title": d.name(k), "ex": ex, "lang": d.ar ? "ar" : "en", "dg": d.arabDigits ? 1 : 0,
-                "f12": d.h12 ? 1 : 0, "mins": d.o.optInt("mins", 20), "rs": d.o.optString("rs", "speak"), "xspk": "spk_exit_" + k]
+                "f12": d.h12 ? 1 : 0, "mins": d.o.optInt("wrm", 0) > 0 ? d.o.optInt("wrm", 0) : d.o.optInt("mins", 20), "rs": d.o.optString("rs", "speak"), "xspk": "spk_exit_" + k]
     }
 
     /// What the buttons widget shows now.
@@ -88,7 +95,7 @@ enum PrayMarks {
         let pk = current(d, now), rt = remindTarget(d, now)
         let rp = rt?["pk"] as? String ?? ""
         return KArt.Btns(prayed: pk.map(has) ?? false, muted: d.next(now).map { mute == $0.at } ?? false,
-                         reminded: rt != nil && (rem[rp] ?? 0) > now, canPray: pk != nil, canRemind: rt != nil)
+                         reminded: rt != nil && (rem[rp] ?? 0) > now, canPray: pk != nil, canRemind: rt != nil, remAt: rem[rp] ?? 0)
     }
     /// What «صلواتي اليوم» shows now.
     static func marks(_ d: KData?, _ now: Int) -> KArt.Marks {
@@ -148,13 +155,32 @@ enum WidgetPress {
                 }
             }
         case "mute":
-            if let nx = d.next(now) { PrayMarks.mute = PrayMarks.mute == nx.at ? 0 : nx.at; fx = "rebuild" }
+            if let nx = d.next(now) {
+                let on = PrayMarks.mute != nx.at
+                PrayMarks.mute = on ? nx.at : 0; fx = "rebuild"
+                // in the widget: that adhan's notification comes quietly now; the app redoes it all when it next runs
+                if handler == nil && on { await quiet(nx.at) }
+            }
         case "remind":
             if let rt = PrayMarks.remindTarget(d, now), let pk = rt["pk"] as? String {
-                if (PrayMarks.rem[pk] ?? 0) > now { var r = PrayMarks.rem; r[pk] = nil; PrayMarks.rem = r; fx = "unremind|" + pk }
-                else if let j = try? JSONSerialization.data(withJSONObject: rt), let s = String(data: j, encoding: .utf8) {
-                    // shown as set at once; the app puts the reminder in
-                    var r = PrayMarks.rem; r[pk] = now + 3_600_000; PrayMarks.rem = r; fx = "remind|" + s
+                let c = UNUserNotificationCenter.current()
+                if (PrayMarks.rem[pk] ?? 0) > now {
+                    var r = PrayMarks.rem; r[pk] = nil; PrayMarks.rem = r; fx = "unremind|" + pk
+                    if handler == nil { c.removePendingNotificationRequests(withIdentifiers: ["rem:" + pk]) }
+                } else if let j = try? JSONSerialization.data(withJSONObject: rt), let s = String(data: j, encoding: .utf8) {
+                    let mins = rt["mins"] as? Int ?? 20
+                    let ex = (rt["ex"] as? [[String: Any]] ?? []).first { (($0["at"] as? NSNumber)?.intValue ?? 0) > now }
+                    let xa = (ex?["at"] as? NSNumber)?.intValue ?? now, at = max(now + 3_000, xa - mins * 60_000)
+                    var r = PrayMarks.rem; r[pk] = at; PrayMarks.rem = r; fx = "remind|" + s
+                    // in the widget: a plain reminder at once; the app puts its own in its place when it next runs
+                    if handler == nil {
+                        let ar = d.ar, n = UNMutableNotificationContent(), left = max(1, (xa - at + 30_000) / 60_000)
+                        n.title = ar ? "باقي \(d.digits(String(left))) دقيقة: \(ex?["name"] as? String ?? "")" : "\(left) min left: \(ex?["name"] as? String ?? "")"
+                        n.body = (ex?["name"] as? String ?? "") + " " + (ex?["clock"] as? String ?? "")
+                        n.sound = .default; n.categoryIdentifier = "REM"; n.interruptionLevel = .timeSensitive
+                        let tr = UNTimeIntervalNotificationTrigger(timeInterval: max(1, Double(at - now) / 1000), repeats: false)
+                        try? await c.add(UNNotificationRequest(identifier: "rem:" + pk, content: n, trigger: tr))
+                    }
                 }
             }
         default: break
@@ -163,6 +189,17 @@ enum WidgetPress {
             if let h = handler { await h(fx) } else { wait(fx) }
         }
         reload()
+    }
+
+    /// The adhan at [at]: its notification without a sound (copied in place, same id).
+    static func quiet(_ at: Int) async {
+        let c = UNUserNotificationCenter.current()
+        for r in await c.pendingNotificationRequests() where r.content.categoryIdentifier == "ADHAN" || ((r.content.userInfo["ev"] as? String) ?? "").contains("\"kind\":\"adhan\"") {
+            let t = (r.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? (r.trigger as? UNTimeIntervalNotificationTrigger)?.nextTriggerDate()
+            guard let t, abs(Int(t.timeIntervalSince1970 * 1000) - at) <= 60_000, let m = r.content.mutableCopy() as? UNMutableNotificationContent else { continue }
+            m.sound = nil
+            try? await c.add(UNNotificationRequest(identifier: r.identifier, content: m, trigger: r.trigger))
+        }
     }
 
     static func reload() {

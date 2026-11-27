@@ -12,7 +12,10 @@ enum LiveNext {
             for a in acts { Task { await a.end(nil, dismissalPolicy: .immediate) } }
             return
         }
-        let content = ActivityContent(state: NextPrayerAttributes.ContentState(name: n.name, at: n.at, clock: n.clock), staleDate: n.at)
+        let ls = LockStyle(w["lk"] as? [String: Any])
+        let content = ActivityContent(state: NextPrayerAttributes.ContentState(name: ls.name(n.name), at: n.at, clock: n.clock, font: ls.font, theme: ls.theme,
+                                                                               showTime: ls.show.contains("time"), showCount: ls.show.contains("count"), showCity: ls.show.contains("city")),
+                                      staleDate: n.at)
         if let a = acts.first {
             Task { await a.update(content) }
             for b in acts.dropFirst() { Task { await b.end(nil, dismissalPolicy: .immediate) } }

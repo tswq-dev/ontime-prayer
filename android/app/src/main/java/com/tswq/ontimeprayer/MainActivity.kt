@@ -265,9 +265,14 @@ class MainActivity : ComponentActivity() {
         }
         // the privacy page, in the phone's browser (the app itself has no internet permission); only our own site
         @JavascriptInterface fun openUrl(u: String) {
-            if (!u.startsWith("https://ontime-prayer.pages.dev/")) return
-            main.post { runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            // the site, and «تواصل معنا» (0.34): the support mail and WhatsApp
+            if (!u.startsWith("https://ontime-prayer.pages.dev/") && !u.startsWith("mailto:itqan1.dev@gmail.com") && !u.startsWith("https://wa.me/")) return
+            main.post { runCatching { startActivity(Intent(if (u.startsWith("mailto:")) Intent.ACTION_SENDTO else Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
         }
+        /** For «تواصل معنا»: the app's version and the phone, to put in the message (0.34). */
+        @JavascriptInterface fun appInfo(): String = runCatching {
+            "${packageManager.getPackageInfo(packageName, 0).versionName} · Android ${Build.VERSION.RELEASE} · ${Build.MANUFACTURER} ${Build.MODEL}"
+        }.getOrDefault("")
         @JavascriptInterface fun soundName(voice: String): String =
             Scheduler.prefs(applicationContext).getString("soundName_$voice", "") ?: ""
         @JavascriptInterface fun clearSound(voice: String) {

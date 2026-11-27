@@ -458,8 +458,9 @@ struct LockView: View {
 
     var body: some View {
         Group {
-            if let d = e.data, let h = d.hero(e.date) {
-                lock(d, h)
+            // with «الإقامة» off the count goes straight to the next prayer (0.34)
+            if let d = e.data, let h = LockStyle.current().show.contains("iqama") ? d.hero(e.date) : d.next(e.date) {
+                lock(d, h, LockStyle.current())
                     .environment(\.layoutDirection, d.en ? .leftToRight : .rightToLeft)
                     .environment(\.locale, d.locale)
             } else {
@@ -470,27 +471,30 @@ struct LockView: View {
     }
 
     @ViewBuilder
-    func lock(_ d: WData, _ h: WData.Hero) -> some View {
+    func lock(_ d: WData, _ h: WData.Hero, _ ls: LockStyle) -> some View {
+        let nm = ls.name(d.name(h.k)), tm = ls.show.contains("time"), cn = ls.show.contains("count")
         switch family {
         case .accessoryInline:
-            Text(d.name(h.k) + " " + d.clock(h.at))
+            Text(nm + (tm || !cn ? " " + d.clock(h.at) : ""))
         case .accessoryCircular:
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
-                    Text(d.name(h.k)).font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
-                    Text(d.clock(h.at, mer: false)).font(.system(size: 15, weight: .bold)).minimumScaleFactor(0.6).widgetAccentable()
+                    Text(nm).font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.5)
+                    if tm || !cn { Text(d.clock(h.at, mer: false)).font(.system(size: 15, weight: .bold)).minimumScaleFactor(0.6).widgetAccentable() }
+                    else { Countdown(from: e.date, to: h.target, style: .timer).font(.system(size: 12, weight: .semibold)).minimumScaleFactor(0.5).widgetAccentable() }
                 }
                 .padding(4)
             }
         default:
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(d.name(h.k)).font(.system(size: 16, weight: .bold)).widgetAccentable()
-                    Text(d.clock(h.at)).font(.system(size: 15, weight: .semibold))
+                    Text(nm).font(.system(size: 16, weight: .bold)).lineLimit(1).minimumScaleFactor(0.6).widgetAccentable()
+                    if tm || !cn { Text(d.clock(h.at)).font(.system(size: 15, weight: .semibold)) }
                 }
-                Countdown(from: e.date, to: h.target, style: .timer).font(.system(size: 14, weight: .medium))
-                if let day = d.day(e.date) { Text(d.hijri(day)).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
+                if cn { Countdown(from: e.date, to: h.target, style: .timer).font(.system(size: 14, weight: .medium)) }
+                let low = [ls.show.contains("hijri") ? d.day(e.date).map { d.hijri($0) } ?? "" : "", ls.show.contains("city") ? (ArtStore.month()?.city ?? "") : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+                if !low.isEmpty { Text(low).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

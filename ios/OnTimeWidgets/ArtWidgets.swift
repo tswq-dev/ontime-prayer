@@ -1,4 +1,5 @@
 import WidgetKit
+import UserNotifications
 import SwiftUI
 
 // The Android widgets on the iPhone (0.31): each design drawn by the same art as Android (ios/Art, KArt = WidgetArt.kt)
@@ -50,8 +51,15 @@ struct ArtProvider: TimelineProvider {
         let f = Self.fam(context.family), now = Date()
         let m0 = Calendar.current.dateInterval(of: .minute, for: now)?.start ?? now
         var es = [ArtEntry(date: now, type: type, fam: f)]
-        for i in 1...60 { es.append(ArtEntry(date: m0.addingTimeInterval(Double(i) * 60), type: type, fam: f)) }
-        completion(Timeline(entries: es, policy: .atEnd))
+        // the two with buttons redraw after each press: a quarter of an hour, so a press shows sooner (0.34)
+        let n = type == "actions" || type == "prayed" ? 15 : 60
+        for i in 1...n { es.append(ArtEntry(date: m0.addingTimeInterval(Double(i) * 60), type: type, fam: f)) }
+        guard type == "actions" else { completion(Timeline(entries: es, policy: .atEnd)); return }
+        // whether the widget sees the app's notifications: then its mute and remind buttons work in it, at once (0.34)
+        UNUserNotificationCenter.current().getPendingNotificationRequests { r in
+            PrayMarks.extNotes = !r.isEmpty
+            completion(Timeline(entries: es, policy: .atEnd))
+        }
     }
 }
 
@@ -65,6 +73,8 @@ struct ArtView: View {
             // the buttons of «بأزرار» and the circles of «صلواتي اليوم» work in the widget (0.33)
             if e.type == "actions" || e.type == "prayed" { ArtButtons(type: e.type, size: g.size, rtl: ArtStore.month()?.ar ?? true) }
         }
+        // «تعديل هذا الويدجت» (0.34): a tap opens the app on this design's editor
+        .widgetURL(ArtStore.style(e.type, e.fam).tap == "edit" ? URL(string: "ontime://w/" + e.type) : nil)
         .containerBackground(for: .widget) {
             // the design covers it; seen only behind the arch of «النافذة», in the app's green
             LinearGradient(colors: [Color(red: 0.067, green: 0.349, blue: 0.290), Color(red: 0.039, green: 0.220, blue: 0.173)], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -88,7 +98,7 @@ struct ArtButtons: View {
     private func hit(_ which: String, _ r: CGRect) -> some View {
         Group {
             // the marks in the widget itself (at once); muting and reminding through the app, where the notifications are
-            if which == "pray" || which.hasPrefix("p") && which.count == 2 {
+            if which == "pray" || which.hasPrefix("p") && which.count == 2 || PrayMarks.extNotes {
                 Button(intent: WidgetMarkIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
             } else {
                 Button(intent: WidgetPressIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }

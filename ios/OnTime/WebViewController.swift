@@ -78,7 +78,14 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                 "textPct": Self.textPct(),
                 "alarmKit": Alarms.supported, "alarmAuth": Alarms.auth(), "alarmState": Alarms.state(),
                 "pendingOpen": d.string(forKey: "pendingOpen") ?? "",
-                "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""]
+                "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
+                // for «تواصل معنا» (0.34)
+                "device": "iOS \(UIDevice.current.systemVersion) · \(Self.model())"]
+    }
+
+    static func model() -> String {
+        var u = utsname(); uname(&u)
+        return withUnsafeBytes(of: &u.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
     }
 
     func pushState() {

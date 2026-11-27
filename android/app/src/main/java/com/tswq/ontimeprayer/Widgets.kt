@@ -195,7 +195,7 @@ object WidgetUpdater {
         val ex = d.day(start)?.optJSONObject("ex")?.optJSONArray(k) ?: return null
         return JSONObject().put("pk", pkOf(k, start)).put("key", k).put("title", d.name(k)).put("ex", ex)
             .put("lang", if (d.ar) "ar" else "en").put("dg", if (d.arabDigits) 1 else 0).put("f12", if (d.h12) 1 else 0)
-            .put("mins", d.o.optInt("mins", 20)).put("rs", d.o.optString("rs", "speak")).put("rring", d.o.optInt("rring", 0)).put("xspk", "spk_exit_$k")
+            .put("mins", d.o.optInt("wrm", 0).takeIf { it > 0 } ?: d.o.optInt("mins", 20)).put("rs", d.o.optString("rs", "speak")).put("rring", d.o.optInt("rring", 0)).put("xspk", "spk_exit_$k")
             .takeIf { Exits.next(it, now) != null }
     }
 
@@ -207,6 +207,7 @@ object WidgetUpdater {
             prayed = pk != null && Prayed.has(ctx, pk),
             muted = nx != null && Scheduler.prefs(ctx).getLong("muteNext", 0) == nx.at,
             reminded = rt != null && Reminders.find(ctx, rt.optString("pk")) != null,
+            remAt = rt?.let { Reminders.find(ctx, it.optString("pk"))?.optLong("at") } ?: 0L,
             canPray = pk != null, canRemind = rt != null)
     }
 

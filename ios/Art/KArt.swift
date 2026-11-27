@@ -286,7 +286,7 @@ enum KArt {
 
     // ---------- entry ----------
     /// The states of the buttons widget: done (✓) or not, and whether there is anything to do.
-    struct Btns { var prayed = false, muted = false, reminded = false, canPray = true, canRemind = true }
+    struct Btns { var prayed = false, muted = false, reminded = false, canPray = true, canRemind = true, remAt = 0 }
 
     static func render(_ type: String, _ style: KStyle, _ d: KData?, _ now: Int, _ wPx: Int, _ hPx: Int, _ dpPx: CGFloat, _ fonts: KFonts = .shared, btns: Btns = Btns()) -> CGImage? {
         guard let cv = ACanvas(wPx, hPx) else { return nil }
@@ -814,7 +814,7 @@ enum KArt {
         let labels = [
             b.prayed ? "✓ " + (x.d.ar ? "صلّيت" : "Prayed") : (x.d.ar ? "صلّيت" : "I prayed"),
             b.muted ? "✓ " + (x.d.ar ? "الأذان مكتوم" : "Muted") : (x.d.ar ? "كتم الأذان القادم" : "Mute next adhan"),
-            b.reminded ? "✓ " + (x.d.ar ? "سنذكّرك" : "Reminder set") : (x.d.ar ? "ذكّرني قبل خروج الوقت" : "Remind before it ends")]
+            b.reminded ? "✓ " + (x.d.ar ? "سنذكّرك" : "Reminder") + (b.remAt > 0 ? " " + x.d.clock(b.remAt) + (x.d.ampm(b.remAt).isEmpty ? "" : " " + x.d.ampm(b.remAt)) : "") : (x.d.ar ? "ذكّرني قبل خروج الوقت" : "Remind before it ends")]
         let on = [b.canPray || b.prayed, true, b.canRemind || b.reminded]
         let top = h * BTN_TOP, bh = h - top - pad, gap = x.dp(8), bw = (w - 2 * pad - 2 * gap) / 3
         for i in 0...2 {
@@ -1252,11 +1252,12 @@ enum KArt {
         let g0 = dd.optString("gr").isEmpty ? dd.optString("d") : dd.optString("gr"), greg = x.d.digits(g0) + (ar && !g0.isEmpty ? "م" : "")
         let wide = isWide(x), s = min(x.w, x.h), k = s / 150, pad = max(14 * k, kSafe(x)), room = x.w - 2 * pad
         var ls: [(String, APaint, Bool)] = []   // text, paint, stretched
-        // the city on top, small (0.33)
-        if x.style.has("city") && !x.d.city.isEmpty { ls.append((x.d.city, ap(tp(x, x.plexB, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }
         if x.style.has("wd") { ls.append((dd.optString("wd"), ap(tp(x, x.nameTf, 1, x.st.fg)) { $0.textSize = wide ? x.h * 0.36 : 38 * k }, true)) }
         if x.style.has("hijri") { ls.append((hij, ap(tp(x, x.nameTf, 1, x.st.light ? c("#0B4D3B") : x.st.acc)) { $0.textSize = wide ? x.h * 0.17 : 17 * k }, false)) }
-        if x.style.has("greg") && !g0.isEmpty { ls.append((greg, ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }
+        // the city beside the Gregorian date, as on the lock screen (0.34; it was a line on top in 0.33)
+        let city = x.style.has("city") && !x.d.city.isEmpty ? x.d.city : ""
+        let gl = [x.style.has("greg") ? greg : "", city].filter { !$0.isEmpty }.joined(separator: " · ")
+        if !gl.isEmpty && (!g0.isEmpty || !city.isEmpty) { ls.append((gl, ap(tp(x, x.plex, 1, x.st.sub)) { $0.textSize = wide ? x.h * 0.12 : 12.5 * k }, false)) }
         if ls.isEmpty { return }
         for l in ls { fit(l.1, l.0, room) }
         let gap: CGFloat = 0.28, tot = ls.reduce(CGFloat(0)) { $0 + $1.1.textSize } + CGFloat(ls.count - 1) * ls[0].1.textSize * gap

@@ -297,7 +297,7 @@ object WidgetArt {
         return bmp
     }
     /** The states of the buttons widget: done (✓) or not, and whether there is anything to do. */
-    data class Btns(val prayed: Boolean = false, val muted: Boolean = false, val reminded: Boolean = false, val canPray: Boolean = true, val canRemind: Boolean = true)
+    data class Btns(val prayed: Boolean = false, val muted: Boolean = false, val reminded: Boolean = false, val canPray: Boolean = true, val canRemind: Boolean = true, val remAt: Long = 0L)
 
     fun renderActions(style: WStyle, d: WData?, now: Long, wPx: Int, hPx: Int, dpPx: Float, fonts: WFonts, b: Btns): Bitmap {
         d?.let { it.cf = style.cf.ifEmpty { it.appCf }; it.dhuhrDay = (it.next(now)?.let { nx -> it.day(nx.at) } ?: it.day(now))?.optLong("dhuhr") ?: now }
@@ -768,7 +768,7 @@ object WidgetArt {
         val labels = listOf(
             if (b.prayed) "✓ " + (if (x.d.ar) "صلّيت" else "Prayed") else (if (x.d.ar) "صلّيت" else "I prayed"),
             if (b.muted) "✓ " + (if (x.d.ar) "الأذان مكتوم" else "Muted") else (if (x.d.ar) "كتم الأذان القادم" else "Mute next adhan"),
-            if (b.reminded) "✓ " + (if (x.d.ar) "سنذكّرك" else "Reminder set") else (if (x.d.ar) "ذكّرني قبل خروج الوقت" else "Remind before it ends"))
+            if (b.reminded) "✓ " + (if (x.d.ar) "سنذكّرك" else "Reminder") + (if (b.remAt > 0) " " + x.d.clock(b.remAt) + (x.d.ampm(b.remAt).let { if (it.isEmpty()) "" else " $it" }) else "") else (if (x.d.ar) "ذكّرني قبل خروج الوقت" else "Remind before it ends"))
         val on = listOf(b.canPray || b.prayed, true, b.canRemind || b.reminded)
         val top = h * BTN_TOP; val bh = h - top - pad; val gap = x.dp(8f); val bw = (w - 2 * pad - 2 * gap) / 3
         for (i in 0..2) {

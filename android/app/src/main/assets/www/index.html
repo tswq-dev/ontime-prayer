@@ -16,6 +16,8 @@
 *{box-sizing:border-box}
 /* 0.33.1: an app, not a page: no text selection, no long-press menu, no tap flash; the fields stay as they are */
 *{-webkit-tap-highlight-color:transparent}
+#supBox .supT{font-weight:inherit}
+#supBox button.opt{width:100%;background:none;border:0;font:inherit;color:inherit;text-align:start;cursor:pointer}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 html,body{margin:0;height:100%}
@@ -143,8 +145,9 @@ body[data-font="naskh"] .hero .name{font-family:"Amiri",serif;font-weight:700;fo
 .sheet{position:absolute;left:0;right:0;bottom:0;max-height:62%;overflow-y:auto;background:var(--sheet);border-radius:28px 28px 0 0;padding:8px 20px 28px;transform:translateY(105%);transition:transform .35s cubic-bezier(.3,.9,.3,1);z-index:6;box-shadow:0 -10px 40px rgba(0,0,0,.12)}
 .sheet.tall{max-height:80%}
 /* the quick setup's «ما يظهر في الشاشة»: the card at the top, the screen under it in view (0.32) */
-.sheet.top{top:0;bottom:auto;max-height:54%;border-radius:0 0 28px 28px;padding:calc(10px + env(safe-area-inset-top, 0px)) 18px 12px;transform:translateY(-105%);display:flex;flex-direction:column;overflow:hidden}
-.sheet.top.show{transform:none}
+/* 0.34: in the middle, a card of the tour (it was against the top) */
+.sheet.top{top:50%;bottom:auto;left:12px;right:12px;width:auto;max-height:52%;border-radius:28px;padding:12px 18px 12px;transform:translateY(-40%) scale(.96);opacity:0;transition:transform .3s,opacity .3s;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.sheet.top.show{transform:translateY(-50%);opacity:1}
 .sheet.top .grab,.sheet.top #tourSkip{display:none}
 .sheet.top #tourBody{min-height:0;flex:1;overflow-y:auto}
 .sheet.top #tourBody h2{font-size:19px;margin-bottom:2px}
@@ -652,10 +655,16 @@ html.ios #fsOpt{display:none}
       <button class="srow" data-p="scr"><span class="sic" id="sic_scr"></span><span class="vn"><b id="sT_scr"></b><span id="sS_scr"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button class="srow" data-p="adh"><span class="sic" id="sic_adh"></span><span class="vn"><b id="sT_adh"></b><span id="sS_adh"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button class="srow iosonly" data-p="iw" id="iwRow" hidden style="display:none"><span class="sic" id="sic_iw"></span><span class="vn"><b id="sT_iw"></b><span id="sS_iw"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <button class="srow" data-p="alm" id="almRow"><span class="sic" id="sic_alm"></span><span class="vn"><b id="sT_alm"></b><span id="sS_alm"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="srow" data-p="alm" id="almRow" hidden style="display:none"><span class="sic" id="sic_alm"></span><span class="vn"><b id="sT_alm"></b><span id="sS_alm"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button class="srow" data-p="date"><span class="sic" id="sic_date"></span><span class="vn"><b id="sT_date"></b><span id="sS_date"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button class="srow" data-p="look"><span class="sic" id="sic_look"></span><span class="vn"><b id="sT_look"></b><span id="sS_look"></span></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       </div>
+    <div class="grp">تواصل معنا</div>
+    <div class="box" id="supBox">
+      <button type="button" class="opt" data-sup="bug"><div><b class="supT">أرسل مشكلة</b><small class="optsub">بالبريد، ومعها رقم النسخة ونوع الجوال</small></div><span class="chev">‹</span></button>
+      <button type="button" class="opt" data-sup="idea"><div><b class="supT">اقترح فكرة</b><small class="optsub">بالبريد</small></div><span class="chev">‹</span></button>
+      <button type="button" class="opt" data-sup="wa" hidden><div><b class="supT">واتساب</b><small class="optsub">محادثة مباشرة</small></div><span class="chev">‹</span></button>
+    </div>
     <button class="flink" id="tourAgain" style="display:block;margin:6px 0 0">شاهد الجولة التعريفية</button>
     <button class="flink" id="privLink" style="display:block;margin:0">سياسة الخصوصية</button>
     </div>
@@ -776,6 +785,7 @@ html.ios #fsOpt{display:none}
     <div class="grp">كتم الجوال من الإقامة</div>
     <div class="seg" id="segSil"></div>
     <div class="numrow" id="silRow"><label for="silNum">عدد دقائق الكتم</label><input id="silNum" type="text" inputmode="numeric" autocomplete="off" min="1" max="120"></div>
+    <p class="note" id="silNote" hidden></p>
     <div class="grp"></div>
     <div class="seg"><button id="applyAll">طبّق هذه الإعدادات على جميع الصلوات</button></div>
   </div>
@@ -1126,6 +1136,11 @@ Object.assign(EN, {"التكبير، ويتكرر حتى توقفه": "The takbi
 Object.assign(EN, {"يعمل المنبّه مرة أخرى إذا ضغطت «غفوة».": "It goes off again if you press “Snooze”.", "يعمل المنبّه مرة أخرى حتى لو ضغطت «إيقاف».": "It goes off again even if you press “Stop”."});
 Object.assign(EN, {"صغير": "Small", "كبير": "Large", "للإضافة: اضغط مطولاً على مساحة فارغة في الشاشة الرئيسية، ثم «تعديل» ← «إضافة أداة»، وابحث عن «الركن الثاني».": "To add one: long-press an empty spot on the home screen, tap Edit → Add Widget, and find On Time."});
 Object.assign(EN, {"خمسة عشر تصميماً": "Fifteen designs", "البانوراما والنافذة والحلقة والجدول والعمود وغيرها، كما في أندرويد": "Panorama, window, ring, table, column and more, as on Android", "خصّص تصاميم الويدجت: الخلفية والخط وما تعرضه": "Customise the widget designs: background, font and what they show"});
+Object.assign(EN, {"تواصل معنا": "Contact us", "أرسل مشكلة": "Report a problem", "بالبريد، ومعها رقم النسخة ونوع الجوال": "By email, with the app version and your phone", "اقترح فكرة": "Suggest an idea", "بالبريد": "By email", "واتساب": "WhatsApp", "محادثة مباشرة": "Direct chat"});
+Object.assign(EN, {"في الآيفون أزرار الصوت توقف المنبّه. فعّل هذا الخيار ليعمل مرة أخرى إن لم تؤكد.": "On the iPhone the volume buttons stop an alarm. Turn this on so it goes off again unless you confirm."});
+Object.assign(EN, {"التذكير قبل الخروج بـ": "Remind before it ends by"});
+Object.assign(EN, Object.fromEntries(Object.entries({"تخصيص الصلاة القادمة على شاشة القفل والجزيرة": "Next prayer on the Lock Screen and in the island", "يعرض": "Shows", "الوقت": "Time", "العدّ": "Countdown", "الإقامة": "Iqama", "التاريخ الهجري": "Hijri date", "المدينة": "City", "تطويل اسم الصلاة": "Stretch the prayer's name", "بدون": "None", "مطوّل": "Stretched", "خط الاسم في الجزيرة": "Name font in the island", "كوفي": "Kufi", "رقعة": "Ruqaa", "نسخ": "Naskh", "ألوان العدّ على شاشة القفل": "Colours of the countdown", "كحلي": "Navy", "أخضر": "Green", "داكن": "Dark"}).filter(([k]) => !(k in EN))));
+Object.assign(EN, {"زر المنبّهات": "The alarms button", "بجانب الإعدادات في الأعلى: منبّه للفجر أو لأي وقت، يتغيّر مع وقت الصلاة.": "Next to the settings at the top: an alarm for Fajr or any time, moving with the prayer time.", "من «الإعدادات» ← «الويدجت»، ويمكنك تخصيص كلٍّ منها.": "From Settings → Widgets; you can adjust each one.", "خمسة أمور تفيدك": "Five things that help", "تعديل هذا الويدجت": "Edit this widget"});
 Object.assign(EN, {"شاشة التطبيق": "App screen", "الويدجت": "Widgets"});
 Object.assign(EN, {"التاريخ واليوم": "Day and date", "المنبّه القادم": "Next alarm", "التاريخ الميلادي": "Gregorian date", "يعرض منبّهك القادم بألوان شاشة المنبّه، كما في أندرويد، وليس له خيارات.": "Shows your next alarm in the alarm screen's colours, as on Android; it has no options.", "على شاشة القفل": "On the lock screen", "الحلقة": "Ring", "دائرة تمتلئ حتى الصلاة القادمة": "A circle that fills up to the next prayer", "دائري ومستطيل وسطر": "Circular, rectangular and a line", "مستطيل وسطر": "Rectangular and a line", "للإضافة: اضغط مطوّلاً على شاشة القفل، ثم «تخصيص» ← «شاشة القفل»، واضغط مكان الويدجت تحت الساعة أو السطر فوقها، وابحث عن «الركن الثاني». ويلوّنها الآيفون بلون واحد.": "To add one: press and hold the lock screen, tap Customise → Lock Screen, tap the widget area under the clock or the line above it, and find On Time. The iPhone tints them in one colour.", "سبعة عشر تصميماً": "Seventeen designs", "البانوراما والنافذة والحلقة والجدول والعمود والتاريخ واليوم والمنبّه القادم وغيرها": "Panorama, window, ring, table, column, day and date, next alarm and more", "الحلقة، والصلاة القادمة، والتاريخ واليوم، والمنبّه القادم": "Ring, next prayer, day and date, next alarm"});
 Object.assign(EN, {"اسم الصلاة القادمة بخط التطبيق، مستطيل": "The next prayer's name in the app's font, rectangular", "الصلوات الخمس": "The five prayers", "أوقات اليوم في سطر والقادمة أوضح، مستطيل": "Today's times in one line, the next one bolder, rectangular", "شريط اليوم": "Day ribbon", "الصلوات على شريط يومك وأين أنت الآن، مستطيل": "The prayers on a strip of your day and where you are now, rectangular", "قمر الليلة": "Tonight's moon", "القمر كما هو الليلة واليوم الهجري، دائري": "The moon as it is tonight and the Hijri day, circular", "الليل يمتلئ حتى الفجر ومتى يبدأ ثلثه الأخير، دائري": "The night filling up to Fajr and when its last third begins, circular", "مع المدينة، مستطيل وسطر": "With the city, rectangular and a line", "بألوانها في الشاشة الرئيسية، وإذا اخترت الأيقونات الملوّنة أو الشفافة لوّنها الآيفون معها. وفي «بأزرار» و«صلواتي اليوم» تعمل الأزرار من الويدجت نفسها. أما شاشة القفل فيلوّنها الآيفون بلون واحد.": "In their colours on the Home Screen; with tinted or clear icons the iPhone tints them too. In “With buttons” and “My prayers today” the buttons work right in the widget. On the Lock Screen the iPhone uses one colour.", "تسعة عشر تصميماً": "Nineteen designs", "البانوراما والنافذة والحلقة والجدول والعمود وبأزرار وصلواتي اليوم والتاريخ واليوم والمنبّه القادم وغيرها": "Panorama, window, ring, table, column, with buttons, my prayers today, day and date, next alarm and more", "تسع: الحلقة والصلاة القادمة والخط والصلوات الخمس وشريط اليوم وقمر الليلة والثلث الأخير والتاريخ واليوم والمنبّه القادم": "Nine: ring, next prayer, calligraphy, the five prayers, day ribbon, tonight's moon, last third, day and date, next alarm"});
@@ -1294,7 +1309,7 @@ const PICON = {fajr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 /* render */
 function applyLang(){ $('phone').setAttribute('dir', isEn() ? 'ltr' : 'rtl'); $('phone').lang = isEn() ? 'en' : 'ar';
-  document.querySelectorAll('.sheet h2:not(#alT):not(#obT):not(#monT):not(#weT):not(#setT), .sheet .sub:not(#alSub):not(#obS):not(#monSub):not(#muSub), .grp, .opt > span:first-child:not(#exOnT), .note:not(#locMsg):not(#muNote):not(#kindNote):not(#remTone):not(#batNote):not(#wHow):not(#weHow):not(#fsNote):not(#ringNote), #wGoT, .tile b, .tile span, #backNow, #skip, #itag, #applyAll, #hintT, #locT, .numrow label, #tourAgain, #privLink, #lpNote').forEach(el => { if (el.dataset.ar === undefined) el.dataset.ar = el.textContent; el.textContent = tr(el.dataset.ar); });
+  document.querySelectorAll('.sheet h2:not(#alT):not(#obT):not(#monT):not(#weT):not(#setT), .sheet .sub:not(#alSub):not(#obS):not(#monSub):not(#muSub), .grp, .opt > span:first-child:not(#exOnT), .note:not(#locMsg):not(#muNote):not(#kindNote):not(#remTone):not(#batNote):not(#wHow):not(#weHow):not(#fsNote):not(#ringNote), #wGoT, .tile b, .tile span, #backNow, #skip, #itag, #applyAll, #hintT, #locT, .numrow label, #tourAgain, #privLink, #supBox .supT, #supBox .optsub, #lpNote').forEach(el => { if (el.dataset.ar === undefined) el.dataset.ar = el.textContent; el.textContent = tr(el.dataset.ar); });
   $('cityQ').placeholder = tr('ابحث عن مدينة'); }
 function applyTheme(){ applyLang(); dirty = true; tickKey = ''; const r = document.documentElement; if (S.theme === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', S.theme); document.body.dataset.font = S.font; const sky = S.bg === 'sky' && !altOn(); phoneEl.classList.toggle('alton', altOn()); $('alt').hidden = !altOn(); if (!altOn()) { phoneEl.classList.remove('altdark'); phoneEl.style.background = ''; altBg = null; altHtml = ''; } $('band').classList.toggle('sky', S.bg === 'sky'); $('skyGL').style.display = $('skyFX').style.display = $('scrim').style.display = sky ? '' : 'none'; if (sky) startSky(); else { preview = null; if (explore) { explore = false; exK = 0; phoneEl.classList.remove('explore'); band.style.height = ''; } } }
 // what the big text is about: after the adhan (until the iqama, if that countdown is on) the same prayer;
@@ -1593,8 +1608,9 @@ function tourDraw(){ const st = tourSteps[tourI], b = $('tourBody'); let h = '';
     + '<li>' + ICON.bell + '<span><b>' + tr('اضغط على أي صلاة') + '</b>' + tr('اضبط أذانها ومؤذنها والإقامة، واعرف متى يخرج وقتها.') + '</span></li>'
     + '<li>' + PICON.fajr + '<span><b>' + tr('اضغط على التاريخ') + '</b>' + tr('يظهر جدول الشهر، واضغط على أي يوم لعرضه.') + '</span></li>'
     + ((S.home || 'mihrab') === 'mihrab' && S.bg === 'sky' ? '<li>' + PICON.maghrib + '<span><b>' + tr('اسحب على السماء') + '</b>' + tr('شاهد السماء في أي وقت من يومك، والشمس والقمر في موضعيهما.') + '</span></li>' : '')
-    + (window.Android && Android.widgetPreview ? '<li>' + PICON.asr + '<span><b>' + tr('ويدجت لشاشتك') + '</b>' + tr('من «الإعدادات» ← «ويدجت الشاشة الرئيسية»، ويمكنك تخصيص كلٍّ منها.') + '</span></li>' : '') + '</ul>';
-    const nt = (h.match(/<li>/g) || []).length; h = '<h2 id="tourT">' + tr(nt >= 4 ? 'أربعة أمور تفيدك' : nt === 2 ? 'أمران يفيدانك' : 'ثلاثة أمور تفيدك') + '</h2>' + h; }
+    + '<li>' + PICON.fajr + '<span><b>' + tr('زر المنبّهات') + '</b>' + tr('بجانب الإعدادات في الأعلى: منبّه للفجر أو لأي وقت، يتغيّر مع وقت الصلاة.') + '</span></li>'
+    + (window.Android && Android.widgetPreview ? '<li>' + PICON.asr + '<span><b>' + tr('ويدجت لشاشتك') + '</b>' + tr('من «الإعدادات» ← «الويدجت»، ويمكنك تخصيص كلٍّ منها.') + '</span></li>' : '') + '</ul>';
+    const nt = (h.match(/<li>/g) || []).length; h = '<h2 id="tourT">' + tr(nt >= 5 ? 'خمسة أمور تفيدك' : nt >= 4 ? 'أربعة أمور تفيدك' : nt === 2 ? 'أمران يفيدانك' : 'ثلاثة أمور تفيدك') + '</h2>' + h; }
   else if (st === 'q0') h = '<div class="tic">' + TOUR_IC + '</div><h2 id="tourT">' + tr('هل تريد ضبط أهم الإعدادات الآن؟') + '</h2><p class="sub">' + tr('شكل الشاشة، والمؤذن، وما يظهر فيها. ويمكنك تغييرها لاحقاً من الإعدادات.') + '</p>';
   else if (st === 'qadh') { const vs = PRAY.map(k => S.al[k].voice), one = vs.every(v => v === vs[0]) ? vs[0] : '';
     const snd = ['adhan','takbir','tone','speak'].indexOf(one) >= 0, scr = ['adhan','takbir','tone'].indexOf(one) >= 0;
@@ -1618,7 +1634,7 @@ function tourDraw(){ const st = tourSteps[tourI], b = $('tourBody'); let h = '';
       + qsSeg('qs', [['speak','عبارة صوتية'], hasTone() ? ['tone','صوت إشعار الجوال'] : ['ding','صوت إشعار الجوال'], ['quiet','إشعار بدون صوت']], S.remSnd || 'speak', 'stack')
       + '<div class="andonly"><div class="box" style="margin-top:12px">' + qsSw('qk', 'remRing', 'ينبهك حتى لو كان الجوال صامتاً', S.remRing) + '</div></div>';
   else if (st === 'qshow') h = '<h2 id="tourT">' + tr('ما يظهر في الشاشة') + '</h2>'
-      + '<div class="grp" style="margin-top:4px">' + tr('خط اسم الصلاة') + '</div><div class="seg fonts">' + QS_FONTS.map(o => '<button data-qf="' + o[0] + '" aria-pressed="' + ((S.font || 'kufi') === o[0]) + '" style="' + o[1] + '">' + tr('العصر') + '</button>').join('') + '</div>'
+      + ''
       + '<div class="box" style="margin-top:12px">'
       + QS_OPTS.filter(o => optFits(o[0])).map(o => '<label class="opt"><span>' + tr(o[1]) + '</span><input type="checkbox" data-qk="' + o[0] + '"' + (S[o[0]] ? ' checked' : '') + '><span class="sw"></span></label>').join('') + '</div>'
       + '<div class="grp">' + tr('بعد الأذان') + '</div><div class="seg stack">' + QS_AFTER.map(o => '<button data-qa="' + o[0] + '" aria-pressed="' + (S.after === o[0]) + '">' + tr(o[1]) + '</button>').join('') + '</div>';
@@ -1653,7 +1669,7 @@ $('tourBody').addEventListener('change', e => { const i = e.target.closest('[dat
     if (x === 'fs' && r.checked) { let st = 'na'; try { st = Android.fsiState(); } catch(z) {} if (st === 'off') { try { Android.askFsi(); } catch(z) {} } } } });
 $('tourBody').addEventListener('click', e => {
   const qf = e.target.closest('[data-qf]'); if (qf) { S.font = qf.dataset.qf; save(); applyTheme(); syncSet(); render(); tourDraw(); qsPulse('font'); return; }
-  const qa = e.target.closest('[data-qa]'); if (qa) { S.after = qa.dataset.qa; syncAfter(); save(); syncSet(); render(); tourDraw(); qsPulse('after'); return; }
+  const qa = e.target.closest('[data-qa]'); if (qa) { S.after = qa.dataset.qa; syncAfter(); save(); syncSet(); tourDraw(); previewAfter(); qsPulse('after'); return; }
   // «اختر الكل» / «إلغاء الكل» while rotating, as in the prayer's settings (keeps one when clearing)
   if (e.target.closest('[data-qall]')) { const all = MU.every(m => (S.rot || []).indexOf(m[0]) >= 0); S.rot = all ? [MU.some(m => m[0] === S.mu) ? S.mu : MU[0][0]] : MU.map(m => m[0]); save(); render(); tourDraw(); return; }
   const qm = e.target.closest('[data-qm]'); if (qm) { const v = qm.dataset.qm;
@@ -1671,6 +1687,32 @@ $('tourBody').addEventListener('click', e => {
   const qs = e.target.closest('[data-qs]'); if (qs) { const v = qs.dataset.qs; S.remSnd = v; if (v === 'speak') previewSnd('spk_pre_asr'); if (v === 'tone') previewSnd('tone_rem'); done(); return; }
   const t = e.target.closest('#tourHomes .tile'); if (t) { S.home = t.dataset.h; altHtml = ''; save(); applyTheme(); syncSet(); render(); tourDraw(); return; }
   const vm = e.target.closest('#tourVm button'); if (vm) { if (vm.dataset.v === 'rot') { S.vmode = 'rot'; S.rotBy = 'day'; S.rot = MU.map(m => m[0]); } else { if (S.vmode !== 'each') S.vmode = 'one'; if (!muOk(S.mu)) S.mu = 'afasy'; } save(); tourDraw(); } });
+// the next prayer on the lock screen and in the island, its own choices (0.34): S.lk, sent with the widgets' data
+const LKF = [['kufi','كوفي'],['ruqaa','رقعة'],['naskh','نسخ']], LKT = [['navy','كحلي'],['green','أخضر'],['dark','داكن']];
+const LKS = [['time','الوقت'],['count','العدّ'],['iqama','الإقامة'],['hijri','التاريخ الهجري'],['city','المدينة']];
+function lkSt(){ return Object.assign({ font: 'kufi', kl: 0, theme: 'navy', show: ['time', 'count', 'iqama', 'hijri', 'city'] }, S.lk || {}); }
+function lkHtml(){ const l = lkSt(), b = (f, v, t, on) => '<button type="button" data-lk="' + f + '" data-v="' + v + '" aria-pressed="' + !!on + '">' + tr(t) + '</button>';
+  return '<div class="grp">' + tr('تخصيص الصلاة القادمة على شاشة القفل والجزيرة') + '</div><div class="box" id="lkBox" style="padding:12px">'
+    + '<div class="wsec" style="margin-top:0"><div class="wl">' + tr('يعرض') + '</div><div class="wbtns" style="grid-template-columns:repeat(3,1fr)">' + LKS.map(o => b('show', o[0], o[1], l.show.indexOf(o[0]) >= 0)).join('') + '</div></div>'
+    + '<div class="wsec"><div class="wl">' + tr('تطويل اسم الصلاة') + '</div><div class="wbtns" style="grid-template-columns:1fr 1fr">' + b('kl', 0, 'بدون', !l.kl) + b('kl', 1, 'مطوّل', l.kl) + '</div></div>'
+    + '<div class="wsec"><div class="wl">' + tr('خط الاسم في الجزيرة') + '</div><div class="wbtns" style="grid-template-columns:repeat(3,1fr)">' + LKF.map(o => b('font', o[0], o[1], l.font === o[0])).join('') + '</div></div>'
+    + '<div class="wsec"><div class="wl">' + tr('ألوان العدّ على شاشة القفل') + '</div><div class="wbtns" style="grid-template-columns:repeat(3,1fr)">' + LKT.map(o => b('theme', o[0], o[1], l.theme === o[0])).join('') + '</div></div></div>'; }
+document.addEventListener('click', e => { const b = e.target.closest('#lkBox [data-lk]'); if (!b) return; const l = lkSt(), f = b.dataset.lk, v = b.dataset.v;
+  if (f === 'show') { const st = new Set(l.show); if (st.has(v)) st.delete(v); else st.add(v); l.show = LKS.map(o => o[0]).filter(k => st.has(k)); }
+  else if (f === 'kl') l.kl = +v; else l[f] = v;
+  S.lk = l; save(); pushSchedule(); const bx = $('lkBox'); if (bx) bx.outerHTML = lkHtml().replace(/^<div class="grp">.*?<\/div>/, ''); });
+// «تواصل معنا» (0.34): mail with the version and the phone; WhatsApp once there is a business number
+const SUP_MAIL = 'itqan1.dev@gmail.com', SUP_WA = '';
+function supInfo(){ let v = ''; try { if (window.Android && Android.appInfo) v = Android.appInfo(); } catch(e) {}
+  if (!v && window.__ios) v = (window.__ios.version || '') + ' · ' + (window.__ios.device || '');
+  return v; }
+function supOpen(u){ try { if (window.Android && Android.openUrl) return Android.openUrl(u); } catch(e) {} location.href = u; }
+document.querySelectorAll('#supBox [data-sup]').forEach(b => { if (b.dataset.sup === 'wa') b.hidden = !SUP_WA;
+  b.onclick = () => { const k = b.dataset.sup, info = supInfo(), en = isEn();
+    if (k === 'wa') return supOpen('https://wa.me/' + SUP_WA + '?text=' + encodeURIComponent((en ? 'Hello, about Al-Rukn Al-Thani' : 'السلام عليكم، بخصوص تطبيق الركن الثاني') + (info ? ' (' + info + ')' : '')));
+    const subj = k === 'bug' ? (en ? 'A problem in Al-Rukn Al-Thani' : 'مشكلة في الركن الثاني') : (en ? 'An idea for Al-Rukn Al-Thani' : 'فكرة للركن الثاني');
+    const body = (k === 'bug' ? (en ? 'What happened:\n\n\nSteps to see it:\n\n' : 'وش صار:\n\n\nكيف أشوفه:\n\n') : '\n\n') + '—\n' + info;
+    supOpen('mailto:' + SUP_MAIL + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body)); }; });
 $('privLink').onclick = () => { const u = 'https://ontime-prayer.pages.dev/privacy' + (isEn() ? '#en' : ''); try { if (window.Android && Android.openUrl) return Android.openUrl(u); } catch(e) {} window.open(u, '_blank'); };
 $('tourAgain').onclick = () => { closeAll(); setTimeout(() => startTour(true), 300); };
 
@@ -1683,7 +1725,11 @@ let yaw = Math.PI, pitch = 24*rad, vyaw = 0, vpitch = 0;
 let sim = Date.now(), preview = null, anim = null, viewDay = null;
 // the same clock time as now, on the day being viewed
 function dayAt(day, real){ const a = ymdOf(day), b = ymdOf(real); return (Date.UTC(a[0], a[1]-1, a[2]) - KSA) + (real - (Date.UTC(b[0], b[1]-1, b[2]) - KSA)); }
-const baseNow = () => viewDay ? dayAt(viewDay, Date.now()) : Date.now();
+// «بعد الأذان» shown for a few seconds when chosen (0.34): the screen as it is just after the last adhan
+let afterPrev = null;
+function previewAfter(){ const n = Date.now(); let t0 = 0; const d = dayTimes(n); PRAY.forEach(k => { if (d[k] && d[k] <= n) t0 = Math.max(t0, d[k]); });
+  if (!t0) t0 = dayTimes(n - 864e5).isha; afterPrev = { t: t0 + 3*6e4, at: n, until: n + 7000 }; render(); setTimeout(render, 7100); }
+const baseNow = () => afterPrev && Date.now() < afterPrev.until ? afterPrev.t + (Date.now() - afterPrev.at) : viewDay ? dayAt(viewDay, Date.now()) : Date.now();
 // the live sky, or the moment the user pinned it to: kept relative to a prayer, so the look stays the same through the seasons
 // (the times, the countdown and everything else stay real)
 const SKYP = { fajr: ['fajr', 20], sunrise: ['sunrise', 8], dhuhr: ['dhuhr', 0], asr: ['asr', 40], maghrib: ['maghrib', 6], night: ['isha', 90] };
@@ -2060,7 +2106,7 @@ function syncSet(){
   seg('segFont', () => S.font, v => S.font = v, [['kufi','العصر','font-family:Reem Kufi'],['ruqaa','العصر','font-family:Aref Ruqaa;font-weight:700'],['naskh','العصر','font-family:Amiri;font-weight:700']]);
   seg('segCount', () => S.count, v => S.count = v, [['hms','٢:٠٤:٣٨'],['hmc','٢:٠٥'],['hm','٢ س ٥ د'],['m','١٢٥ دقيقة'],['text','ساعتين و٥ دقائق'],['off','إخفاء']]);
   seg('segLang', () => S.lang, v => S.lang = v, [['ar','العربية'],['en','English']]);
-  seg('segAfter', () => S.after, v => { S.after = v; syncAfter(); }, [['since','الوقت المنقضي من الأذان'],['iq','الوقت المتبقي للإقامة'],['next','الانتقال إلى الصلاة القادمة']]);
+  seg('segAfter', () => S.after, v => { S.after = v; syncAfter(); setTimeout(previewAfter, 0); }, [['since','الوقت المنقضي من الأذان'],['iq','الوقت المتبقي للإقامة'],['next','الانتقال إلى الصلاة القادمة']]);
   seg('segSkyPin', () => !S.skyPin ? 'live' : (S.skyPin.p || 'custom'), v => { if (v === 'live') S.skyPin = null; else if (v !== 'custom') S.skyPin = { k: SKYP[v][0], off: SKYP[v][1], p: v }; dirty = true; },
     [['live','مباشرة'],['fajr','الفجر'],['sunrise','الشروق'],['dhuhr','الظهر'],['asr','العصر'],['maghrib','الغروب'],['night','الليل']].concat(S.skyPin && !S.skyPin.p ? [['custom','المنظر المثبّت']] : []));
   seg('segIntro', () => S.intro, v => S.intro = v, [['always','كل مرة'],['first','أول مرة فقط'],['off','بدون']]);
@@ -2190,6 +2236,10 @@ function syncAl(){ fadeSoon($("alSheet")); fadeSoon($("muSheet"));
   if (a.sil === undefined) a.sil = a.silent ? 20 : 0;
   seg('segSil', () => a.silC ? 'c' : a.sil, v => { if (v === 'c') { a.silC = true; if ([0,15,20,30].indexOf(a.sil) >= 0) a.sil = 25; } else { a.silC = false; a.sil = +v; } }, [[0,'بدون'],[15,'١٥ د'],[20,'٢٠ د'],[30,'٣٠ د'],['c', a.silC ? cl(a.sil) : 'مخصص']]);
   $('silRow').style.display = a.silC ? '' : 'none'; numBind($('silNum'), 1, 120, () => a.sil, v => { a.sil = v; save(); }, () => { syncAl(); });
+  // without the iqama alert the iqama is still counted, from its minutes (0.34): say so
+  const sn = $('silNote'); sn.hidden = !(isP && a.sil > 0 && !a.iqOn);
+  if (!sn.hidden) sn.textContent = isEn() ? 'The iqama is counted ' + a.iq + ' min after the adhan (the default) unless you turn on the iqama alert and set its time.'
+    : 'تُحسب الإقامة بعد ' + dg(a.iq) + ' دقيقة من الأذان (الافتراضي) ما لم تفعّل تنبيه الإقامة وتحدد وقتها.';
 }
 // «apply to every prayer» shows whether it is in effect: pressed with a tick while all five share this prayer's settings, back to normal once one differs (0.22.4)
 const alSig = a => JSON.stringify(Object.keys(a).filter(x => x !== 'mu').sort().map(x => [x, a[x]]));
@@ -2369,6 +2419,8 @@ function amDraw(){ const a = amDraft; if (!a) { amClose(); return; }
   // the wake-up check: after it is stopped, «هل استيقظت؟»; no «نعم، استيقظت» and it goes off again
   h += sec('تأكيد الاستيقاظ', '<div class="box"><label class="opt"><span>' + tr('اسألني «هل استيقظت؟»') + '</span><input type="checkbox" data-amt="wake"' + (a.wake ? ' checked' : '') + '><span class="sw"></span></label></div>'
     + '<p class="note" style="margin-top:6px">' + tr(rp > 1 ? 'بعد آخر منبّه في السلسلة يصلك «هل استيقظت؟»، وإن لم تضغط «نعم، استيقظت» يعمل المنبّه مرة أخرى.' : 'بعد إيقاف المنبّه يصلك «هل استيقظت؟»، وإن لم تضغط «نعم، استيقظت» يعمل المنبّه مرة أخرى.') + '</p>'
+    // the iPhone: its volume buttons stop an alarm (the system's rule, 0.34)
+    + (!a.wake && window.__host === 'ios' ? '<p class="note" style="margin-top:6px;color:var(--gold, #b8893a)">' + tr('في الآيفون أزرار الصوت توقف المنبّه. فعّل هذا الخيار ليعمل مرة أخرى إن لم تؤكد.') + '</p>' : '')
     + (a.wake ? '<div class="amsub">' + tr('إن لم تؤكد خلال') + '</div>' + sg('amwk', [2, 3, 5].map(v => [v, amMin(v)]), a.wakeIn || 3) : ''));
   // the sound: the phone's alarm sounds, or an adhan from the app's voices (Fajr alarms take the voice's Fajr adhan where it has one)
   // the sound: the phone's own, the app's alarm sounds (0.28, made for it, gentle or strong), or an adhan from its voices
@@ -2566,7 +2618,7 @@ function buildWidgetData(){
     try { fH.formatToParts(new Date(d.dhuhr)).forEach(x => { if (x.type === 'day') day.hd = x.value; else if (x.type === 'month') day.hm = x.value; else if (x.type === 'year') day.hy = x.value; }); day.wd = fW.format(new Date(d.dhuhr)); day.gr = fG.format(new Date(d.dhuhr)); day.hmn = parseInt(fN.format(new Date(d.dhuhr)), 10) || 0; } catch(e) {}
     day.wdi = new Date(d.dhuhr).getUTCDay(); days.push(day); }
   const names = {}, iq = {}; ['fajr','sunrise','duha','dhuhr','asr','maghrib','isha'].forEach(k => names[k] = NAMES[k]); PRAY.forEach(k => iq[k] = (S.al[k] && S.al[k].iq) || 20);
-  return { v: 1, iqc: S.iqc ? 1 : 0, lang: en ? 'en' : 'ar', dg: S.num === 'arab' ? 1 : 0, f12: S.fmt === '12' ? 1 : 0, dar: S.dar ? 1 : 0, font: S.font || 'kufi', city: cityLabel(city), names, iq, mins: (S.before || [10,20,30])[0], rs: S.remSnd || 'speak', ims: S.imsak || 10, count: S.count || 'hms', rring: S.remRing ? 1 : 0, fri: S.fri !== false ? 1 : 0, ia: S.ia === 'since' ? 'since' : 'iq', theme: S.theme || 'auto', live: S.liveNext ? 1 : 0, days };
+  return { v: 1, wrm: S.wrm || 0, lk: lkSt(), iqc: S.iqc ? 1 : 0, lang: en ? 'en' : 'ar', dg: S.num === 'arab' ? 1 : 0, f12: S.fmt === '12' ? 1 : 0, dar: S.dar ? 1 : 0, font: S.font || 'kufi', city: cityLabel(city), names, iq, mins: (S.before || [10,20,30])[0], rs: S.remSnd || 'speak', ims: S.imsak || 10, count: S.count || 'hms', rring: S.remRing ? 1 : 0, fri: S.fri !== false ? 1 : 0, ia: S.ia === 'since' ? 'since' : 'iq', theme: S.theme || 'auto', live: S.liveNext ? 1 : 0, days };
 }
 /* home screen widgets: a gallery, and a customise screen for each one (the pictures are drawn by the app itself) */
 const WT = [['pano','البانوراما',4,2],['window','النافذة',2,2],['ring','الحلقة',2,2],['orbit','مدار اليوم',4,2],['script','الخط',4,1],['table','الجدول',4,2],['clock','ساعة السماء',2,2],['moon','القمر',2,2],['column','العمود',2,4],['ribbon','شريط اليوم',4,1],['exit','خروج الوقت',4,1],['actions','بأزرار',4,2],['line','سطر واحد',4,1],['prayed','صلواتي اليوم',4,1],['night','الثلث الأخير',2,2],['ramadan','رمضان',4,2],['white','الأيام البيض',4,2]];
@@ -2616,7 +2668,8 @@ function wRender(){ wLoad();
   let lk = $('wLock'); if (wIOS()) { if (!lk) { lk = document.createElement('div'); lk.id = 'wLock'; $('wList').after(lk); }
     lk.innerHTML = '<div class="grp">' + tr('على شاشة القفل') + '</div><div class="box">' + LOCKW.map(w => '<div class="opt"><span>' + tr(w[0]) + '<small class="optsub">' + tr(w[1]) + '</small></span></div>').join('') + '</div><p class="note">' + tr('للإضافة: اضغط مطوّلاً على شاشة القفل، ثم «تخصيص» ← «شاشة القفل»، واضغط مكان الويدجت تحت الساعة أو السطر فوقها، وابحث عن «الركن الثاني». ويلوّنها الآيفون بلون واحد.') + '</p>'
       + '<div class="box"><label class="opt"><span>' + tr('عدّ الصلاة القادمة على شاشة القفل') + '<small class="optsub">' + tr('بألوان التطبيق وفي الجزيرة، يبدأ كلما فتحت التطبيق ويبقى حتى ٨ ساعات') + '</small></span><input type="checkbox" id="wLive"' + (S.liveNext ? ' checked' : '') + '><span class="sw"></span></label></div>';
-    $('wLive').onchange = e => { S.liveNext = e.target.checked; save(); render(); }; }
+    $('wLive').onchange = e => { S.liveNext = e.target.checked; save(); render(); };
+    lk.insertAdjacentHTML('beforeend', lkHtml()); }
   wQ = wTypes().map(w => w[0]); wDraw(); }
 const LOCKW = [['الحلقة','دائرة تمتلئ حتى الصلاة القادمة'],['الصلاة القادمة','دائري ومستطيل وسطر'],['الخط','اسم الصلاة القادمة بخط التطبيق، مستطيل'],['الصلوات الخمس','أوقات اليوم في سطر والقادمة أوضح، مستطيل'],['شريط اليوم','الصلوات على شريط يومك وأين أنت الآن، مستطيل'],['قمر الليلة','القمر كما هو الليلة واليوم الهجري، دائري'],['الثلث الأخير','الليل يمتلئ حتى الفجر ومتى يبدأ ثلثه الأخير، دائري'],['التاريخ واليوم','مع المدينة، مستطيل وسطر'],['المنبّه القادم','مستطيل وسطر']];
 // the widget gallery opened from the settings goes back there with the phone's back button (0.22.2)
@@ -2669,7 +2722,12 @@ function weDraw(){ const t = we.t, w = wDef(t), st = we.st, opts = (wInfo.show &
   if (opts.length && !lnT) h += sec(t === 'table' ? 'الصفوف' : (t === 'line' ? 'ومعها' : 'يعرض'), '<div class="wchips">' + opts.map(k => btn('rows', k, wLbl(t, k), (st.rows || []).indexOf(k) >= 0)).join('') + '</div>');
   // the table's city and date, on one line: on top over the countdown (default), on top in the middle, or at the bottom (0.20)
   if (t === 'table' && (st.rows || []).some(k => k === 'city' || k === 'date')) h += sec('مكان المدينة والتاريخ', '<div class="wbtns" style="grid-template-columns:repeat(3,1fr)">' + [['l','أعلى اليسار'],['c','أعلى في المنتصف'],['b','أسفل في المنتصف']].map(o => btn('hp', o[0], tr(o[1]), (st.hp || 'l') === o[0])).join('') + '</div>');
+  // «ذكّرني قبل خروج الوقت» on the buttons widget: how long before (0.34; it took the first of the reminder choices)
+  if (t === 'actions') { const r0 = S.wrm || (S.before || [10,20,30])[0];
+    h += sec('التذكير قبل الخروج بـ', '<div class="wbtns" style="grid-template-columns:repeat(4,1fr)">' + [10, 15, 20, 30].map(m => btn('wrm', m, amMin(m), r0 === m)).join('') + '</div>'); }
   const taps = t === 'prayed' ? [['pray','«صلّيت» بضغطة']].concat(WTAP) : WTAP, tap0 = t === 'prayed' ? 'pray' : 'app';
+  // the iPhone opens the app on a tap; it can open on this widget's editor (0.34)
+  if (wIOS()) h += sec('عند الضغط عليها', '<div class="wbtns" style="grid-template-columns:1fr 1fr">' + [['app','يفتح التطبيق'],['edit','تعديل هذا الويدجت']].map(o => btn('tap', o[0], tr(o[1]), (st.tap === 'edit' ? 'edit' : 'app') === o[0])).join('') + '</div>');
   if (!wIOS()) h += sec('عند الضغط عليها', '<div class="wbtns" style="grid-template-columns:repeat(' + (taps.length === 4 ? 2 : 3) + ',1fr)">' + taps.map(o => btn('tap', o[0], tr(o[1]), (st.tap || tap0) === o[0])).join('') + '</div>');
   if (t === 'prayed') h += '<p class="note" style="margin-top:-4px">' + tr('في الويدجت العريض: اضغط على الدائرة نفسها، وتُزال العلامة بضغطة أخرى. وفي المربع: تُعلَّم الصلاة الحالية.') + '</p>';
   // the app settings these widgets use
@@ -2683,6 +2741,7 @@ function weDraw(){ const t = we.t, w = wDef(t), st = we.st, opts = (wInfo.show &
 $('weOpts').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b || !we) return; const f = b.dataset.f, v = b.dataset.v;
   if (f === 'size') { if (v !== we.t) { we = { t: v, id: 0, st: wStyle(v, 0) }; weDraw(); } return; }
   if (f === 'lnset') { lnSetStart(); return; }
+  if (f === 'wrm') { S.wrm = +v; save(); pushSchedule(); weDraw(); return; }
   if (f === 'ims' || f === 'third') { if (f === 'ims') S.imsak = +v; else S.thirdOn = v === '1';
     save(); pushSchedule(); if (v !== 'off' && v !== '0') needNotify(); weDraw(); return; }
   if (f === 'rows') { const r = new Set(we.st.rows || []); if (r.has(v)) r.delete(v); else r.add(v); if (we.t === 'table' && !r.size) r.add('times'); we.st.rows = ((wInfo.show && wInfo.show[we.t]) || []).filter(k => r.has(k)); }
@@ -2745,7 +2804,7 @@ if (window.Android && Android.fsiState) { fsSync(); $('setBtn').addEventListener
 // "Customize" on a widget from the home screen, or a widget just added, opens its customise screen
 window.__openWidget = (id, type) => wOpen({ id: +id, type });
 // a widget set to open the month table or the next prayer's settings
-window.__openFrom = k => { if (k === 'alarms') { closeAll(); syncSet(); setPage('alm'); open('setSheet'); return; } if (k === 'month') { closeAll(); openMonth(); } else if (k === 'prayer') { const n = Date.now(), e = timeline(n).find(x => x.t > n && PRAY.indexOf(x.k) >= 0); if (e) { closeAll(); alKey = e.k; syncAl(); open('alSheet'); } } };
+window.__openFrom = k => { if (k.indexOf('w:') === 0) { closeAll(); S.onb = true; save(); wOpen({ id: 0, type: k.slice(2) }); return; } if (k === 'alarms') { closeAll(); syncSet(); setPage('alm'); open('setSheet'); return; } if (k === 'month') { closeAll(); openMonth(); } else if (k === 'prayer') { const n = Date.now(), e = timeline(n).find(x => x.t > n && PRAY.indexOf(x.k) >= 0); if (e) { closeAll(); alKey = e.k; syncAl(); open('alSheet'); } } };
 window.__onWidgets = () => { if ($('wSheet').classList.contains('show')) wRender(); if (lnSet) { lnSetSeen(); setTimeout(lnSetSeen, 700); setTimeout(lnSetSeen, 1800); } };
 applyTheme(); render(); setInterval(render, 1000); setTimeout(pushSchedule, 1500);
 setTimeout(() => { try { const p = hasW() && Android.pendingWidget ? Android.pendingWidget() : ''; if (p) { const [id, type] = p.split(','); S.onb = true; save(); wOpen({ id: +id, type }); }

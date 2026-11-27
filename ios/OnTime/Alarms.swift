@@ -121,6 +121,10 @@ enum Alarms {
     }
     /// «نعم، استيقظت» (or the app opened while it goes on): no check, and the rest of the series goes.
     static func awake(_ alarm: Int, base: Double) {
+        if alarm == -1 {
+            if #available(iOS 26.0, *), let s = ud.string(forKey: "tryChk"), let u = UUID(uuidString: s) { try? AlarmManager.shared.cancel(id: u) }
+            ud.removeObject(forKey: "tryChk"); Scheduler.center.removeDeliveredNotifications(withIdentifiers: ["alwake:-1"]); return
+        }
         ud.set(base, forKey: "alCut_\(alarm)")
         Scheduler.center.removeDeliveredNotifications(withIdentifiers: ["al:wake:\(alarm)", "alwake:\(alarm)"])
         sync()
@@ -128,6 +132,19 @@ enum Alarms {
     /// The alarm the wake-up check follows was stopped (note: «هل استيقظت؟» now) or snoozed: the check goes a few minutes
     /// after that, and the notice set beforehand goes (0.30).
     static func moveCheck(_ al: Int, base: Double, after t: Double, note: Bool) async {
+        // the try: once, the check and its alarm again unless «نعم، استيقظت» (0.34)
+        if al == -1 {
+            guard let tw = ud.dictionary(forKey: "tryWake") else { return }
+            ud.removeObject(forKey: "tryWake")
+            let at = t + Double(min(15, max(1, tw["in"] as? Int ?? 3))) * 60_000
+            if #available(iOS 26.0, *) {
+                let id = await AK.keep(Want(at: at, kind: "alarm", key: "try", title: tw["t"] as? String ?? "", snooze: tw["snz"] as? Int ?? 10,
+                                            sound: tw["snd"] as? String ?? "", al: -1, base: 0, idx: 0, snN: tw["snN"] as? Int ?? 3))
+                ud.set(id.uuidString, forKey: "tryChk")
+            }
+            if note { try? await Scheduler.center.add(UNNotificationRequest(identifier: "alwake:-1", content: wakeNote(-1, base: 0, again: at), trigger: nil)) }
+            return
+        }
         guard let a = list().first(where: { id($0) == al }), (a["wake"] as? NSNumber)?.boolValue == true, ud.double(forKey: "alCut_\(al)") != base else { return }
         let at = t + Double(min(15, max(1, (a["wakeIn"] as? NSNumber)?.intValue ?? 3))) * 60_000
         ud.set(at, forKey: "alChkAt_\(al)"); ud.set(base, forKey: "alChkB_\(al)")
@@ -241,8 +258,11 @@ enum Alarms {
         // iPhone takes an alarm only for a time to come. The page counts down to the very time it was set for, so the
         // count is the wait (0.30)
         let t = title(a), snz = (a["snz"] as? NSNumber)?.intValue ?? 10, snd = alarmSound(a), snN = (a["snN"] as? NSNumber)?.intValue ?? 3
+        // with the wake-up check on, the try is followed by «هل استيقظت؟» as the alarm itself would be (0.34)
+        let wk = (a["wake"] as? NSNumber)?.boolValue == true
+        if wk { ud.set(["in": (a["wakeIn"] as? NSNumber)?.intValue ?? 3, "t": t, "snz": snz, "snd": snd, "snN": snN], forKey: "tryWake") } else { ud.removeObject(forKey: "tryWake") }
         Task {
-            let at = await AK.once { Want(at: Scheduler.nowMs + 3_000, kind: "alarm", key: "try", title: t, snooze: snz, sound: snd, al: -1, base: 0, idx: 0, snN: snN) }
+            let at = await AK.once { var w = Want(at: Scheduler.nowMs + 3_000, kind: "alarm", key: "try", title: t, snooze: snz, sound: snd, al: -1, base: 0, idx: 0, snN: snN); w.wake = wk; return w }
             DispatchQueue.main.async { WebViewController.shared.tried(at) }
         }
     }
