@@ -221,6 +221,12 @@ def main():
             note('- no next button; tapped the first choice: ' + str(r)); time.sleep(1.5)
             if not r: break
     shot('main', 'The main screen after the welcome.')
+    # the live sky on the emulator's software GPU takes all the machine (screenshots stopped answering): the plain design from here
+    js("document.getElementById('setBtn').click()"); time.sleep(1.5)
+    js("document.querySelector('#setSheet .srow[data-p=scr]').click()"); time.sleep(1.5)
+    note('- plain design: %s' % click(r'^بسيط$', 4)); time.sleep(1)
+    js("document.getElementById('back').click()"); time.sleep(1.5)
+    shot('main-plain', 'The main screen in the plain design (for the emulator).')
 
     # 2. every settings page
     click(r'^$|تخصيص الشاشة', 2); js("document.getElementById('setBtn').click()"); time.sleep(1.5)
