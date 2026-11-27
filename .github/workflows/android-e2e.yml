@@ -1,8 +1,10 @@
 name: Android first-use test (emulator)
 
-# By hand only: builds the trial APK, runs a whole first use of it on an emulator (tools/e2e/android_e2e.py) and puts the
+# By hand (a push of app to the "e2e" branch): builds the trial APK, runs a whole first use of it on an emulator (tools/e2e/android_e2e.py) and puts the
 # pictures and steps.md on the "e2e-shots" branch.
 on:
+  push:
+    branches: [e2e]
   workflow_dispatch:
 
 permissions:
