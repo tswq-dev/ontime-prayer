@@ -125,7 +125,8 @@ def js(expr):
 
 
 CLICK = r"""(re => { re = new RegExp(re); const els = [...document.querySelectorAll('button, [role=button], .opt, .srow, label, a')]
-  .filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim()));
+  .filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim())
+    && (!e.closest('.sheet') || e.closest('.sheet').classList.contains('show')) && !e.closest('[hidden]'));
   const onTop = e => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); };
   let top = els.filter(onTop);
   // not in view (a tile further down a page): bring the first into view and look again
@@ -213,7 +214,15 @@ def main():
         if rep_n > 3:
             note('- the same screen 3 times, moving on'); js("document.getElementById('back') && document.getElementById('back').click()"); break
         # in the alarm step choose an alarm at the adhan, so it can be met later
-        if 'منبّه للفجر' in txt and 'alarm' not in seen:
+        # the city: chosen by hand (the emulator's location may not come), Makkah
+        if 'هل نحدد مدينتك' in txt:
+            r = click(r'^أختار بنفسي$', 3); shot('setup-city-ask', 'The location question:\n```\n' + txt[:400] + '\n```\nTapped: ' + str(r)); continue
+        if 'مدن تقويم أم القرى' in txt:
+            js("(document.querySelector('#cityQ') || {}).value = 'مكه'; document.querySelector('#cityQ').dispatchEvent(new Event('input'))"); time.sleep(1)
+            shot('setup-city-search', 'Searched «مكه» (with ه).')
+            r = js("(() => { const b = document.querySelector('#cityList button'); if (!b) return null; b.click(); return b.textContent; })()")
+            time.sleep(1.5); shot('setup-city', 'Picked: ' + str(r)); continue
+        if re.search(r'^منبّه للفجر$', txt, re.M) and 'alarm' not in seen:
             seen.add('alarm'); click(r'^عند الأذان$'); shot('setup-alarm', 'The Fajr alarm step: chose «عند الأذان».\n\n```\n' + txt[:600] + '\n```')
         # a request to allow something: allow it, as most users do
         r = click(r'^(التالي|ابدأ|متابعة|موافق|تم|سماح|اسمح|السماح|نعم|حسناً|ابدأ الآن|Next|Start|OK|Done|Allow)$', wait=2)
