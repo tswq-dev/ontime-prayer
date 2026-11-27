@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // trial (debug) builds only: lets the emulator test drive the page (android-e2e.yml)
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) android.webkit.WebView.setWebContentsDebuggingEnabled(true)
 
         // From target SDK 35 the app draws under the system bars, so pad the page by their size.
         val root = FrameLayout(this).apply { setBackgroundColor(getColor(R.color.bg)) }
