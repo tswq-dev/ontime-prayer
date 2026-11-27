@@ -122,6 +122,7 @@ jobs:
         with:
           name: ios-build-log
           path: ios/build.log
+          retention-days: 3
 
       - uses: softprops/action-gh-release@v2
         if: env.ASC_KEY_ID == ''

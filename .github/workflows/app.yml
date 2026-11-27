@@ -41,10 +41,7 @@ jobs:
           gradle :app:assembleDebug --no-daemon 2>&1 | tee ../ci-out/build.log
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk ontime-prayer.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ontime-prayer-apk
-          path: ontime-prayer.apk
+      # (no artifact: the APK is in the release; artifacts filled the account's 0.5 GB of Actions storage)
       # The pictures and logs go to the "shots" branch of the private repo only.
       - name: Publish pictures and logs
         if: always() && github.repository == 'tswq-dev/umm-al-qura-prayer-times'
