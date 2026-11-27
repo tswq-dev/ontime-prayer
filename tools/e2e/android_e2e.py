@@ -126,6 +126,7 @@ def js(expr):
 
 CLICK = r"""(re => { re = new RegExp(re); const els = [...document.querySelectorAll('button, [role=button], .opt, .srow, label, a')]
   .filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim()));
+  els.slice(0, 1).forEach(e => e.scrollIntoView({ block: 'center' }));
   const top = els.filter(e => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); });
   const e = top[0]; if (!e) return null; e.click(); return (e.textContent || '').trim().slice(0, 40); })(%s)"""
 
@@ -241,9 +242,15 @@ def main():
         js("history.back && 0")
     js("document.getElementById('back').click()"); time.sleep(1)
 
-    # 3. the alarms button
+    # 3. the alarms icon: a new alarm with what it suggests, saved
     js("document.getElementById('almBtn').click()"); time.sleep(1.5)
-    shot('alarms', 'The alarms, from their button.')
+    shot('alarms', 'The alarms, from their icon.')
+    js("(document.querySelector('[data-amadd]') || {click(){}}).click()"); time.sleep(1.5)
+    shot('alarm-new', 'A new alarm, as suggested.')
+    al_title = js("(document.getElementById('amBody') || {}).innerText") or ''
+    note('```\n' + al_title[:400] + '\n```')
+    js("(document.querySelector('[data-amsave]') || {click(){}}).click()"); time.sleep(1.5)
+    shot('alarms-saved', 'The alarms after saving it.')
     js("document.getElementById('back').click()"); time.sleep(1)
 
     # 4. widgets on the home screen: the two with buttons and two others, pinned by the app as its gallery does
@@ -275,13 +282,16 @@ def main():
     # 6. the Fajr alarm of the next day, if one was set in the setup
     nd = day + timedelta(days=1); tf = uq.prayer_times(nd, LAT, LON)
     fajr = datetime.combine(nd, datetime.strptime(tf['fajr'], '%H:%M').time())
-    set_clock(fajr - timedelta(minutes=31)); time.sleep(5); wake()
+    set_clock(fajr - timedelta(minutes=55)); time.sleep(5); wake()
     ash('cmd statusbar expand-notifications'); time.sleep(2)
     shot('shade-before-alarm', 'Half an hour before the Fajr alarm: the shade (the advance notice, if any).')
     ash('cmd statusbar collapse')
-    set_clock(fajr - timedelta(seconds=70)); sleep_screen()
+    m = re.search(r'(قبل|بعد) أذان الفجر بـ\s*(\d+)', al_title.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')))
+    at = fajr + timedelta(minutes=(-1 if m and m.group(1) == 'قبل' else 1) * int(m.group(2))) if m else fajr
+    note('- the alarm should go off at %s' % at.strftime('%H:%M'))
+    set_clock(at - timedelta(seconds=70)); sleep_screen()
     time.sleep(80)
-    shot('alarm-locked', 'The Fajr alarm time with the screen locked.')
+    shot('alarm-locked', 'The alarm time with the screen locked.')
     ash('input keyevent KEYCODE_VOLUME_UP'); time.sleep(3)
     shot('alarm-after-volume', 'After pressing volume up (snooze, by the app\'s rule).')
     wake(); ash('cmd statusbar expand-notifications'); time.sleep(2)
