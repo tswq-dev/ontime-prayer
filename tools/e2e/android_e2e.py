@@ -126,8 +126,10 @@ def js(expr):
 
 CLICK = r"""(re => { re = new RegExp(re); const els = [...document.querySelectorAll('button, [role=button], .opt, .srow, label, a')]
   .filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim()));
-  els.slice(0, 1).forEach(e => e.scrollIntoView({ block: 'center' }));
-  const top = els.filter(e => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); });
+  const onTop = e => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); };
+  let top = els.filter(onTop);
+  // not in view (a tile further down a page): bring the first into view and look again
+  if (!top.length && els.length) { els[0].scrollIntoView({ block: 'center' }); top = els.filter(onTop); }
   const e = top[0]; if (!e) return null; e.click(); return (e.textContent || '').trim().slice(0, 40); })(%s)"""
 
 
