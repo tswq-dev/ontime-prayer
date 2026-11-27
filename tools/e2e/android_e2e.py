@@ -45,7 +45,7 @@ def shot(name, say=''):
 
 
 def dump():
-    ash('uiautomator dump /sdcard/ui.xml >/dev/null 2>&1')
+    ash('rm -f /sdcard/ui.xml'); ash('uiautomator dump /sdcard/ui.xml >/dev/null 2>&1')
     x = adb('exec-out cat /sdcard/ui.xml')
     try:
         return ET.fromstring(x[x.find('<'):]) if '<' in x else None
