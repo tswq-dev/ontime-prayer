@@ -123,7 +123,7 @@ def js(expr):
 CLICK = r"""(re => { re = new RegExp(re); const els = [...document.querySelectorAll('button, [role=button], .opt, .srow, label, a')]
   .filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim()));
   const top = els.filter(e => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); });
-  const e = (top[0] || els[0]); if (!e) return null; e.click(); return (e.textContent || '').trim().slice(0, 40); })(%s)"""
+  const e = top[0]; if (!e) return null; e.click(); return (e.textContent || '').trim().slice(0, 40); })(%s)"""
 
 
 def click(pat, wait=5):
@@ -202,6 +202,10 @@ def main():
         # in the alarm step choose an alarm at the adhan, so it can be met later
         if 'منبّه للفجر' in txt and 'alarm' not in seen:
             seen.add('alarm'); click(r'^عند الأذان$'); shot('setup-alarm', 'The Fajr alarm step: chose «عند الأذان».\n\n```\n' + txt[:600] + '\n```')
+        # a request to allow something: allow it, as most users do
+        r = click(r'^(اسمح بالتنبيهات|السماح بالعمل في الخلفية|اسمح بالموقع|استخدم موقعي)$', wait=1)
+        if r:
+            shot('setup', 'On screen:\n```\n' + txt[:700] + '\n```\nTapped: ' + r); continue
         r = click(r'^(التالي|ابدأ|متابعة|موافق|تم|سماح|اسمح|السماح|نعم|حسناً|ابدأ الآن|Next|Start|OK|Done|Allow)$', wait=2)
         shot('setup', 'On screen:\n```\n' + txt[:700] + '\n```\nTapped: ' + str(r))
         if not r:
