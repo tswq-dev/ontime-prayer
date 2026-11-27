@@ -189,16 +189,19 @@ def main():
     ok = page() is not None
     note('- the page reached through DevTools: %s, title: %s' % (ok, js('document.title')))
     time.sleep(4)
-    seen = set()
+    seen = set(); seen_txt = {}
     for i in range(40):
         # system permission dialogs first
-        s = tap_node(r'^(Allow|السماح|While using the app|أثناء استخدام التطبيق|Only this time)$', wait=1)
+        s = tap_node(r'^(Allow|السماح|سماح|اسمح|While using the app|أثناء استخدام التطبيق|عند استخدام التطبيق|Only this time)$', wait=2)
         if s:
             shot('permission', 'A system dialog, answered: ' + s); continue
         txt = visible_text()
         if not txt.strip():
             break
         key = txt[:120]
+        rep_n = seen_txt.get(key, 0) + 1; seen_txt[key] = rep_n
+        if rep_n > 3:
+            note('- the same screen 3 times, moving on'); js("document.getElementById('back') && document.getElementById('back').click()"); break
         # in the alarm step choose an alarm at the adhan, so it can be met later
         if 'منبّه للفجر' in txt and 'alarm' not in seen:
             seen.add('alarm'); click(r'^عند الأذان$'); shot('setup-alarm', 'The Fajr alarm step: chose «عند الأذان».\n\n```\n' + txt[:600] + '\n```')
