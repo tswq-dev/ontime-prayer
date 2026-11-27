@@ -136,11 +136,12 @@ def click(pat, wait=5):
 
 
 def visible_text():
-    return js("(() => [...document.querySelectorAll('.sheet.show, #tourSheet.show, .coach.show')].map(e => e.innerText).join('\\n---\\n').slice(0, 1500))()") or ''
+    return js("(() => [...document.querySelectorAll('.sheet.show, #tourSheet.show, #coach')].filter(e => e.offsetParent && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).opacity > 0.1).map(e => e.innerText).join('\\n---\\n').slice(0, 1500))()") or ''
 
 
 def set_clock(dt):
-    ash('date %s' % dt.strftime('%m%d%H%M%Y.%S'))
+    # dt is Riyadh time; the phone is set in UTC to leave no doubt
+    ash('date -u %s' % (dt - timedelta(hours=3)).strftime('%m%d%H%M%Y.%S'))
     note('- the clock set to %s' % dt.strftime('%Y-%m-%d %H:%M:%S'))
 
 
@@ -156,7 +157,7 @@ def main():
     note('# A first use of the app, on an Android emulator\n')
     adb('root'); time.sleep(3); adb('wait-for-device')
     ash('settings put global auto_time 0'); ash('settings put global auto_time_zone 0')
-    ash('setprop persist.sys.timezone Asia/Riyadh'); ash('cmd alarm set-timezone Asia/Riyadh')
+    note('- the phone\'s time zone: %s' % ash('getprop persist.sys.timezone'))
     ash('settings put system screen_off_timeout 600000')
     # an Arabic phone, as most users have
     ash('setprop persist.sys.locale ar-SA'); ash('stop'); time.sleep(2); ash('start')
@@ -201,7 +202,7 @@ def main():
         # in the alarm step choose an alarm at the adhan, so it can be met later
         if 'منبّه للفجر' in txt and 'alarm' not in seen:
             seen.add('alarm'); click(r'^عند الأذان$'); shot('setup-alarm', 'The Fajr alarm step: chose «عند الأذان».\n\n```\n' + txt[:600] + '\n```')
-        r = click(r'^(التالي|ابدأ|متابعة|موافق|تم|سماح|اسمح|السماح|نعم|حسناً|Next|Start|OK|Done|Allow)\b', wait=2)
+        r = click(r'^(التالي|ابدأ|متابعة|موافق|تم|سماح|اسمح|السماح|نعم|حسناً|ابدأ الآن|Next|Start|OK|Done|Allow)$', wait=2)
         shot('setup', 'On screen:\n```\n' + txt[:700] + '\n```\nTapped: ' + str(r))
         if not r:
             # no button found: tap the first choice on the sheet
@@ -270,7 +271,7 @@ def main():
     shot('shade-after-alarm', 'The shade after snoozing.')
     ash('cmd statusbar collapse')
     # the app again, after all this
-    ash('monkey -p %s -c android.intent.category.LAUNCHER 1' % PKG); time.sleep(4)
+    ash('monkey -p %s -c android.intent.category.LAUNCHER 1' % PKG); time.sleep(10)
     shot('app-after', 'The app opened again at the end.')
     note('\n## Log lines from the app\n```\n' + sh("adb logcat -d -t 400 | grep -iE 'ontime|chromium|AndroidRuntime' | tail -80") + '\n```')
 

@@ -36,7 +36,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -timezone Asia/Riyadh -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: python3 tools/e2e/android_e2e.py ontime-prayer.apk out || true
       - name: Publish pictures
         if: always()
