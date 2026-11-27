@@ -163,7 +163,11 @@ def main():
     for _ in range(90):
         if ash('getprop sys.boot_completed') == '1' and 'package:' in ash('pm path android'): break
         time.sleep(2)
-    time.sleep(8); ash('input keyevent KEYCODE_WAKEUP'); ash('wm dismiss-keyguard')
+    # until the launcher is up (the first run opened the app while the phone was still starting)
+    for _ in range(90):
+        if 'launcher' in ash('dumpsys window | grep -E "mCurrentFocus|mFocusedApp"').lower(): break
+        ash('input keyevent KEYCODE_WAKEUP'); ash('wm dismiss-keyguard'); time.sleep(2)
+    time.sleep(5)
     adb('emu geo fix %f %f' % (LON, LAT))
     # the morning of tomorrow, a quiet start
     day = date.today() + timedelta(days=1)
@@ -177,9 +181,13 @@ def main():
     ash('pm revoke %s android.permission.ACCESS_FINE_LOCATION' % PKG); ash('pm revoke %s android.permission.ACCESS_COARSE_LOCATION' % PKG)
 
     # 1. first opening, as a new user: through every screen of the welcome and the setup, a picture of each
-    ash('monkey -p %s -c android.intent.category.LAUNCHER 1' % PKG); time.sleep(6)
+    for _ in range(5):
+        ash('monkey -p %s -c android.intent.category.LAUNCHER 1' % PKG); time.sleep(8)
+        if ash('pidof ' + PKG) and PKG in ash('dumpsys window | grep mCurrentFocus'): break
     shot('first-open', 'The app as it first opens.')
-    page()
+    ok = page() is not None
+    note('- the page reached through DevTools: %s, title: %s' % (ok, js('document.title')))
+    time.sleep(4)
     seen = set()
     for i in range(40):
         # system permission dialogs first
