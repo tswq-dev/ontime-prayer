@@ -1,0 +1,38 @@
+name: iPhone page pictures
+
+# The page as the iPhone's WebKit draws it (ios/ci/pageshots.swift: a WKWebView at iPhone size with the app's shim),
+# through a first opening and a replayed tour, pictures on the page-shots branch. Runs on a push to branch page.
+on:
+  push:
+    branches: [page]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_[0-9]*.app | sort -V | tail -1)
+          echo "Using $X"; sudo xcode-select -s "$X"
+      - name: Pictures
+        run: |
+          set -o pipefail
+          python3 -c "import re; s=open('ios/OnTime/WebViewController.swift').read(); open('shim.js','w').write(re.search(r'static let shim = \"\"\"\n(.*?)\n\s*\"\"\"', s, re.S).group(1))"
+          swiftc -O -parse-as-library ios/ci/pageshots.swift -o pageshots 2>&1 | tee compile.log
+          TZ=Asia/Riyadh timeout 600 ./pageshots android/app/src/main/assets/www shim.js page-shots
+          sw_vers > page-shots/system.txt
+      - name: To the page-shots branch
+        if: always()
+        run: |
+          mkdir -p page-shots && cp compile.log page-shots/ 2>/dev/null || true
+          cd page-shots
+          git init -q -b page-shots && git config user.name ci && git config user.email ci@example.com
+          git add . && git commit -q -m "page pictures for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" page-shots
