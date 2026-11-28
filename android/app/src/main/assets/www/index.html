@@ -95,10 +95,13 @@ body[data-font="naskh"] .hero .name{font-family:"Amiri",serif;font-weight:700;fo
 #pdoor{transition:opacity .3s}
 #pglow{opacity:0;transition:opacity 1.4s .2s}
 #intro.go #pglow{opacity:1}
-#iword{position:absolute;left:0;right:0;text-align:center;font-family:"Aref Ruqaa",serif;font-weight:700;font-size:54px;line-height:1.25;background:linear-gradient(100deg,#9a7330,#f6e3ae 45%,#c99a4b 70%,#8a6526);-webkit-background-clip:text;background-clip:text;color:transparent;clip-path:inset(-20% -5% -20% 100%);transition:clip-path 1s cubic-bezier(.5,.1,.3,1) 1.9s}
-#intro.go #iword{clip-path:inset(-20% -5% -20% -5%)}
-#itag{position:absolute;left:0;right:0;text-align:center;font-size:13px;color:rgba(243,226,184,.7);opacity:0;transition:opacity .7s 2.6s}
-#intro.go #itag{opacity:1}
+/* the name (1.0.1): written in from the right in gold, as with a pen (a soft edge, moved by the script), rising a little,
+   then a light runs along it; it stays a moment before the screen opens. Before, it showed for a blink before going */
+#iword{position:absolute;left:0;right:0;text-align:center;font-family:"Aref Ruqaa",serif;font-weight:700;font-size:56px;line-height:1.3;background:linear-gradient(100deg,#8a6526 0%,#c99a4b 16%,#f3dda2 30%,#c99a4b 44%,#9a7330 56%,#c99a4b 68%,#fff3cf 80%,#d4a756 90%,#8a6526 100%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-mask-image:linear-gradient(to left,#000 -20%,transparent 0%);mask-image:linear-gradient(to left,#000 -20%,transparent 0%);transform:translateY(12px);transition:transform 1.4s cubic-bezier(.2,.8,.2,1),background-position 1.8s cubic-bezier(.45,0,.25,1)}
+#intro.word #iword{transform:none}
+#intro.shine #iword{background-position:0 0}
+#itag{position:absolute;left:0;right:0;text-align:center;font-size:14px;letter-spacing:.02em;color:rgba(243,226,184,.78);opacity:0;transform:translateY(6px);transition:opacity .9s,transform .9s cubic-bezier(.2,.8,.2,1)}
+#intro.tag #itag{opacity:1;transform:none}
 #intro .skip{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:none;border:0;color:rgba(255,255,255,.45);min-height:44px;padding:0 18px;cursor:pointer;font-size:13px}
 #intro.bye #iword,#intro.bye #itag,#intro.bye .skip,#intro.bye #pline,#intro.bye #psun,#intro.bye #pglow{opacity:0;transition:opacity .3s}
 .band{transition:height .6s cubic-bezier(.3,.85,.25,1),border-radius .5s}
@@ -1585,7 +1588,8 @@ function hiTaste(){ const ios = wIOS(), n = ios ? wTypes().length : WT.filter(w 
 let tourI = 0, tourSteps = [], tourThen = false, tourKind = '', tourReplay = false, qsPending = false;
 const TOUR_IC = '<svg viewBox="96 88 320 330"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="currentColor"/></svg>';
 function startTour(replay){ tourThen = !replay && !!window.Android && !S.onb; tourI = 0; tourKind = 'tour'; tourReplay = !!replay;
-  tourSteps = ['hi', 'c:set'].concat(hasAlarms() ? ['c:alm'] : [], ['c:city', 'c:date', 'c:pray']).concat(S.bg === 'sky' && !altOn() ? ['c:sky'] : [], window.Android && batState() === 'off' ? ['bat'] : []);
+  // the alarm icon is the tour's last step (1.0.1), with «اضبط منبّهاً الآن»
+  tourSteps = ['hi', 'c:set', 'c:city', 'c:date', 'c:pray'].concat(S.bg === 'sky' && !altOn() ? ['c:sky'] : [], window.Android && batState() === 'off' ? ['bat'] : [], hasAlarms() ? ['c:alm'] : []);
   S.tourSeen = true; save(); tourDraw(); open('tourSheet'); }
 const COACH = { set: () => $('setBtn'), alm: () => $('almBtn'), city: () => $('cityBtn'), date: () => $('date'), sky: () => $('band'),
   pray: () => { const vis = q => [...document.querySelectorAll(q)].find(e => e.getClientRects().length); return vis('#list .chip.next, .ap-r.next, .as-t.next, .ao-c.next, .ac-c.next') || vis('#list .chip, .ap-r, .as-t, .ao-c, .ac-c'); } };
@@ -1683,7 +1687,7 @@ function tourEnd(){ const k = tourKind; tourKind = ''; coachHide(); $('tourSheet
   if (tourThen) setTimeout(startOnb, 350); else if (k === 'tour') setTimeout(() => offerQs(tourReplay), 400); }
 // quick setup (0.22.4): after the first tour and the permissions (or a replayed tour), offer the few settings most people change, each step skippable
 function offerQs(force){ if (!force && S.qsSeen) return; if (document.querySelector('.sheet.show') || !$('coach').hidden) { qsPending = true; return; }
-  S.qsSeen = true; save(); tourThen = false; tourKind = 'qs'; tourI = 0; tourSteps = ['q0', 'qadh', 'qmu'].concat(hasAlarms() ? ['qalm'] : [], ['qshow']); tourDraw(); }  // «صوت التذكيرات» left to the settings (0.35)
+  S.qsSeen = true; save(); tourThen = false; tourKind = 'qs'; tourI = 0; tourSteps = ['q0', 'qadh', 'qmu', 'qshow']; tourDraw(); }  // «صوت التذكيرات» left to the settings (0.35); the Fajr alarm card gone, the tour's last step points at the alarm icon (1.0.1)
 const muNeeded = () => PRAY.some(k => ['adhan','takbir'].indexOf(S.al[k].voice) >= 0);
 const QS_KINDS = () => [['adhan','أذان كامل'],['takbir','تكبيرات فقط'],['speak','عبارة صوتية']].concat(hasTone() ? [['tone','صوت إشعار الجوال']] : [], [['notify','إشعار بدون صوت'],['vibrate','اهتزاز'],['none','بدون']]);
 const qsSeg = (attr, opts, cur, cls) => '<div class="seg' + (cls ? ' ' + cls : '') + '">' + opts.map(o => '<button data-' + attr + '="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + tr(o[1]) + '</button>').join('') + '</div>';
@@ -2897,6 +2901,13 @@ function playIntro(tries){
   const La = arch.getTotalLength() + 2, Ll = line.getTotalLength() + 2;
   arch.style.strokeDasharray = La; arch.style.strokeDashoffset = La; line.style.strokeDasharray = Ll; line.style.strokeDashoffset = Ll;
   void box.offsetWidth; box.classList.add('go');
+  // the name written in from the right with a soft edge (a moving mask), then a light along it, then the line under it (1.0.1)
+  const word = $('iword'), mask = g => { word.style.webkitMaskImage = g; word.style.maskImage = g; };
+  setTimeout(() => { if (gone || !box.parentNode) return; box.classList.add('word'); const t0 = performance.now(), dur = 1300;
+    (function pen(now){ const p = Math.min(1, (now - t0)/dur), e = 1 - Math.pow(1 - p, 3), x = e*130;
+      mask('linear-gradient(to left, #000 ' + (x - 16).toFixed(1) + '%, transparent ' + x.toFixed(1) + '%)');
+      if (p < 1 && box.parentNode) requestAnimationFrame(pen); else mask('none'); })(t0);
+    setTimeout(() => { if (box.parentNode) box.classList.add('shine', 'tag'); }, dur + 100); }, 1400);
   let gone = false; const kill = () => { introOn = false; ro.disconnect(); if (box.parentNode) box.parentNode.removeChild(box); };
   function leave(){ if (gone) return; gone = true; clearTimeout(tm); box.classList.add('bye');
     setTimeout(() => { arch.style.transition = 'none'; arch.style.strokeDasharray = 'none'; door.style.opacity = '0'; afterIntro();
@@ -2904,8 +2915,8 @@ function playIntro(tries){
       (function step(now){ const p = Math.max(0, Math.min(1, (now - t0)/dur)); setT(Math.exp(Math.pow(p, 2.2)*Math.log(22))); arch.style.opacity = String(1 - Math.max(0, (p - 0.45)/0.55)); if (p < 1 && box.parentNode) requestAnimationFrame(step); else kill(); })(t0);
       setTimeout(kill, 1600);
     }, 340); }
-  const tm = setTimeout(leave, 3600);
-  setTimeout(() => { if (box.parentNode) { if (!gone) afterIntro(); gone = true; kill(); } }, 6500);   // never left on screen
+  const tm = setTimeout(leave, 4700);   // the name stays a moment before the screen opens (it was 3.6 s: it showed for a blink)
+  setTimeout(() => { if (box.parentNode) { if (!gone) afterIntro(); gone = true; kill(); } }, 7800);   // never left on screen
   $('skip').addEventListener('click', leave);
 }
 playIntro(0);

@@ -136,15 +136,15 @@ final class Scheme: NSObject, WKURLSchemeHandler {
     func run() async {
         // the opening, frame by frame
         var t = 0.0
-        for at in [0.4, 1.0, 1.6, 2.2, 2.6, 3.0, 3.4, 4.2, 5.0] {
+        for at in [0.8, 1.6, 2.2, 2.6, 3.0, 3.4, 3.8, 4.4, 5.0, 5.6, 6.2, 7.0] {
             await wait(at - t); t = at
             await shot(String(format: "intro-%.1fs", at), await js("(function(){ var w = document.getElementById('iword'), b = document.getElementById('intro'); if (!b) return 'intro gone'; var r = w.getBoundingClientRect(), cs = getComputedStyle(w); return 'intro: ' + b.className + ' | word top ' + Math.round(r.top) + ' h ' + Math.round(r.height) + ' w ' + Math.round(r.width) + ' | clip ' + cs.clipPath + ' | font ' + cs.fontFamily + ' loaded ' + document.fonts.check('54px \"Aref Ruqaa\"'); })()"))
         }
-        await wait(1.5)
-        // the first run: through every screen, tapping on as a new user would
+        // the first run: through every screen, tapping on as a new user would (the tour starts a few seconds after the opening)
         var seen: [String: Int] = [:]
-        for _ in 0..<40 {
-            let txt = await js(onScreen)
+        for _ in 0..<45 {
+            var txt = ""
+            for _ in 0..<24 { txt = await js(onScreen); if !txt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }; await wait(0.5) }
             if txt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }
             let key = String(txt.prefix(120)); seen[key, default: 0] += 1
             if seen[key]! > 3 { log.append("- the same screen 3 times, stopped"); break }
@@ -169,13 +169,14 @@ final class Scheme: NSObject, WKURLSchemeHandler {
         _ = await js("(function(){ document.getElementById('setBtn').click(); return 1; })()")
         await wait(1.2)
         await shot("settings")
-        let r = await click("شاهد الجولة التعريفية")
+        let r = await js("(function(){ var b = document.getElementById('tourAgain'); if (!b) return ''; b.click(); return 'tourAgain'; })()")
         log.append("- replay: " + r)
-        await wait(1.5)
+        await wait(2.0)
         for _ in 0..<12 {
             let txt = await js(onScreen)
             if txt.isEmpty { break }
-            await shot("replay", txt)
+            let state = await js("(function(){ var c = document.getElementById('coach'); return c && !c.hidden ? 'coach ring ' + document.getElementById('chRing').style.cssText : 'sheet'; })()")
+            await shot("replay", txt + "\n[" + state + "]")
             let k = await click("^(التالي|ابدأ)$")
             if k.isEmpty { break }
             await wait(1.4)

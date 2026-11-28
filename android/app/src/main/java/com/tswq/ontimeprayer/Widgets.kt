@@ -188,9 +188,9 @@ object WidgetUpdater {
     // ---------- the buttons widget ----------
     private fun pkOf(k: String, start: Long) = k + ":" + WData.dateKey(start)
 
-    /** "Remind me before it ends": the time we are in, else the next prayer. */
+    /** "Remind me before it ends": the prayer whose time we are in, else the next one, as the widget shows (not Duha, 1.0.1). */
     private fun remindTarget(d: WData, now: Long): JSONObject? {
-        val cur = d.current(now)
+        val cur = d.current(now)?.takeIf { it.k in WData.PRAY }
         val (k, start) = if (cur != null) cur.k to cur.start else (d.next(now) ?: return null).let { it.k to it.at }
         val ex = d.day(start)?.optJSONObject("ex")?.optJSONArray(k) ?: return null
         return JSONObject().put("pk", pkOf(k, start)).put("key", k).put("title", d.name(k)).put("ex", ex)
@@ -201,7 +201,7 @@ object WidgetUpdater {
 
     private fun btns(ctx: Context, d: WData?, now: Long): WidgetArt.Btns {
         if (d == null) return WidgetArt.Btns()
-        val cur = d.current(now); val pk = cur?.let { pkOf(it.k, it.start) }
+        val cur = d.current(now)?.takeIf { it.k in WData.PRAY }; val pk = cur?.let { pkOf(it.k, it.start) }   // «صلّيت»: the five only (not Duha)
         val nx = d.next(now); val rt = remindTarget(d, now)
         return WidgetArt.Btns(
             prayed = pk != null && Prayed.has(ctx, pk),

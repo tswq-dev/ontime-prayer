@@ -31,6 +31,8 @@ enum Scheduler {
         let now = nowMs, near = now + 48 * 3600 * 1000
         // the muted adhan has come and gone
         if PrayMarks.mute > 0 && Double(PrayMarks.mute) < now - 120_000 { PrayMarks.mute = 0 }
+        // the notifications are made again here, so the widget's copies of quieted ones are of no use now (1.0.1)
+        PrayMarks.quietOrig = [:]
         let evs = events().filter { at($0) > now + 1000 }.sorted { at($0) < at($1) }
         setCategories(evs.first { $0["kind"] as? String == "adhan" })
         center.getPendingNotificationRequests { reqs in

@@ -51,8 +51,11 @@ struct ArtProvider: TimelineProvider {
         let f = Self.fam(context.family), now = Date()
         let m0 = Calendar.current.dateInterval(of: .minute, for: now)?.start ?? now
         var es = [ArtEntry(date: now, type: type, fam: f)]
-        // the two with buttons redraw after each press: a quarter of an hour, so a press shows sooner (0.34)
-        let n = type == "actions" || type == "prayed" ? 15 : 60
+        // the two with buttons redraw after each press: a quarter of an hour, so a press shows sooner (0.34); right after a
+        // press only three minutes, the fewest pictures to draw, and a full timeline after them (1.0.1)
+        let btn = type == "actions" || type == "prayed"
+        let pressed = btn && Int(now.timeIntervalSince1970 * 1000) - PrayMarks.pressAt < 20_000
+        let n = pressed ? 3 : btn ? 15 : 60
         for i in 1...n { es.append(ArtEntry(date: m0.addingTimeInterval(Double(i) * 60), type: type, fam: f)) }
         guard type == "actions" else { completion(Timeline(entries: es, policy: .atEnd)); return }
         // whether the widget sees the app's notifications: then its mute and remind buttons work in it, at once (0.34)
@@ -97,12 +100,9 @@ struct ArtButtons: View {
     let type: String, size: CGSize, rtl: Bool
     private func hit(_ which: String, _ r: CGRect) -> some View {
         Group {
-            // the marks in the widget itself (at once); muting and reminding through the app, where the notifications are
-            if which == "pray" || which.hasPrefix("p") && which.count == 2 || PrayMarks.extNotes {
-                Button(intent: WidgetMarkIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
-            } else {
-                Button(intent: WidgetPressIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
-            }
+            // every button in the widget itself, at once (1.0.1): through the app («كتم», «ذكّرني») it took seconds; the
+            // widget changes the waiting notifications itself and the app redoes them when it next opens
+            Button(intent: WidgetMarkIntent(which)) { Rectangle().fill(Color.white.opacity(0.001)) }
         }
             .buttonStyle(.plain)
             .frame(width: r.width, height: r.height)

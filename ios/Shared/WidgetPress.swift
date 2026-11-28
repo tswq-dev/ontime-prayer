@@ -67,6 +67,17 @@ enum PrayMarks {
         set { var o = load(); o["rem"] = newValue; save(o) }
     }
 
+    /// When a widget button was last pressed: the next timeline is short, so the press shows at once (1.0.1).
+    static var pressAt: Int {
+        get { (load()["press"] as? NSNumber)?.intValue ?? 0 }
+        set { var o = load(); o["press"] = newValue; save(o) }
+    }
+    /// The adhan notifications quieted by the widget, as they were (id → archived content), to put back on «unmute».
+    static var quietOrig: [String: String] {
+        get { (load()["qorig"] as? [String: String]) ?? [:] }
+        set { var o = load(); o["qorig"] = newValue.isEmpty ? nil : newValue; save(o) }
+    }
+
     /// Whether the widget sees the app's notifications (0.34): then muting and reminding are done by the widget itself, at once.
     static var extNotes: Bool {
         get { (load()["ext"] as? Bool) ?? false }
@@ -78,11 +89,11 @@ enum PrayMarks {
         guard let cur = d.current(now), PRAY.contains(cur.k) else { return nil }
         return pk(cur.k, cur.start)
     }
-    /// «ذكّرني قبل خروج الوقت»: the time we are in, else the next prayer, while it has an end ahead; as the reminder the
-    /// notifications set (the page's fields).
+    /// «ذكّرني قبل خروج الوقت»: the prayer whose time we are in, else the next one, the prayer the widget shows (not Duha,
+    /// 1.0.1), while it has an end ahead; as the reminder the notifications set (the page's fields).
     static func remindTarget(_ d: KData, _ now: Int) -> [String: Any]? {
         let k: String, start: Int
-        if let cur = d.current(now) { k = cur.k; start = cur.start } else if let nx = d.next(now) { k = nx.k; start = nx.at } else { return nil }
+        if let cur = d.current(now), PRAY.contains(cur.k) { k = cur.k; start = cur.start } else if let nx = d.next(now) { k = nx.k; start = nx.at } else { return nil }
         guard let ex = d.day(start)?.optJSONObject("ex")?.optJSONArray(k) as? [[String: Any]],
               ex.contains(where: { (($0["at"] as? NSNumber)?.intValue ?? 0) > now }) else { return nil }
         return ["pk": pk(k, start), "key": k, "title": d.name(k), "ex": ex, "lang": d.ar ? "ar" : "en", "dg": d.arabDigits ? 1 : 0,
@@ -141,6 +152,7 @@ enum WidgetPress {
     static func run(_ which: String) async {
         let now = Int(Date().timeIntervalSince1970 * 1000)
         guard let d = KData.load(SharedStore.read()) else { return }
+        PrayMarks.pressAt = now
         var fx: String? = nil
         switch which {
         case "pray":
@@ -158,8 +170,8 @@ enum WidgetPress {
             if let nx = d.next(now) {
                 let on = PrayMarks.mute != nx.at
                 PrayMarks.mute = on ? nx.at : 0; fx = "rebuild"
-                // in the widget: that adhan's notification comes quietly now; the app redoes it all when it next runs
-                if handler == nil && on { await quiet(nx.at) }
+                // in the widget: that adhan's notification comes quietly now (or as it was again); the app redoes it all when it next runs
+                if handler == nil { if on { await quiet(nx.at) } else { await loud() } }
             }
         case "remind":
             if let rt = PrayMarks.remindTarget(d, now), let pk = rt["pk"] as? String {
@@ -197,9 +209,23 @@ enum WidgetPress {
         for r in await c.pendingNotificationRequests() where r.content.categoryIdentifier == "ADHAN" || ((r.content.userInfo["ev"] as? String) ?? "").contains("\"kind\":\"adhan\"") {
             let t = (r.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() ?? (r.trigger as? UNTimeIntervalNotificationTrigger)?.nextTriggerDate()
             guard let t, abs(Int(t.timeIntervalSince1970 * 1000) - at) <= 60_000, let m = r.content.mutableCopy() as? UNMutableNotificationContent else { continue }
+            if let a = try? NSKeyedArchiver.archivedData(withRootObject: r.content, requiringSecureCoding: true) {
+                var q = PrayMarks.quietOrig; q[r.identifier] = a.base64EncodedString(); PrayMarks.quietOrig = q
+            }
             m.sound = nil
             try? await c.add(UNNotificationRequest(identifier: r.identifier, content: m, trigger: r.trigger))
         }
+    }
+    /// «Unmute» in the widget: the quieted adhan notifications as they were (same id and time).
+    static func loud() async {
+        let c = UNUserNotificationCenter.current(), q = PrayMarks.quietOrig
+        guard !q.isEmpty else { return }
+        for r in await c.pendingNotificationRequests() {
+            guard let b = q[r.identifier], let a = Data(base64Encoded: b),
+                  let orig = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UNNotificationContent.self, from: a) else { continue }
+            try? await c.add(UNNotificationRequest(identifier: r.identifier, content: orig, trigger: r.trigger))
+        }
+        PrayMarks.quietOrig = [:]
     }
 
     static func reload() {
