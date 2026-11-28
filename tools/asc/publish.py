@@ -141,7 +141,7 @@ AGE = dict(
     profanityOrCrudeHumor='NONE', sexualContentGraphicAndNudity='NONE', sexualContentOrNudity='NONE',
     violenceCartoonOrFantasy='NONE', violenceRealistic='NONE', violenceRealisticProlongedGraphicOrSadistic='NONE',
     advertising=False, ageAssurance=False, gambling=False, healthOrWellnessTopics=False, lootBox=False,
-    messagingAndChat=False, parentalControls=False, unrestrictedWebAccess=False, userGeneratedContent=False,
+    messagingAndChat=False, parentalControls=False, socialMedia=False, unrestrictedWebAccess=False, userGeneratedContent=False,
 )
 
 @step('age rating: none of the topics (4+)')
@@ -154,6 +154,11 @@ def age(iid):
                  {'data': {'type': 'ageRatingDeclarations', 'id': d['id'], 'attributes': attrs}})
             return f'{len(attrs)} answers'
         except ApiError as e:
+            need = [m.group(1) for x in e.errs for m in [re.search(r"attribute '(\w+)'", x.get('detail', ''))]
+                    if m and x.get('code', '').endswith('REQUIRED') and m.group(1) not in attrs]
+            if need:                                            # a new question: answer no
+                for n in need: attrs[n] = False
+                continue
             bad = [x.get('source', {}).get('pointer', '').rsplit('/', 1)[-1] for x in e.errs]
             bad = [b for b in bad if b in attrs]
             if not bad: raise
@@ -250,6 +255,7 @@ def main():
     ilocs = call('GET', f'/v1/appInfos/{iid}/appInfoLocalizations')['data']
     info_ar(iid, ilocs); info_en(iid, ilocs)
     vlocs = call('GET', f'/v1/appStoreVersions/{vid}/appStoreVersionLocalizations')['data']
+    LOC['ar'] = next((x['id'] for x in vlocs if x['attributes']['locale'] == 'ar-SA'), None)
     ver_ar(vid, vlocs); ver_en(vid, vlocs)
     categories(iid); age(iid); review(vid)
     if LOC.get('ar'): screenshots(LOC['ar'])
