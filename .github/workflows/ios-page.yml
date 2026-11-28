@@ -26,7 +26,7 @@ jobs:
           set -o pipefail
           python3 -c "import re; s=open('ios/OnTime/WebViewController.swift').read(); open('shim.js','w').write(re.search(r'static let shim = \"\"\"\n(.*?)\n\s*\"\"\"', s, re.S).group(1))"
           swiftc -O -parse-as-library ios/ci/pageshots.swift -o pageshots 2>&1 | tee compile.log
-          TZ=Asia/Riyadh timeout 600 ./pageshots android/app/src/main/assets/www shim.js page-shots
+          TZ=Asia/Riyadh ./pageshots android/app/src/main/assets/www shim.js page-shots
           sw_vers > page-shots/system.txt
       - name: To the page-shots branch
         if: always()
