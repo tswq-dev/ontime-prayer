@@ -1,0 +1,25 @@
+name: App Store page
+# Fills the App Store page (texts, pictures, review notes, build) from tools/asc. Runs on a push to branch asc;
+# "[submit]" in the commit message also sends the version for review.
+on:
+  push:
+    branches: [asc]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  asc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q pyjwt cryptography
+      - name: Fill the App Store page
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          SUBMIT: ${{ contains(github.event.head_commit.message, '[submit]') && '1' || '' }}
+        run: python3 tools/asc/publish.py
