@@ -122,8 +122,20 @@ final class Scheme: NSObject, WKURLSchemeHandler {
       return e.offsetParent && e.getBoundingClientRect().height > 0 && re.test((e.textContent || '').trim())
         && (!e.closest('.sheet') || e.closest('.sheet').classList.contains('show')) && !e.closest('[hidden]'); });
       var onTop = function(e){ var r = e.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (e === h || e.contains(h)); };
-      var top = els.filter(onTop); if (!top.length && els.length) { els[0].scrollIntoView({ block: 'center' }); top = els.filter(onTop); }
+      var top = els.filter(onTop);   // no scrollIntoView: a user can't scroll what the page doesn't let them (it scrolled the screen itself)
       var e = top[0]; if (!e) return ''; e.click(); return (e.textContent || '').trim().slice(0, 40); })
+    """
+
+    // where things are: the scroll of every box that can scroll, the ring, the alarm and settings icons, what is under the ring
+    static let state = """
+    (function(){ var c = document.getElementById('coach'), ring = document.getElementById('chRing'), o = [];
+      if (c && !c.hidden) { var rr = ring.getBoundingClientRect(); var h = document.elementFromPoint(rr.left + rr.width/2, rr.top + rr.height/2);
+        o.push('ring ' + Math.round(rr.left) + ',' + Math.round(rr.top) + ' under: ' + (h ? (h.id || h.className || h.tagName) : '-')); }
+      ['almBtn', 'setBtn'].forEach(function(id){ var e = document.getElementById(id); if (e) { var r = e.getBoundingClientRect(); o.push(id + ' ' + Math.round(r.left) + ',' + Math.round(r.top)); } });
+      var sc = []; [document.scrollingElement].concat([].slice.call(document.querySelectorAll('*'))).forEach(function(e){ if (e && (e.scrollTop || e.scrollLeft)) sc.push((e.id || e.className || e.tagName).toString().slice(0, 24) + ' ' + e.scrollLeft + ',' + e.scrollTop); });
+      o.push('scrolled: ' + (sc.join('; ') || 'none')); o.push('intro ' + !!document.getElementById('intro'));
+      o.push('sheets: ' + [].slice.call(document.querySelectorAll('.sheet.show')).map(function(e){ return e.id; }).join(','));
+      return o.join(' | '); })()
     """
 
     func click(_ pat: String) async -> String {
@@ -146,9 +158,10 @@ final class Scheme: NSObject, WKURLSchemeHandler {
             var txt = ""
             for _ in 0..<24 { txt = await js(onScreen); if !txt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }; await wait(0.5) }
             if txt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }
+            await wait(0.9)   // a sheet slides in
             let key = String(txt.prefix(120)); seen[key, default: 0] += 1
             if seen[key]! > 3 { log.append("- the same screen 3 times, stopped"); break }
-            let state = await js("(function(){ var c = document.getElementById('coach'), ring = document.getElementById('chRing'); return (c && !c.hidden ? 'coach ring ' + ring.style.left + ',' + ring.style.top + ' ' + ring.style.width : '') + ' | intro ' + !!document.getElementById('intro') + ' | home h ' + Math.round((document.getElementById('list') || {getBoundingClientRect: function(){ return {height: -1}; }}).getBoundingClientRect().height); })()")
+            let state = await js(Self.state)
             if txt.contains("مدن تقويم أم القرى") {
                 _ = await js("(function(){ var q = document.querySelector('#cityQ'); q.value = 'مكه'; q.dispatchEvent(new Event('input')); return 1; })()")
                 await wait(0.8)
@@ -175,7 +188,7 @@ final class Scheme: NSObject, WKURLSchemeHandler {
         for _ in 0..<12 {
             let txt = await js(onScreen)
             if txt.isEmpty { break }
-            let state = await js("(function(){ var c = document.getElementById('coach'); return c && !c.hidden ? 'coach ring ' + document.getElementById('chRing').style.cssText : 'sheet'; })()")
+            let state = await js(Self.state)
             await shot("replay", txt + "\n[" + state + "]")
             let k = await click("^(التالي|ابدأ)$")
             if k.isEmpty { break }
