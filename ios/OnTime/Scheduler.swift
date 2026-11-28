@@ -48,7 +48,7 @@ enum Scheduler {
             if let last = chosen.last {
                 let ar = (last["lang"] as? String ?? "ar") != "en"
                 let c = UNMutableNotificationContent()
-                c.title = ar ? "افتح «الفجر الصادق»" : "Open True Dawn"
+                c.title = ar ? "افتح «الفجر الصادق»" : "Open True Fajr"
                 c.body = ar ? "لتستمر التنبيهات في وقتها." : "So the alerts keep coming on time."
                 c.sound = .default
                 add("refresh", c, at(last) + 60_000)

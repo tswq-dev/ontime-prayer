@@ -347,7 +347,7 @@ enum KArt {
     static func empty(_ cv: ACanvas, _ w: CGFloat, _ h: CGFloat, _ u: CGFloat, _ f: KFonts, _ ar: Bool) {
         cv.drawRoundRect(RectF(0, 0, w, h), square ? 0 : 22 * u, square ? 0 : 22 * u, ap(paint()) { $0.shader = ALinear(0, 0, w * 0.35, h, c("#11594A"), c("#0A382C")) })
         let p = APaint(c("#F4ECDC")); p.typeface = f.plexB; p.textSize = 13 * u; p.textAlign = .CENTER
-        let s = ar ? "افتح «الفجر الصادق» مرة لتظهر الأوقات" : "Open True Dawn once to show the times"
+        let s = ar ? "افتح «الفجر الصادق» مرة لتظهر الأوقات" : "Open True Fajr once to show the times"
         fit(p, s, w - 24 * u); cv.drawText(s, w / 2, h / 2 + p.textSize * 0.35, p)
     }
 

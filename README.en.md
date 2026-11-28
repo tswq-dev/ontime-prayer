@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="96" height="96" alt="True Dawn logo">
+<img src="docs/assets/logo.svg" width="96" height="96" alt="True Fajr logo">
 
-# True Dawn — الفجر الصادق
+# True Fajr — الفجر الصادق
 
 **Prayer times exactly as the official Umm al-Qura calendar website shows them: to the minute, for any date and any coordinates, offline.**
 
@@ -25,7 +25,7 @@
 
 - **An open formula** with no dependencies, in five languages: Python, JavaScript, Kotlin (Android), Swift (iOS) and Dart (Flutter),
   each checked automatically on all the data, plus a complete specification for porting it to any other language.
-- **[The True Dawn website](https://ontime-prayer.pages.dev/?lang=en)** («الفجر الصادق»), in Arabic and English, computes the times on the device, works offline and installs
+- **[The True Fajr website](https://ontime-prayer.pages.dev/?lang=en)** («الفجر الصادق»), in Arabic and English, computes the times on the device, works offline and installs
   on a phone like an app.
 - **Verifiable**: every answer of the official Umm al-Qura calendar website we used is in this repository, and one script re-runs the
   whole check.
@@ -66,7 +66,7 @@ UmmAlQura.prayerTimes('2027-03-20', 21.426666, 39.831666)                       
 These are the times the official Umm al-Qura calendar website shows for Makkah on 20 March 2027, using the coordinates of its own
 city list. In Ramadan pass `ramadan=True` (or `1`): Isha is then 120 minutes after Maghrib instead of 90.
 
-<p align="center"><img src="docs/assets/site-en.png" width="560" alt="The True Dawn website on a phone, in light and dark mode"></p>
+<p align="center"><img src="docs/assets/site-en.png" width="560" alt="The True Fajr website on a phone, in light and dark mode"></p>
 
 ---
 
@@ -168,7 +168,7 @@ The comparison is reproducible: `tools/compare/adhan.mjs`, results in `data/comp
 
 ## Usage
 
-1. **[The True Dawn website](https://ontime-prayer.pages.dev/?lang=en)** (`site/`): one page that computes on the device, works offline after the first visit and
+1. **[The True Fajr website](https://ontime-prayer.pages.dev/?lang=en)** (`site/`): one page that computes on the device, works offline after the first visit and
    installs on a phone. Arabic and English, 173 Saudi cities, GPS or typed coordinates, and day, month and year views in the Hijri
    or Gregorian calendar. Add `?lang=en` to the address to open it in English.
 2. **Python:** `umm_al_qura_times.py`, one file, no dependencies (see Quick start).
@@ -213,7 +213,7 @@ node js/verify.js           # the same check, JavaScript
 | `umm_al_qura_times.py` | Reference implementation (Python) |
 | `js/` | JavaScript port and its full check |
 | `ports/` | Kotlin, Swift and Dart ports, each with a full check |
-| `site/` | The True Dawn website («الفجر الصادق») |
+| `site/` | The True Fajr website («الفجر الصادق») |
 | `ALGORITHM.md` | Full specification for porting |
 | `METHOD.md` | Research log: every round, dead ends included |
 | `data/vectors.csv.gz` | Every server answer used: one row per date, place and time zone |

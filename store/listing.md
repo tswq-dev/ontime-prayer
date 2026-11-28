@@ -50,14 +50,14 @@
 
 ### English
 
-**App name** (30): True Dawn: to the second
+**App name** (30): True Fajr: to the second
 
 **Short description** (80):
 Umm al-Qura prayer times to the minute, and the adhan in the voice you choose.
 
 **Full description**:
 
-True Dawn shows prayer times from the Umm al-Qura calendar, matching its official website to the minute, and works them out on your phone with no internet.
+True Fajr shows prayer times from the Umm al-Qura calendar, matching its official website to the minute, and works them out on your phone with no internet.
 
 The adhan comes in the first second of its minute, in the voice of the muezzin you choose.
 
@@ -118,7 +118,7 @@ In Arabic and English, light and dark.
 
 **الوصف**: نص Google Play نفسه، مع حذف سطر «يتوقف الأذان بزر القفل…» (خاص بأندرويد).
 
-**English**: Name «True Dawn» · Subtitle «Prayer on time, to the second» · Keywords: adhan,azan,prayer times,umm al-qura,salah,hijri,muezzin,iqama,ramadan,fasting,widget,muslim
+**English**: Name «True Fajr» · Subtitle «Prayer on time, to the second» · Keywords: adhan,azan,prayer times,umm al-qura,salah,hijri,muezzin,iqama,ramadan,fasting,widget,muslim
 
 **الخصوصية في App Store Connect**: Data Not Collected.
 
