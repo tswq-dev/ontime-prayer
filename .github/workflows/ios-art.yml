@@ -31,7 +31,10 @@ jobs:
       # the sheets on their own branch, where they can be fetched with git (artifact storage is out of reach for review)
       - name: Sheets to the art-shots branch
         run: |
-          mkdir shots && cp ios-widgets/sheets/*.png shots/ && cp compile.log shots/ && cd shots
+          mkdir -p shots/one && cp ios-widgets/sheets/*.png shots/ && cp compile.log shots/
+          # each design at Asr at full size (3×), for the store pictures
+          cp ios-widgets/3-asr_*.png shots/one/ 2>/dev/null || true
+          cd shots
           git init -q -b art-shots && git config user.name ci && git config user.email ci@example.com
           git add . && git commit -q -m "widget pictures for ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" art-shots
