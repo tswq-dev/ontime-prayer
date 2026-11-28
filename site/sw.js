@@ -1,4 +1,4 @@
-// الركن الثاني (On Time Prayer) — offline support. Page: network first (updates arrive when online), cache when offline. Icons: cache first.
+// الفجر الصادق (True Fajr) — offline support. Page: network first (updates arrive when online), cache when offline. Icons: cache first.
 const CACHE = 'ontime-prayer-v3';
 // each page under its own key (the home page as './'), so opening the privacy page never replaces the home page kept for offline use
 const key = u => { const p = new URL(u).pathname; return /\/(index\.html)?$/.test(p) ? './' : p; };
