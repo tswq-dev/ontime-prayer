@@ -204,7 +204,8 @@ body[data-font="naskh"] .hero .name{font-family:"Amiri",serif;font-weight:700;fo
 #coach .ch-ring{position:absolute;border:2px solid var(--brass);box-shadow:0 0 0 9999px rgba(3,9,7,.74);transition:left .35s cubic-bezier(.3,.9,.3,1),top .35s cubic-bezier(.3,.9,.3,1),width .35s,height .35s,border-radius .35s;pointer-events:none}
 #coach .ch-tip{position:absolute;left:18px;right:18px;background:var(--sheet);color:var(--ink);border-radius:22px;padding:14px 16px 10px;box-shadow:0 12px 34px rgba(0,0,0,.35)}
 #coach .ch-t{margin:0 0 10px;font-size:15.5px;line-height:1.65}
-#coach.alm .ch-ring{pointer-events:auto;cursor:pointer}
+/* its own name (1.0.1): as «.alm» it took the alarm rows' style, a cream background over the whole screen behind the ring */
+#coach.chalm .ch-ring{pointer-events:auto;cursor:pointer}
 #coach .ch-now{display:block;margin:10px auto 0;font-weight:600}
 #coach .ch-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #coach .ch-dots{margin:0}
@@ -1606,7 +1607,7 @@ function coachShow(k){ const el = COACH[k] && COACH[k]();
   $('chT').textContent = tr(COACH_T[k]);
   $('chDots').innerHTML = tourSteps.map((x, i) => '<i class="' + (i === tourI ? 'on' : '') + '"></i>').join('');
   const last = tourI === tourSteps.length - 1; $('chNext').textContent = tr(last ? 'ابدأ' : 'التالي'); $('chSkip').hidden = last;
-  $('chNow').hidden = k !== 'alm'; $('coach').classList.toggle('alm', k === 'alm'); $('chNow').textContent = tr('اضبط منبّهاً الآن');
+  $('chNow').hidden = k !== 'alm'; $('coach').classList.toggle('chalm', k === 'alm'); $('chNow').textContent = tr('اضبط منبّهاً الآن');
   $('coach').hidden = false; $('chNext').focus({ preventScroll: true }); }
 function coachHide(){ $('coach').hidden = true; }
 // a wave of ±3 hours around now, again and again while the sky step is up; each wave ends where it began
@@ -2893,7 +2894,7 @@ function playIntro(tries){
   const setT = k => { k0 = k; pg.setAttribute('transform', 'translate(' + ccx + ' ' + ccy + ') scale(' + (u*k) + ') translate(-256 -270)'); const sw = 4.2/(u*k); arch.setAttribute('stroke-width', sw); line.setAttribute('stroke-width', sw); };
   // everything is placed from the screen's size, again whenever it changes (system bars arrive after the first frame)
   const layout = () => { const r = $('isvg').getBoundingClientRect(); Wp = r.width || phoneEl.clientWidth || innerWidth; Hp = r.height || phoneEl.clientHeight || innerHeight; sz = Math.min(200, Wp*0.48); u = sz/320; ccx = Wp/2; ccy = Hp*0.36;
-    $('isvg').setAttribute('viewBox', '0 0 ' + Wp + ' ' + Hp); setT(k0); $('iword').style.top = (ccy + sz*0.5) + 'px'; $('itag').style.top = (ccy + sz*0.5 + 76) + 'px'; };
+    $('isvg').setAttribute('viewBox', '0 0 ' + Wp + ' ' + Hp); setT(k0); $('iword').style.top = (ccy + sz*0.5 + 8) + 'px'; $('itag').style.top = (ccy + sz*0.5 + 88) + 'px'; };
   layout(); box.classList.add('ready');
   const ro = new ResizeObserver(layout); ro.observe(phoneEl); ro.observe($('isvg'));
   // right after installing, the screen can still change size in the first frames (system bars arrive late): follow it
