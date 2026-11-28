@@ -1580,8 +1580,8 @@ const NUM_AR = { 9: 'تسعة', 16: 'ستة عشر', 17: 'سبعة عشر', 18: 
 const NUM_EN = { 9: 'nine', 16: 'sixteen', 17: 'seventeen', 18: 'eighteen', 19: 'nineteen', 20: 'twenty', 21: 'twenty-one' };
 function hiTaste(){ const ios = wIOS(), n = ios ? wTypes().length : WT.filter(w => w[0] !== 'window').length, l = ios ? LOCKW.length : 0, en = isEn();
   const w = (m, t) => (t[m] || String(m));
-  return en ? w(n, NUM_EN).replace(/^./, c => c.toUpperCase()) + ' widget designs' + (l ? ', and ' + w(l, NUM_EN) + ' for the Lock Screen' : '') + ', whose font, colours and contents you choose, along with the look of the screen and each prayer\'s muezzin and alert.'
-    : w(n, NUM_AR) + ' تصميماً للويدجت' + (l ? '، و' + w(l, NUM_AR) + ' لشاشة القفل' : '') + '، تختار خطّها وألوانها وما تعرضه، مع هيئة الشاشة ومؤذّن كل صلاة وتنبيهها.'; }
+  return en ? w(n, NUM_EN).replace(/^./, c => c.toUpperCase()) + ' widget designs' + (l ? ' and ' + w(l, NUM_EN) + ' for the Lock Screen' : '') + ' to make your own, along with the app screen itself, and a muezzin for each prayer.'
+    : w(n, NUM_AR) + ' تصميماً للويدجت' + (l ? ' و' + w(l, NUM_AR) + ' لشاشة القفل' : '') + ' تُخصّصها كما تشاء، إلى جانب تخصيص شاشة التطبيق، واختيار مؤذّنٍ لكل صلاة.'; }
 let tourI = 0, tourSteps = [], tourThen = false, tourKind = '', tourReplay = false, qsPending = false;
 const TOUR_IC = '<svg viewBox="96 88 320 330"><path d="M160 392 V262 A156 156 0 0 1 256 112 A156 156 0 0 1 352 262 V392" fill="none" stroke="currentColor" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/><path d="M206 392 A50 50 0 0 1 306 392 Z" fill="currentColor"/></svg>';
 function startTour(replay){ tourThen = !replay && !!window.Android && !S.onb; tourI = 0; tourKind = 'tour'; tourReplay = !!replay;
