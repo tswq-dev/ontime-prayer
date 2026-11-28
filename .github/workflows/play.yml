@@ -1,0 +1,60 @@
+name: Android app for Google Play
+# The signed .aab for Google Play (upload key from the PLAY_UPLOAD_KEY secret, see play-key.yml),
+# published as a pre-release "play-<versionCode>" of the private repo. Runs on a push to branch play.
+on:
+  push:
+    branches: [play]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aab:
+    if: github.repository == 'tswq-dev/umm-al-qura-prayer-times'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Widget pictures
+        working-directory: android
+        continue-on-error: true
+        run: gradle :app:testDebugUnitTest --tests com.tswq.ontimeprayer.WidgetShots --no-daemon -q
+      - name: Widget picker previews
+        run: |
+          if ls android/app/build/shots/wp_*.png >/dev/null 2>&1; then cp android/app/build/shots/wp_*.png android/app/src/main/res/drawable-nodpi/; fi
+      - name: Upload key
+        env:
+          K: ${{ secrets.PLAY_UPLOAD_KEY }}
+        run: |
+          if [ -z "$K" ]; then echo "::error::PLAY_UPLOAD_KEY is missing: run play-key.yml first"; exit 1; fi
+          echo "::add-mask::${K%%:*}"
+          printf '%s' "${K#*:}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "PLAY_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          echo "PLAY_KEYSTORE_PASS=${K%%:*}" >> "$GITHUB_ENV"
+      - name: Build the .aab
+        working-directory: android
+        run: gradle :app:bundleRelease --no-daemon
+      - name: Check the signature
+        run: |
+          A=android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$A" | grep -q "jar verified"
+          keytool -printcert -jarfile "$A" | grep -E 'Owner:|SHA256:' | head -2
+          V=$(grep -oP 'versionCode = \K[0-9]+' android/app/build.gradle.kts)
+          N=$(grep -oP 'versionName = "\K[^"]+' android/app/build.gradle.kts)
+          cp "$A" "true-fajr-$N.aab"
+          echo "VC=$V" >> "$GITHUB_ENV"; echo "VN=$N" >> "$GITHUB_ENV"
+          rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: play-${{ env.VC }}
+          name: "الفجر الصادق ${{ env.VN }} لـ Google Play (${{ env.VC }})"
+          body: "ملف .aab موقّع بمفتاح الرفع، يُرفع في Google Play Console."
+          files: true-fajr-${{ env.VN }}.aab
+          prerelease: true

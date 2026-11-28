@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Google Play: .github/workflows/play.yml puts the upload key here (from the PLAY_UPLOAD_KEY secret).
+val playKey: String? = System.getenv("PLAY_KEYSTORE_FILE")
+
 android {
     namespace = "com.tswq.ontimeprayer"
     compileSdk = 36
@@ -17,18 +20,27 @@ android {
 
     signingConfigs {
         // Fixed test key so each trial build installs over the previous one.
-        // Replace with a private release key before publishing to Google Play.
+        // Google Play builds are signed with the upload key instead (play.yml).
         getByName("debug") {
             storeFile = file("test.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        if (playKey != null) create("play") {
+            storeFile = file(playKey)
+            storePassword = System.getenv("PLAY_KEYSTORE_PASS")
+            keyAlias = "upload"
+            keyPassword = System.getenv("PLAY_KEYSTORE_PASS")
+        }
     }
 
     buildTypes {
         getByName("debug") { signingConfig = signingConfigs.getByName("debug") }
-        getByName("release") { isMinifyEnabled = false }
+        getByName("release") {
+            isMinifyEnabled = false
+            if (playKey != null) signingConfig = signingConfigs.getByName("play")
+        }
     }
 
     compileOptions {

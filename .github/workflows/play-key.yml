@@ -1,0 +1,42 @@
+name: Google Play upload key (once)
+# Makes the upload key for Google Play, once. The key comes out as the "play-upload-key" artifact (kept one day):
+# its PLAY_UPLOAD_KEY.txt goes into the repo secret of the same name, and the whole zip is kept safe by the owner.
+on:
+  push:
+    branches: [play-key]
+
+permissions:
+  contents: read
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make the key
+        env:
+          HAS: ${{ secrets.PLAY_UPLOAD_KEY != '' }}
+        run: |
+          if [ "$HAS" = true ]; then echo "::error::PLAY_UPLOAD_KEY is already set: no second key"; exit 1; fi
+          P=$(openssl rand -base64 30 | tr -dc 'A-Za-z0-9' | head -c 24)
+          mkdir out
+          keytool -genkeypair -keystore out/upload-key.jks -storetype PKCS12 -alias upload -keyalg RSA -keysize 4096 \
+            -validity 10000 -storepass "$P" -keypass "$P" -dname "CN=Ibrahim Alzahrani, O=True Fajr, C=SA" 2>&1 | tail -1
+          printf '%s:%s' "$P" "$(base64 -w0 out/upload-key.jks)" > out/PLAY_UPLOAD_KEY.txt
+          printf 'alias: upload\npassword: %s\n' "$P" > out/password.txt
+          keytool -list -v -keystore out/upload-key.jks -storepass "$P" | grep -E 'SHA1:|SHA256:' > out/fingerprints.txt
+          cat > out/README.txt <<'T'
+          مفتاح الرفع لـ Google Play («الفجر الصادق»)
+
+          1) افتح PLAY_UPLOAD_KEY.txt وانسخ كل ما فيه (سطر واحد طويل).
+          2) في GitHub: المستودع umm-al-qura-prayer-times ← Settings ← Secrets and variables ← Actions ← New repository secret
+             الاسم: PLAY_UPLOAD_KEY   والقيمة: ما نسخته.
+          3) احفظ هذا الملف المضغوط كاملاً في مكان آمن (مثل Google Drive)، ولا ترسله لأحد.
+             لو ضاع المفتاح يمكن طلب مفتاح جديد من Google Play Console، لكن يأخذ أياماً.
+          T
+          sed -i 's/^          //' out/README.txt
+          cat out/fingerprints.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-upload-key
+          path: out
+          retention-days: 1
