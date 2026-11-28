@@ -128,7 +128,7 @@ jobs:
         if: env.ASC_KEY_ID == ''
         with:
           tag_name: ios-${{ github.run_number }}
-          name: "الركن الثاني آيفون - نسخة تجريبية ${{ github.run_number }}"
+          name: "الفجر الصادق آيفون - نسخة تجريبية ${{ github.run_number }}"
           body: "ملف ontime-prayer.ipa غير موقّع: ثبّته على الآيفون ببرنامج Sideloadly وحساب Apple العادي (يحتاج إعادة تثبيت كل 7 أيام)."
           files: ontime-prayer.ipa
           prerelease: true

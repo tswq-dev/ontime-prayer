@@ -1,4 +1,4 @@
-# «الركن الثاني» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
+# «الفجر الصادق» on iPhone: a native shell for the same page as Android (android/app/src/main/assets/www),
 # with local notifications for the adhan. Generate the Xcode project with `xcodegen generate`.
 # CI signs for TestFlight with profiles it makes itself (ios/ci/asc.py) and passes their names as CI_PROFILE_*.
 name: OnTime
@@ -49,7 +49,7 @@ targets:
     info:
       path: OnTime/Info.plist
       properties:
-        CFBundleDisplayName: الركن الثاني
+        CFBundleDisplayName: الفجر الصادق
         CFBundleDevelopmentRegion: ar
         # XcodeGen writes 1.0 (1) unless told; TestFlight needs each build number higher than the last
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -113,7 +113,7 @@ targets:
     info:
       path: OnTimeWidgets/Info.plist
       properties:
-        CFBundleDisplayName: الركن الثاني
+        CFBundleDisplayName: الفجر الصادق
         CFBundleDevelopmentRegion: ar
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

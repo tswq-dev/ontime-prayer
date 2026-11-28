@@ -295,7 +295,7 @@ enum Alarms {
             let last = ud.double(forKey: "akLast")
             if last > now + 3 * day {
                 let n = UNMutableNotificationContent()
-                n.title = ar ? "افتح «الركن الثاني»" : "Open On Time"
+                n.title = ar ? "افتح «الفجر الصادق»" : "Open True Dawn"
                 n.body = ar ? "لتجديد الأذان والمنبّهات للأيام القادمة." : "To renew the adhan and the alarms for the days ahead."
                 n.sound = .default
                 Scheduler.add("al:refresh", n, last - 2 * day)

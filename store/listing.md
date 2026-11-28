@@ -1,17 +1,17 @@
-# نصوص المتجر: الركن الثاني
+# نصوص المتجر: الفجر الصادق
 
 الحدود بين القوسين هي حدود المتجر بالحروف. سياسة الخصوصية: https://ontime-prayer.pages.dev/privacy
 
 ## Google Play
 
-**اسم التطبيق** (30): الركن الثاني بالثواني
+**اسم التطبيق** (30): الفجر الصادق - مواقيت الصلاة
 
 **الوصف المختصر** (80):
 مواقيت الصلاة وفق تقويم أم القرى على الدقيقة، والأذان بصوت المؤذن الذي تختاره.
 
 **الوصف الكامل** (4000):
 
-«الركن الثاني» يعرض مواقيت الصلاة وفق تقويم أم القرى، مطابقةً لموقعه الرسمي على الدقيقة، ويحسبها على جوالك دون إنترنت.
+«الفجر الصادق» يعرض مواقيت الصلاة وفق تقويم أم القرى، مطابقةً لموقعه الرسمي على الدقيقة، ويحسبها على جوالك دون إنترنت.
 
 يصلك الأذان في أول ثانية من دقيقته، بصوت المؤذن الذي تختاره.
 
@@ -50,14 +50,14 @@
 
 ### English
 
-**App name** (30): On Time Prayer: to the second
+**App name** (30): True Dawn: to the second
 
 **Short description** (80):
 Umm al-Qura prayer times to the minute, and the adhan in the voice you choose.
 
 **Full description**:
 
-On Time Prayer shows prayer times from the Umm al-Qura calendar, matching its official website to the minute, and works them out on your phone with no internet.
+True Dawn shows prayer times from the Umm al-Qura calendar, matching its official website to the minute, and works them out on your phone with no internet.
 
 The adhan comes in the first second of its minute, in the voice of the muezzin you choose.
 
@@ -106,9 +106,9 @@ In Arabic and English, light and dark.
 
 ## App Store
 
-**الاسم** (30): الركن الثاني
+**الاسم** (30): الفجر الصادق
 
-**العنوان الفرعي** (30): الصلاة على وقتها، بالثواني
+**العنوان الفرعي** (30): صلاتك على وقتها
 
 **الكلمات المفتاحية** (100، بفواصل بلا مسافات):
 اذان,أذان,مواقيت,اوقات الصلاة,ام القرى,تقويم,هجري,مؤذن,اقامة,رمضان,صيام,ويدجت,منبه
@@ -118,7 +118,7 @@ In Arabic and English, light and dark.
 
 **الوصف**: نص Google Play نفسه، مع حذف سطر «يتوقف الأذان بزر القفل…» (خاص بأندرويد).
 
-**English**: Name «On Time Prayer» · Subtitle «Prayer on time, to the second» · Keywords: adhan,azan,prayer times,umm al-qura,salah,hijri,muezzin,iqama,ramadan,fasting,widget,muslim
+**English**: Name «True Dawn» · Subtitle «Prayer on time, to the second» · Keywords: adhan,azan,prayer times,umm al-qura,salah,hijri,muezzin,iqama,ramadan,fasting,widget,muslim
 
 **الخصوصية في App Store Connect**: Data Not Collected.
 

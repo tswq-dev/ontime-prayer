@@ -174,7 +174,7 @@ struct Countdown: View {
 struct OpenAppView: View {
     var body: some View {
         VStack(spacing: 6) {
-            Text("الركن الثاني").font(.custom(WFont.kufi.ps, size: 22)).foregroundStyle(Color.hex(0xF4ECDC))
+            Text("الفجر الصادق").font(.custom(WFont.kufi.ps, size: 22)).foregroundStyle(Color.hex(0xF4ECDC))
             Text("افتح التطبيق مرة").font(.custom(WFonts.plex, size: 13)).foregroundStyle(Color.hex(0xE2C27A))
             Text("Open the app once").font(.custom(WFonts.plex, size: 10)).foregroundStyle(Color.hex(0xF4ECDC).opacity(0.6))
         }
@@ -464,7 +464,7 @@ struct LockView: View {
                     .environment(\.layoutDirection, d.en ? .leftToRight : .rightToLeft)
                     .environment(\.locale, d.locale)
             } else {
-                if family == .accessoryInline { Text("الركن الثاني: افتح التطبيق") } else { Text("افتح التطبيق").font(.system(size: 12)) }
+                if family == .accessoryInline { Text("الفجر الصادق: افتح التطبيق") } else { Text("افتح التطبيق").font(.system(size: 12)) }
             }
         }
         .containerBackground(for: .widget) { Color.clear }
